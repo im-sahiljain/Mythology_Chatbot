@@ -1,0 +1,173 @@
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// Public localtunnel URL for remote Wi-Fi / 4G access
+const TUNNEL_BACKEND_URL = 'https://rare-boxes-judge.loca.lt';
+
+// Fallback to local network IP if on same Wi-Fi
+const getLocalIp = (): string => {
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
+  if (hostUri && !hostUri.includes('exp.direct')) {
+    return `http://${hostUri.split(':')[0]}:8000`;
+  }
+  return 'http://192.168.1.10:8000';
+};
+
+// Use Tunnel URL when running in Expo Tunnel mode, otherwise use local network
+const isTunnel = Constants.expoConfig?.hostUri?.includes('exp.direct') || (Constants as any).manifest2?.extra?.expoClient?.hostUri?.includes('exp.direct');
+
+export const API_BASE_URL = Platform.OS === 'web'
+  ? 'http://localhost:8000'
+  : (isTunnel ? TUNNEL_BACKEND_URL : TUNNEL_BACKEND_URL); // Defaults to Tunnel for universal mobile access
+
+console.log(`🌐 [API Service] Platform: ${Platform.OS} | Target API URL: ${API_BASE_URL}`);
+
+// Headers helper to bypass localtunnel reminder screen
+const getHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Bypass-Tunnel-Reminder': 'true',
+  'bypass-tunnel-reminder': 'true',
+});
+
+export interface SourceCitation {
+  scenario_title?: string;
+  epic?: string;
+  character?: string;
+  verse_citations?: string[];
+  summary_snippet?: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  mode: string;
+  character: string;
+  provider_used: string;
+  sources: SourceCitation[];
+}
+
+export interface CompletenessResponse {
+  status: 'needs_clarification' | 'resolved';
+  completeness_score: number;
+  reply: string;
+  options: string[];
+  provider_used?: string;
+  sources: SourceCitation[];
+}
+
+export interface TwoTurnResponse {
+  turn: number;
+  reply: string;
+  options: string[];
+  sources: SourceCitation[];
+}
+
+export interface ProgressiveResponse {
+  reply: string;
+  sources: SourceCitation[];
+}
+
+export interface SocraticResponse {
+  status: 'interviewing' | 'resolved';
+  reply: string;
+  character: string;
+  provider_used?: string;
+  sources: SourceCitation[];
+}
+
+export interface FullChatResponse {
+  stage: 'interviewing' | 'resolved' | 'follow_up';
+  reply: string;
+  character: string;
+  sources: SourceCitation[];
+  searched_vector_db: boolean;
+  provider_used?: string;
+}
+
+export const apiService = {
+  // 1. Universal Epic Scholar (POST /chat)
+  async universalChat(message: string, provider?: string): Promise<ChatResponse> {
+    const res = await fetch(`${API_BASE_URL}/chat`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, mode: 'guidance', provider }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch universal chat response');
+    return res.json();
+  },
+
+  // 2. Character Persona Mode (POST /chat-character)
+  async characterChat(message: string, character: string, provider?: string): Promise<ChatResponse> {
+    const res = await fetch(`${API_BASE_URL}/chat-character`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, character, mode: 'guidance', provider }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch character chat response');
+    return res.json();
+  },
+
+  async personaChat(message: string, character: string, provider?: string): Promise<ChatResponse> {
+    return this.characterChat(message, character, provider);
+  },
+
+  // 3. Strategy 1: Adaptive Completeness (POST /strategy/completeness)
+  async completenessStrategy(message: string, provider?: string): Promise<CompletenessResponse> {
+    const res = await fetch(`${API_BASE_URL}/strategy/completeness`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, provider }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch completeness strategy response');
+    return res.json();
+  },
+
+  // 4. Strategy 2: Two-Turn Decision Tree (POST /strategy/two-turn)
+  async twoTurnStrategy(message: string, turn: number = 1, selected_option?: string, provider?: string): Promise<TwoTurnResponse> {
+    const res = await fetch(`${API_BASE_URL}/strategy/two-turn`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, turn, selected_option, provider }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch two-turn strategy response');
+    return res.json();
+  },
+
+  // 5. Strategy 3: Progressive Hybrid Search (POST /strategy/progressive)
+  async progressiveStrategy(message: string, chat_history: { role: string; content: string }[], provider?: string): Promise<ProgressiveResponse> {
+    const res = await fetch(`${API_BASE_URL}/strategy/progressive`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, chat_history, provider }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch progressive strategy response');
+    return res.json();
+  },
+
+  // 6. Strategy 4: Autonomous Socratic Interviewer (POST /strategy/socratic-interviewer)
+  async socraticStrategy(message: string, chat_history: { role: string; content: string }[], force_resolve?: boolean, provider?: string): Promise<SocraticResponse> {
+    const res = await fetch(`${API_BASE_URL}/strategy/socratic-interviewer`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, chat_history, force_resolve, provider }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch socratic strategy response');
+    return res.json();
+  },
+
+  // 7. Strategy 5: Full Chat with Continuous Follow-Up Memory (POST /strategy/full-chat)
+  async fullChatStrategy(
+    message: string,
+    chat_history: { role: string; content: string; sources?: SourceCitation[] }[],
+    force_resolve?: boolean,
+    session_id?: string,
+    provider?: string
+  ): Promise<FullChatResponse> {
+    const res = await fetch(`${API_BASE_URL}/strategy/full-chat`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, chat_history, force_resolve, session_id, provider }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch full chat response');
+    return res.json();
+  },
+};
