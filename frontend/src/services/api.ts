@@ -1,32 +1,24 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-// Public localtunnel URL for remote Wi-Fi / 4G access
-const TUNNEL_BACKEND_URL = 'https://rare-boxes-judge.loca.lt';
-
-// Fallback to local network IP if on same Wi-Fi
+// Extract host IP dynamically from Expo or fallback to localhost
 const getLocalIp = (): string => {
   const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoClient?.hostUri;
-  if (hostUri && !hostUri.includes('exp.direct')) {
+  if (hostUri) {
     return `http://${hostUri.split(':')[0]}:8000`;
   }
   return 'http://192.168.1.10:8000';
 };
 
-// Use Tunnel URL when running in Expo Tunnel mode, otherwise use local network
-const isTunnel = Constants.expoConfig?.hostUri?.includes('exp.direct') || (Constants as any).manifest2?.extra?.expoClient?.hostUri?.includes('exp.direct');
-
-export const API_BASE_URL = Platform.OS === 'web'
-  ? 'http://localhost:8000'
-  : (isTunnel ? TUNNEL_BACKEND_URL : TUNNEL_BACKEND_URL); // Defaults to Tunnel for universal mobile access
+// API URL priority: 1) .env (EXPO_PUBLIC_API_URL) -> 2) Platform default (web: localhost, mobile: Wi-Fi IP)
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  (Platform.OS === 'web' ? 'http://localhost:8000' : getLocalIp());
 
 console.log(`🌐 [API Service] Platform: ${Platform.OS} | Target API URL: ${API_BASE_URL}`);
 
-// Headers helper to bypass localtunnel reminder screen
 const getHeaders = () => ({
   'Content-Type': 'application/json',
-  'Bypass-Tunnel-Reminder': 'true',
-  'bypass-tunnel-reminder': 'true',
 });
 
 export interface SourceCitation {
