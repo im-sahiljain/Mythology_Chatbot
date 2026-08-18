@@ -29,10 +29,30 @@ export const StreamingText: React.FC<{
     }
   }, [idx, text, speed]);
 
-  // Parse markdown bold (**text**) tokens into bold Text components
+  // Parse markdown bold (***text***, **text**, and *text*) tokens into bold Text components
   const renderFormatted = (raw: string) => {
-    const parts = raw.split(/(\*\*.*?\*\*)/g);
+    const parts = raw.split(/(\*\*\*[\s\S]*?\*\*\*|\*\*[\s\S]*?\*\*|\*[^*\n]+?\*)/g);
+
     return parts.map((part, i) => {
+      if (!part) return null;
+
+      // Handle ***text***
+      if (part.startsWith('***') && part.endsWith('***') && part.length >= 6) {
+        return (
+          <Text
+            key={i}
+            style={{
+              fontFamily: bold,
+              fontWeight: '700',
+              color: theme.text,
+            }}
+          >
+            {part.slice(3, -3)}
+          </Text>
+        );
+      }
+
+      // Handle **text**
       if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
         const content = part.slice(2, -2);
         return (
@@ -48,6 +68,45 @@ export const StreamingText: React.FC<{
           </Text>
         );
       }
+
+      // Handle *text* (single asterisk)
+      if (
+        part.startsWith('*') &&
+        part.endsWith('*') &&
+        part.length >= 2 &&
+        !part.slice(1, -1).includes('*')
+      ) {
+        const content = part.slice(1, -1);
+        return (
+          <Text
+            key={i}
+            style={{
+              fontFamily: bold,
+              fontWeight: '700',
+              color: theme.text,
+            }}
+          >
+            {content}
+          </Text>
+        );
+      }
+
+      // Streaming in-flight opening tags
+      if (part.startsWith('***')) {
+        return (
+          <Text
+            key={i}
+            style={{
+              fontFamily: bold,
+              fontWeight: '700',
+              color: theme.text,
+            }}
+          >
+            {part.slice(3)}
+          </Text>
+        );
+      }
+
       if (part.startsWith('**')) {
         return (
           <Text
@@ -62,6 +121,7 @@ export const StreamingText: React.FC<{
           </Text>
         );
       }
+
       return <Text key={i}>{part}</Text>;
     });
   };
@@ -84,4 +144,3 @@ export const StreamingText: React.FC<{
     </Text>
   );
 };
-
