@@ -33,6 +33,8 @@ export interface ChatResponse {
   reply: string;
   mode: string;
   character: string;
+  stage?: 'interviewing' | 'resolved' | 'follow_up';
+  searched_vector_db?: boolean;
   provider_used: string;
   sources: SourceCitation[];
 }
@@ -88,18 +90,40 @@ export const apiService = {
   },
 
   // 2. Character Persona Mode (POST /chat-character)
-  async characterChat(message: string, character: string, provider?: string): Promise<ChatResponse> {
+  async characterChat(
+    message: string,
+    character: string,
+    chatHistory?: any[],
+    forceResolve: boolean = false,
+    sessionId?: string,
+    provider?: string
+  ): Promise<ChatResponse> {
     const res = await fetch(`${API_BASE_URL}/chat-character`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ message, character, mode: 'guidance', provider }),
+      body: JSON.stringify({
+        message,
+        character,
+        chat_history: chatHistory || [],
+        force_resolve: forceResolve,
+        session_id: sessionId,
+        mode: 'guidance',
+        provider
+      }),
     });
     if (!res.ok) throw new Error('Failed to fetch character chat response');
     return res.json();
   },
 
-  async personaChat(message: string, character: string, provider?: string): Promise<ChatResponse> {
-    return this.characterChat(message, character, provider);
+  async personaChat(
+    message: string,
+    character: string,
+    chatHistory?: any[],
+    forceResolve: boolean = false,
+    sessionId?: string,
+    provider?: string
+  ): Promise<ChatResponse> {
+    return this.characterChat(message, character, chatHistory, forceResolve, sessionId, provider);
   },
 
   // 3. Strategy 1: Adaptive Completeness (POST /strategy/completeness)

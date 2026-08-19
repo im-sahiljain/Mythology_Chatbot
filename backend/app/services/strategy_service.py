@@ -433,3 +433,146 @@ OR
             print(f"Router Warning: {e}")
             return False, user_message
 
+    # -------------------------------------------------------------
+    # STRATEGY 6: Character-Strict Socratic Multi-Turn Chat
+    # -------------------------------------------------------------
+    def process_character_socratic_chat(
+        self,
+        message: str,
+        character: str,
+        chat_history: List[Dict[str, Any]],
+        force_resolve: bool = False,
+        session_id: str = None,
+        provider: str = None
+    ) -> Dict[str, Any]:
+        """
+        1st-Person Character-Strict Socratic Chat with complete memory:
+        1. Interviewing Stage (Turns 1-2): Character asks 1st-person probing Socratic question to uncover root dilemma.
+        2. Resolved Stage (Turn 3+ or Context Sufficient): Delivers Final 1st-Person Counsel with ChromaDB cards filtered by protagonist.
+        3. Follow-Up Stage: Continuous conversation answering in authentic 1st-person persona.
+        """
+        active_char = character or "Krishna"
+        print("\n" + "="*80)
+        print(f"👑 [CHARACTER SOCRATIC LOG] Persona: {active_char} | History Turns: {len(chat_history)} | Force: {force_resolve}")
+        print("="*80)
+
+        # Check if Final Epic Counsel has already been delivered in history
+        already_resolved = any(
+            t.get("role") == "assistant" and ("Final Counsel from" in t.get("content", "") or "✨" in t.get("content", "") or "Final Epic Counsel" in t.get("content", ""))
+            for t in chat_history
+        )
+
+        history_text = ""
+        if chat_history:
+            history_text = "CONVERSATION HISTORY:\n" + "\n".join([f"{t.get('role', 'user')}: {t.get('content', '')}" for t in chat_history]) + "\n\n"
+
+        combined_text = f"{history_text}Latest User Input: {message}"
+
+        # -------------------------------------------------------------
+        # CASE A: POST-COUNSEL FOLLOW-UP MODE
+        # -------------------------------------------------------------
+        if already_resolved:
+            print(f"   💬 [Character Socratic] Active State: FOLLOW_UP MODE with {active_char}")
+            needs_search, search_query = self._decide_followup_search(message, history_text, provider)
+
+            sources = []
+            context_str = ""
+            if needs_search:
+                print(f"   🔍 [Character Tool Call] Vector Search TRIGGERED for '{search_query}' (protagonist: {active_char})")
+                rag_res = self.rag_service.query_by_character(
+                    message=search_query,
+                    character=active_char,
+                    provider=provider,
+                    chat_history=chat_history
+                )
+                sources = rag_res.get("sources", [])
+                context_str = "\n".join([f"Scenario: {s.scenario_title} ({s.epic}) - {s.summary_snippet}" for s in sources])
+
+            followup_system_prompt = f"""
+You are {active_char} from the Indian Epics. You are in deep, 1st-person conversation with a seeker who has already received your primary counsel.
+Answer their follow-up thoughts, questions, or doubts with authentic 1st-person wisdom drawn from your own life and principles.
+
+RULES:
+1. Speak exclusively in 1st person as {active_char}.
+2. Maintain full awareness of what the seeker has shared across all prior turns.
+3. Keep your response clear, warm, and under 150 words.
+"""
+            scripture_section = f"Retrieved Character Memories/Stories:\n{context_str}" if context_str else "Respond directly from your persona and conversation memory."
+            followup_prompt = f"""
+{history_text}
+Latest Question from Seeker: "{message}"
+
+{scripture_section}
+
+Provide your 1st-person response as {active_char}:
+"""
+            llm_res = LLMFactory.generate_response(followup_prompt, followup_system_prompt, provider)
+
+            return {
+                "stage": "follow_up",
+                "mode": "guidance",
+                "reply": llm_res["reply"],
+                "character": active_char,
+                "sources": sources,
+                "searched_vector_db": needs_search,
+                "provider_used": llm_res["provider_used"]
+            }
+
+        # -------------------------------------------------------------
+        # CASE B: INITIAL INTERVIEW / RESOLUTION STAGE
+        # -------------------------------------------------------------
+        user_turn_count = len([t for t in chat_history if t.get("role") == "user"]) + 1
+
+        if force_resolve:
+            print("   ⚡ [Character Socratic] Manual override: Forcing final counsel immediately!")
+            is_sufficient = True
+        elif user_turn_count >= 3:
+            print(f"   🛡️ [Character Socratic] Safety Brake: Turn {user_turn_count} reached. Forcing final counsel!")
+            is_sufficient = True
+        else:
+            is_sufficient = self._evaluate_context_sufficiency(combined_text, user_turn_count, provider)
+
+        print(f"   ➔ Context Sufficiency: {'SUFFICIENT (Delivering Final Counsel)' if is_sufficient else 'INSUFFICIENT (Asking Socratic Q)'}")
+
+        if not is_sufficient:
+            interview_system_prompt = f"""
+You are {active_char}. A seeker has approached you for guidance with a personal dilemma.
+Before revealing your definitive judgment and the lessons from your own life, you must understand their circumstance more deeply.
+
+RULES:
+1. Speak strictly in the 1st-person voice and authentic persona of {active_char}.
+2. In 1 warm sentence, acknowledge their struggle.
+3. Ask 1 deep, targeted Socratic question in your voice to uncover the root cause, hidden motivations, or emotional stakes (e.g. duty vs attachment, fear vs truth).
+4. Do NOT deliver your final advice or scripture citations yet.
+5. Keep your response under 55 words.
+"""
+            interview_prompt = f"{combined_text}\n\nAs {active_char}, ask 1 deep Socratic question to understand the seeker's dilemma better:"
+            llm_res = LLMFactory.generate_response(interview_prompt, interview_system_prompt, provider)
+
+            return {
+                "stage": "interviewing",
+                "mode": "guidance",
+                "reply": llm_res["reply"],
+                "character": active_char,
+                "sources": [],
+                "searched_vector_db": False,
+                "provider_used": llm_res["provider_used"]
+            }
+        else:
+            # Generate Final 1st-Person Epic Counsel using ChromaDB with strict character filter
+            rag_res = self.rag_service.query_by_character(
+                message=combined_text,
+                character=active_char,
+                provider=provider,
+                chat_history=chat_history
+            )
+            return {
+                "stage": "resolved",
+                "mode": "guidance",
+                "reply": f"✨ **Final Counsel from {active_char}**\n\n{rag_res['reply']}",
+                "character": active_char,
+                "sources": rag_res.get("sources", []),
+                "searched_vector_db": True,
+                "provider_used": rag_res["provider_used"]
+            }
+

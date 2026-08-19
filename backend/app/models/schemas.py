@@ -8,7 +8,10 @@ class GeneralChatRequest(BaseModel):
 
 class CharacterChatRequest(BaseModel):
     message: str = Field(..., description="User's dilemma, query, or prompt text", json_schema_extra={"example": "I feel conflicted because my company favors the founder's son over my most hardworking junior. What should I do?"})
-    character: str = Field(..., description="Character persona for 1st-person roleplay (e.g. Sita, Vibhishana, Drona, Krishna, Karna)", json_schema_extra={"example": "Vibhishana"})
+    character: str = Field(..., description="Character persona for 1st-person roleplay (e.g. Sita, Vibhishana, Drona, Krishna, Karna)", json_schema_extra={"example": "Krishna"})
+    chat_history: Optional[List[Dict[str, Any]]] = Field(default=[], description="Full conversation history: [{'role': 'user'|'assistant', 'content': '...'}]")
+    session_id: Optional[str] = Field(default=None, description="Optional unique session ID")
+    force_resolve: Optional[bool] = Field(default=False, description="Manual override to trigger final counsel immediately")
     mode: Optional[str] = Field(default="guidance", description="Mode: 'guidance' (Scenario Match) or 'knowledge' (Raw Verses)")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider override: 'ollama', 'openai', or 'gemini'")
 
@@ -40,8 +43,10 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
-    mode: str
+    mode: str = "guidance"
     character: str
+    stage: Optional[str] = Field(default="resolved", description="'interviewing' | 'resolved' | 'follow_up'")
+    searched_vector_db: Optional[bool] = False
     provider_used: str
     sources: List[SourceCitation] = []
 
