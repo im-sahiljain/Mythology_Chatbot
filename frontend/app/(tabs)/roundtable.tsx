@@ -758,10 +758,14 @@ export default function RoundtableScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 14 }}>{profile.icon}</Text>
-                  <Text style={[styles.councilChipName, { color: theme.text, fontFamily: label }]}>
-                    {profile.name}
-                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleInsertMention(charName)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.councilChipName, { color: theme.text, fontFamily: label }]}>
+                      @{charName}
+                    </Text>
+                  </TouchableOpacity>
 
                   {/* Mute Toggle */}
                   <TouchableOpacity
@@ -888,35 +892,6 @@ export default function RoundtableScreen() {
               </Text>
             </TouchableOpacity>
           )}
-
-          {/* @Mention Shortcuts */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.mentionChipsScroll}
-          >
-            <Text style={[styles.mentionLabel, { color: theme.secondary, fontFamily: label }]}>
-              Address:
-            </Text>
-            {activeCouncil.map((name) => (
-              <TouchableOpacity
-                key={name}
-                style={[
-                  styles.mentionChip,
-                  {
-                    backgroundColor: theme.surfaceContainerLowest,
-                    borderColor: theme.outlineVariant,
-                  },
-                ]}
-                onPress={() => handleInsertMention(name)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.mentionChipText, { color: theme.text, fontFamily: label }]}>
-                  @{name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
 
           {/* Input Row */}
           <View style={styles.inputRow}>
