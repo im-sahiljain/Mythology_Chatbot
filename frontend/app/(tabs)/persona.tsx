@@ -10,7 +10,9 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Pressable as RNPressable,
+  ActivityIndicator,
 } from 'react-native';
+
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { apiService, SourceCitation } from '../../src/services/api';
 import { StreamingText } from '../../src/components/StreamingText';
@@ -32,9 +34,12 @@ import {
   setActiveSessionId,
   createNewSession,
   subscribeToSessions,
+  syncUserSessionsFromDb,
+  fetchSessionDetailFromDb,
   ChatMessage,
   ChatSession,
 } from '../../src/services/chatStorage';
+
 
 export interface GuideCard {
   name: string;
@@ -127,6 +132,7 @@ export const GUIDE_CHARACTERS: GuideCard[] = [
 ];
 
 interface ChatMsg {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
   stage?: 'interviewing' | 'resolved' | 'follow_up';
@@ -145,6 +151,8 @@ export default function PersonaScreen() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [hasStartedConsultation, setHasStartedConsultation] = useState(false);
   const [currentStage, setCurrentStage] = useState<'interviewing' | 'resolved' | 'follow_up'>('interviewing');
+  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
+  const [isSessionLoading, setIsSessionLoading] = useState<boolean>(false);
 
   const [history, setHistory] = useState<ChatMsg[]>([
     {
@@ -173,11 +181,10 @@ export default function PersonaScreen() {
     }
   };
 
-  // Restore or subscribe to active persona session
   useEffect(() => {
-    const syncSession = () => {
+    const syncSession = async () => {
       if (!params.id) {
-        // Clean /persona route -> Always show guide selection deck!
+        setIsSessionLoading(false);
         setSessionId('');
         setHasStartedConsultation(false);
         setCurrentStage('interviewing');
@@ -185,14 +192,16 @@ export default function PersonaScreen() {
         return;
       }
 
-      const all = loadAllSessions();
-      const active = all.find((s) => s.id === params.id && s.mode === 'persona');
+      let all = loadAllSessions();
+      if (all.length === 0) {
+        all = await syncUserSessionsFromDb();
+      }
+      const active = all.find((s) => s.id === params.id);
 
-      if (active && active.character && active.history && active.history.length > 0) {
+      if (active && active.history && active.history.length > 0) {
+        setIsSessionLoading(false);
         setSessionId(active.id);
-        if (active.stage) {
-          setCurrentStage(active.stage as any);
-        }
+        if (active.stage) setCurrentStage(active.stage as any);
         const matchedGuide = GUIDE_CHARACTERS.find(
           (g) => g.name.toLowerCase() === active.character?.toLowerCase()
         );
@@ -200,6 +209,7 @@ export default function PersonaScreen() {
 
         setHistory(
           active.history.map((h) => ({
+            id: h.id,
             role: h.role,
             content: h.content,
             stage: (h as any).stage || active.stage || 'resolved',
@@ -207,13 +217,41 @@ export default function PersonaScreen() {
           }))
         );
         setHasStartedConsultation(true);
+        return;
+      }
+
+      setIsSessionLoading(true);
+      setSessionId(params.id as string);
+      setActiveSessionId(params.id as string);
+      const fetchedMsgs = await fetchSessionDetailFromDb(params.id as string);
+      setIsSessionLoading(false);
+
+      if (fetchedMsgs.length > 0) {
+        const targetChar = active?.character || fetchedMsgs[0]?.character;
+        if (targetChar) {
+          const matchedGuide = GUIDE_CHARACTERS.find(
+            (g) => g.name.toLowerCase() === targetChar.toLowerCase()
+          );
+          if (matchedGuide) setSelectedGuide(matchedGuide);
+        }
+
+        setHistory(
+          fetchedMsgs.map((h) => ({
+            id: h.id,
+            role: h.role,
+            content: h.content,
+            stage: h.stage || 'resolved',
+            sources: h.sources,
+          }))
+        );
+        setHasStartedConsultation(true);
       } else {
-        setSessionId('');
         setHasStartedConsultation(false);
         setCurrentStage('interviewing');
         setHistory([]);
       }
     };
+
 
     syncSession();
     const unsubscribe = subscribeToSessions((all, activeId) => {
@@ -346,11 +384,16 @@ export default function PersonaScreen() {
       );
 
       const respStage = res.stage || 'resolved';
-      setCurrentStage(respStage);
+      setCurrentStage(respStage as any);
+
+      const asstId = (Date.now() + 1).toString();
+      setNewlyAddedId(asstId);
+
 
       const finalHistory: ChatMsg[] = [
         ...nextHistory,
         {
+          id: asstId,
           role: 'assistant',
           content: res.reply,
           stage: respStage,
@@ -359,6 +402,7 @@ export default function PersonaScreen() {
       ];
       setHistory(finalHistory);
       savePersonaSession(finalHistory, respStage);
+
     } catch {
       const fallbackHistory: ChatMsg[] = [
         ...nextHistory,
@@ -403,14 +447,25 @@ export default function PersonaScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section 1: Hero Character Deck (Shown only before consultation starts) */}
-        {!hasStartedConsultation && (
+        {/* Center Circular Loader during session switch */}
+        {isSessionLoading ? (
+          <View style={styles.centerLoaderContainer}>
+            <ActivityIndicator size="large" color={theme.primaryContainer} />
+            <Text style={[styles.centerLoaderText, { color: theme.textSecondary, fontFamily: body }]}>
+              Loading consultation...
+            </Text>
+          </View>
+        ) : (
           <>
-            <View style={styles.heroSection}>
-              <View style={styles.heroHeader}>
-                <Text style={[styles.heroTitle, { color: theme.primaryContainer, fontFamily: serif }]}>
-                  Select Your Guide
-                </Text>
+            {/* Section 1: Hero Character Deck (Shown only before consultation starts) */}
+            {!hasStartedConsultation && (
+              <>
+                <View style={styles.heroSection}>
+                  <View style={styles.heroHeader}>
+                    <Text style={[styles.heroTitle, { color: theme.primaryContainer, fontFamily: serif }]}>
+                      Select Your Guide
+                    </Text>
+
                 <Text style={[styles.heroSubtitle, { color: theme.secondary, fontFamily: body }]}>
                   Consult the ancients for modern wisdom
                 </Text>
@@ -639,16 +694,46 @@ export default function PersonaScreen() {
                       </View>
                       <StreamingText
                         text={msg.content}
+                        animate={msg.id === newlyAddedId}
                         style={[
                           styles.aiText,
                           { color: theme.text, fontFamily: serif },
                         ]}
                       />
+
+                      {/* Socratic Force Resolve CTA: Shown strictly on the latest active interviewing bubble before final counsel */}
+                      {msg.role === 'assistant' &&
+                        msg.stage === 'interviewing' &&
+                        currentStage === 'interviewing' &&
+                        index === history.length - 1 &&
+                        (!msg.sources || msg.sources.length === 0) &&
+                        !msg.content.includes('Final Epic Counsel') && (
+                        <TouchableOpacity
+                          style={[
+                            styles.forceResolveBtn,
+                            { backgroundColor: theme.bgSecondary, borderColor: theme.primaryContainer },
+                          ]}
+                          onPress={() => sendQuery(undefined, true)}
+                          activeOpacity={0.8}
+                        >
+                          <Text
+                            style={[
+                              styles.forceResolveBtnText,
+                              { color: theme.primaryContainer, fontFamily: label },
+                            ]}
+                          >
+                            ⚡ Give Me Grounded Counsel Now (Skip Questions)
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+
                       {msg.sources && msg.sources.length > 0 && (
                         <SourceCard sources={msg.sources} />
                       )}
                     </View>
                   </View>
+
                 ) : (
                   <View
                     style={[
@@ -697,8 +782,11 @@ export default function PersonaScreen() {
             )}
           </View>
         )}
+          </>
+        )}
 
         <View style={{ height: 110 }} />
+
       </ScrollView>
 
       {/* Floating Bottom Input Pill with Fade */}
@@ -1014,16 +1102,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   forceResolveBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     borderWidth: 1,
     alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   forceResolveBtnText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
   },
+
   resetText: {
     fontSize: 12,
     textDecorationLine: 'underline',
@@ -1146,4 +1238,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  centerLoaderContainer: {
+    paddingVertical: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+  },
+  centerLoaderText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    letterSpacing: 0.2,
+  },
 });
+
+
+

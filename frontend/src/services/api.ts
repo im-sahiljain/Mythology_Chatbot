@@ -438,6 +438,15 @@ export const apiService = {
     const res = await customFetch(`${API_BASE_URL}/api/admin/guest-usage`);
     if (!res.ok) throw new Error('Failed to fetch guest usage');
     return res.json();
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await customFetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST' });
+    } catch (err) {
+      console.warn('Logout request failed:', err);
+    }
   }
 };
+
 
