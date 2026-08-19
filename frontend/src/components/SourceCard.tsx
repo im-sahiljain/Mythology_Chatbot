@@ -353,8 +353,9 @@ const s = StyleSheet.create({
   },
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   popupContainer: {
-    width: Platform.OS === 'web' ? Math.min(SCREEN_WIDTH * 0.9, 580) : '100%',
-    maxHeight: '84%',
+    width: '100%',
+    maxWidth: 580,
+    maxHeight: '86%',
     borderRadius: 22,
     borderWidth: 1,
     overflow: 'hidden',

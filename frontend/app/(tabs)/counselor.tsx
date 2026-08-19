@@ -6,6 +6,9 @@ import { SourceCard } from '../../src/components/SourceCard';
 import { useTheme } from '../../src/context/ThemeContext';
 import { FadeSlide, Pressable, TypingDots } from '../../src/components/AnimatedComponents';
 
+import { VedicDrawer } from '../../src/components/VedicDrawer';
+import { VedicTopBar } from '../../src/components/VedicTopBar';
+
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
 const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
 const bold = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
@@ -23,6 +26,7 @@ export default function CounselorScreen() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<ChatBubble[]>([]);
   const [currentStatus, setCurrentStatus] = useState<'interviewing' | 'resolved' | null>(null);
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -65,12 +69,14 @@ export default function CounselorScreen() {
     setLoading(true);
     try {
       const apiHistory = history.map((h) => ({ role: h.role, content: h.content }));
-      const lastUserMsg = history.filter((h) => h.role === 'user').slice(-1)[0]?.content || 'Please give epic counsel.';
-      const res: SocraticResponse = await apiService.socraticStrategy(lastUserMsg, apiHistory, true);
-
+      const res: SocraticResponse = await apiService.socraticStrategy(
+        'Please deliver your final counsel now based on what I have shared.',
+        apiHistory,
+        true
+      );
       setCurrentStatus('resolved');
-      setHistory((prev) => [
-        ...prev,
+      setHistory([
+        ...history,
         {
           role: 'assistant',
           content: res.reply,
@@ -93,7 +99,13 @@ export default function CounselorScreen() {
 
   return (
     <View style={[st.container, { backgroundColor: theme.bg }]}>
-      <ScrollView style={st.list} contentContainerStyle={st.listContent}>
+      <VedicDrawer
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+      />
+      <VedicTopBar onOpenDrawer={() => setDrawerVisible(true)} />
+
+      <ScrollView style={st.list} contentContainerStyle={[st.listContent, { paddingTop: 72 }]}>
         {/* Status Banner */}
         {currentStatus && (
           <FadeSlide duration={300}>

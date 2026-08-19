@@ -71,10 +71,11 @@ class RAGService:
         message: str,
         character: str = "Krishna",
         mode: str = "guidance",
-        provider: str = None
+        provider: str = None,
+        chat_history: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """Character-Strict RAG Query (POST /chat-character) - Filters scenarios strictly from character's own story."""
-        return self._handle_guidance_query(message, character, provider, mode=mode, strict_character=True)
+        return self._handle_guidance_query(message, character, provider, mode=mode, strict_character=True, chat_history=chat_history)
 
     def _handle_guidance_query(
         self,
@@ -82,15 +83,23 @@ class RAGService:
         character: Optional[str] = None,
         provider: str = None,
         mode: str = "guidance",
-        strict_character: bool = False
+        strict_character: bool = False,
+        chat_history: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         sources: List[SourceCitation] = []
         context_str = ""
 
+        # Construct search query with user history context if needed
+        search_query = message
+        if chat_history and len(chat_history) > 1:
+            user_texts = [h.get("content", "") for h in chat_history if h.get("role") == "user"]
+            if user_texts:
+                search_query = f"{' '.join(user_texts[-2:])} {message}".strip()
+
         if self.scenarios_collection and self.scenarios_collection.count() > 0:
             try:
                 print(f"\n🔍 [Vector DB] Querying ChromaDB (Embedder: all-MiniLM-L6-v2) | strict: {strict_character} | character: '{character or 'None (Cross-Epic)'}'")
-                query_kwargs = {"query_texts": [message], "n_results": 5}
+                query_kwargs = {"query_texts": [search_query], "n_results": 5}
                 if strict_character and character:
                     query_kwargs["where"] = {"protagonist": character}
 
@@ -151,7 +160,8 @@ RULES:
 1. Speak in the authentic 1st-person voice and persona of {active_character}.
 2. Draw 100% of your examples and lessons from your own personal life and decisions.
 3. Offer practical, ethical guidance to the user's dilemma based on your life principles.
-4. Keep your response extremely crisp, concise, and under a strict maximum limit of 150 words. Do not ramble.
+4. Maintain conversational continuity with the user, referencing prior context when appropriate.
+5. Keep your response crisp, impactful, and under 170 words.
 """
         else:
             active_character = "Epic Scholar"
@@ -179,19 +189,32 @@ RULES:
    - End with a clear, simple lesson learned from the story.
    - Give 1 or 2 small, practical steps the user can take today.
 """
-#             system_prompt = f"""
-# You are a Wise Epic Scholar and Master Guide of the Indian Epics (Ramayana & Mahabharata).
-# Your role is to offer objective, profound, and practical guidance to the user's dilemma by drawing upon the most relevant stories, choices, and philosophical principles (Dharma) from the epics.
 
-# RULES:
-# 1. Speak as a wise, neutral while maintaining a humanized tone in simple language.
-# 2. Your response should be like a story that references/explains the events in the epic, how the characters resolved their issues/faced their problems and connect to the users current situation.
-# 3. Reference the retrieved epic stories and figures objectively in 3rd person (e.g., "In the Ramayana...", "In the Mahabharata...").
-# 4. Translate ancient wisdom into crisp, actionable advice for the modern dilemma.
-# 5. In your response assure the user that they are not the first to face such  situtation (mention some popular characters from the epic who  faced similar  situations) and that many people have faced it before, then explain the situtation of the character in the epic while not assuming that the user knows the sotyr thus explaining the story to the user of what actual happened, then draw a similarity in users current situtation. Provide a lesson learned at the end. You can make up or infer details to make the story more compelling and humanizing, but the core philosophical lesson must remain true to the epic's teachings.
-# """
+        # Format conversation history if available
+        history_str = ""
+        if chat_history and len(chat_history) > 0:
+            formatted_turns = []
+            for turn in chat_history:
+                role_label = (active_character if strict_character else "Epic Guide") if turn.get("role") == "assistant" else "Seeker (User)"
+                content_val = turn.get("content", "").strip()
+                if content_val:
+                    formatted_turns.append(f"{role_label}: {content_val}")
+            history_str = "\n".join(formatted_turns)
 
-        prompt = f"""
+        if history_str:
+            prompt = f"""
+Conversation History:
+{history_str}
+
+Latest Message from Seeker: "{message}"
+
+Retrieved Epic Context:
+{context_str if context_str else "Draw upon core epic principles of Dharma, Svadharma, and your authentic lived experiences."}
+
+Provide wise, direct 1st-person guidance as {active_character} to the seeker, taking into account the ongoing conversation history.
+"""
+        else:
+            prompt = f"""
 User's Modern Dilemma: "{message}"
 
 Retrieved Epic Context:
@@ -212,6 +235,7 @@ Provide wise, actionable guidance to help the user resolve their dilemma.
         print(f"   • Mode:             {mode}")
         print(f"   • Provider:         {provider or settings.DEFAULT_LLM_PROVIDER}")
         print(f"   • Strict Character: {strict_character}")
+        print(f"   • History Turns:    {len(chat_history) if chat_history else 0}")
         print(f"   • Retrieved Chars:  {retrieved_characters if retrieved_characters else 'None'}")
         print("-" * 80)
         print(f"📜 [SYSTEM PROMPT]:\n{system_prompt.strip()}")

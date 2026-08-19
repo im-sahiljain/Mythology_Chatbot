@@ -6,6 +6,9 @@ import { SourceCard } from '../../src/components/SourceCard';
 import { useTheme } from '../../src/context/ThemeContext';
 import { FadeSlide, Pressable, TypingDots } from '../../src/components/AnimatedComponents';
 
+import { VedicDrawer } from '../../src/components/VedicDrawer';
+import { VedicTopBar } from '../../src/components/VedicTopBar';
+
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
 const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
 const bold = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
@@ -21,6 +24,7 @@ export default function ProgressiveScreen() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<ChatBubble[]>([]);
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -63,7 +67,13 @@ export default function ProgressiveScreen() {
 
   return (
     <View style={[st.container, { backgroundColor: theme.bg }]}>
-      <ScrollView style={st.list} contentContainerStyle={st.listContent}>
+      <VedicDrawer
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+      />
+      <VedicTopBar onOpenDrawer={() => setDrawerVisible(true)} />
+
+      <ScrollView style={st.list} contentContainerStyle={[st.listContent, { paddingTop: 72 }]}>
         {history.length === 0 && (
           <FadeSlide>
             <View style={[st.empty, { backgroundColor: theme.surface, borderColor: theme.surfaceBorder }]}>

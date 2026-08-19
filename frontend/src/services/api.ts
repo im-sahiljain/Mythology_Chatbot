@@ -33,6 +33,8 @@ export interface ChatResponse {
   reply: string;
   mode: string;
   character: string;
+  stage?: 'interviewing' | 'resolved' | 'follow_up';
+  searched_vector_db?: boolean;
   provider_used: string;
   sources: SourceCitation[];
 }
@@ -75,6 +77,22 @@ export interface FullChatResponse {
   provider_used?: string;
 }
 
+export interface RoundtableSpeakerReply {
+  character: string;
+  action: 'speak' | 'join' | 'depart';
+  content: string;
+  sources?: SourceCitation[];
+  stage?: 'interviewing' | 'resolved' | 'follow_up';
+}
+
+export interface RoundtableChatResponse {
+  replies: RoundtableSpeakerReply[];
+  active_council: string[];
+  muted_council?: string[];
+  stage?: 'interviewing' | 'resolved' | 'follow_up';
+  provider_used?: string;
+}
+
 export const apiService = {
   // 1. Universal Epic Scholar (POST /chat)
   async universalChat(message: string, provider?: string): Promise<ChatResponse> {
@@ -88,32 +106,81 @@ export const apiService = {
   },
 
   // 2. Character Persona Mode (POST /chat-character)
-  async characterChat(message: string, character: string, provider?: string): Promise<ChatResponse> {
+  async characterChat(
+    message: string,
+    character: string,
+    chatHistory?: any[],
+    forceResolve: boolean = false,
+    sessionId?: string,
+    provider?: string
+  ): Promise<ChatResponse> {
     const res = await fetch(`${API_BASE_URL}/chat-character`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ message, character, mode: 'guidance', provider }),
+      body: JSON.stringify({
+        message,
+        character,
+        chat_history: chatHistory || [],
+        force_resolve: forceResolve,
+        session_id: sessionId,
+        mode: 'guidance',
+        provider
+      }),
     });
-    if (!res.ok) throw new Error('Failed to fetch character chat response');
+    if (!res.ok) throw new Error('Failed to fetch character response');
     return res.json();
   },
 
-  async personaChat(message: string, character: string, provider?: string): Promise<ChatResponse> {
-    return this.characterChat(message, character, provider);
+  async personaChat(
+    message: string,
+    character: string,
+    chatHistory?: any[],
+    forceResolve: boolean = false,
+    sessionId?: string,
+    provider?: string
+  ): Promise<ChatResponse> {
+    return this.characterChat(message, character, chatHistory, forceResolve, sessionId, provider);
   },
 
-  // 3. Strategy 1: Adaptive Completeness (POST /strategy/completeness)
+  // 3. User-Controlled Multi-Legend Council (POST /chat-roundtable)
+  async roundtableChat(
+    message: string,
+    councilCharacters: string[],
+    mutedCharacters: string[] = [],
+    chatHistory?: any[],
+    forceResolve?: boolean,
+    sessionId?: string,
+    provider?: string
+  ): Promise<RoundtableChatResponse> {
+    const res = await fetch(`${API_BASE_URL}/chat-roundtable`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        message,
+        council_characters: councilCharacters,
+        muted_characters: mutedCharacters,
+        chat_history: chatHistory || [],
+        force_resolve: forceResolve,
+        session_id: sessionId,
+        provider,
+      }),
+    });
+    if (!res.ok) throw new Error('Failed to fetch roundtable response');
+    return res.json();
+  },
+
+  // 4. Strategy 1: Completeness Evaluator (POST /strategy/completeness)
   async completenessStrategy(message: string, provider?: string): Promise<CompletenessResponse> {
     const res = await fetch(`${API_BASE_URL}/strategy/completeness`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ message, provider }),
     });
-    if (!res.ok) throw new Error('Failed to fetch completeness strategy response');
+    if (!res.ok) throw new Error('Failed to fetch completeness response');
     return res.json();
   },
 
-  // 4. Strategy 2: Two-Turn Decision Tree (POST /strategy/two-turn)
+  // 5. Strategy 2: Two-Turn Decision Tree (POST /strategy/two-turn)
   async twoTurnStrategy(message: string, turn: number = 1, selected_option?: string, provider?: string): Promise<TwoTurnResponse> {
     const res = await fetch(`${API_BASE_URL}/strategy/two-turn`, {
       method: 'POST',
@@ -124,7 +191,7 @@ export const apiService = {
     return res.json();
   },
 
-  // 5. Strategy 3: Progressive Hybrid Search (POST /strategy/progressive)
+  // 6. Strategy 3: Progressive Hybrid Search (POST /strategy/progressive)
   async progressiveStrategy(message: string, chat_history: { role: string; content: string }[], provider?: string): Promise<ProgressiveResponse> {
     const res = await fetch(`${API_BASE_URL}/strategy/progressive`, {
       method: 'POST',
@@ -135,7 +202,7 @@ export const apiService = {
     return res.json();
   },
 
-  // 6. Strategy 4: Autonomous Socratic Interviewer (POST /strategy/socratic-interviewer)
+  // 7. Strategy 4: Autonomous Socratic Interviewer (POST /strategy/socratic-interviewer)
   async socraticStrategy(message: string, chat_history: { role: string; content: string }[], force_resolve?: boolean, provider?: string): Promise<SocraticResponse> {
     const res = await fetch(`${API_BASE_URL}/strategy/socratic-interviewer`, {
       method: 'POST',
@@ -146,7 +213,7 @@ export const apiService = {
     return res.json();
   },
 
-  // 7. Strategy 5: Full Chat with Continuous Follow-Up Memory (POST /strategy/full-chat)
+  // 8. Strategy 5: Full Chat with Continuous Follow-Up Memory (POST /strategy/full-chat)
   async fullChatStrategy(
     message: string,
     chat_history: { role: string; content: string; sources?: SourceCitation[] }[],
