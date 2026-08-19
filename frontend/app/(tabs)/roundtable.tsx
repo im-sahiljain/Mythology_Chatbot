@@ -184,9 +184,16 @@ export default function RoundtableScreen() {
     // Check if user is typing an '@' mention
     const lastAtIndex = text.lastIndexOf('@');
     if (lastAtIndex !== -1) {
+      // If preceding character is also '@' (e.g. '@@') or textAfterAt contains '@', hide dropup!
+      if (lastAtIndex > 0 && text[lastAtIndex - 1] === '@') {
+        setShowMentionDropup(false);
+        setMentionQuery('');
+        return;
+      }
+
       const textAfterAt = text.slice(lastAtIndex + 1);
-      // If there is no whitespace after '@', active mention dropup is open
-      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+      // If there is no whitespace or extra '@' after '@', active mention dropup is open
+      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n') && !textAfterAt.includes('@')) {
         setShowMentionDropup(true);
         setMentionQuery(textAfterAt.toLowerCase());
         return;
@@ -339,7 +346,7 @@ export default function RoundtableScreen() {
         saveRoundtableSession(history, sessionId, updated);
       }
     }
-    setInviteModalVisible(false);
+    // Keep modal open so user can invite multiple legends manually until clicking ✕
   };
 
   const handleInsertMention = (charName: string) => {
@@ -451,94 +458,26 @@ export default function RoundtableScreen() {
       <VedicTopBar onOpenDrawer={() => setDrawerVisible(true)} />
       <VedicDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
 
+      {/* Top Header Fade Overlay */}
+      <View
+        style={[
+          styles.topFadeOverlay,
+          Platform.OS === 'web'
+            ? ({
+                background: `linear-gradient(to bottom, ${theme.bg} 40%, ${theme.bg}CC 70%, ${theme.bg}00 100%)`,
+              } as any)
+            : { backgroundColor: 'transparent' },
+        ]}
+        pointerEvents="none"
+      />
+
       {/* Main Container */}
       <View style={styles.contentWrapper}>
-        {/* Top Active Council Bar */}
-        <View
-          style={[
-            styles.councilBar,
-            {
-              backgroundColor: theme.surface,
-              borderColor: theme.outlineVariant,
-              shadowColor: theme.shadow,
-            },
-          ]}
-        >
-          <View style={styles.councilBarTitleRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ fontSize: 16 }}>🪷</Text>
-              <Text style={[styles.councilBarTitle, { color: theme.primary, fontFamily: serif }]}>
-                Vedic Council
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.inviteBtn, { backgroundColor: theme.primaryContainer }]}
-              onPress={() => setInviteModalVisible(true)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.inviteBtnText, { color: theme.onPrimaryContainer, fontFamily: label }]}>
-                ➕ Invite Legend
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Council Member Chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.councilChipsScroll}
-          >
-            {activeCouncil.map((charName) => {
-              const profile = getLegendInfo(charName);
-              const isMuted = mutedCouncil.includes(charName);
-
-              return (
-                <View
-                  key={charName}
-                  style={[
-                    styles.councilChip,
-                    {
-                      backgroundColor: isMuted ? theme.surfaceContainerLowest : profile.accent,
-                      borderColor: isMuted ? theme.outlineVariant : profile.color,
-                      opacity: isMuted ? 0.6 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={{ fontSize: 15 }}>{profile.icon}</Text>
-                  <Text style={[styles.councilChipName, { color: theme.text, fontFamily: label }]}>
-                    {profile.name}
-                  </Text>
-
-                  {/* Mute Toggle */}
-                  <TouchableOpacity
-                    style={[styles.chipActionBtn, { backgroundColor: theme.surface }]}
-                    onPress={() => handleToggleMute(charName)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={{ fontSize: 11 }}>{isMuted ? '🔇' : '🔊'}</Text>
-                  </TouchableOpacity>
-
-                  {/* Dismiss Button */}
-                  {activeCouncil.length > 1 && (
-                    <TouchableOpacity
-                      style={[styles.chipActionBtn, { backgroundColor: theme.surface }]}
-                      onPress={() => handleDismissCharacter(charName)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={{ fontSize: 10, color: theme.secondary }}>✕</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
-
         {/* Chat History & Welcome Deck */}
         <ScrollView
           ref={scrollRef}
           style={styles.chatScroll}
-          contentContainerStyle={[styles.chatContent, { paddingBottom: 160 }]}
+          contentContainerStyle={[styles.chatContent, { paddingTop: 80, paddingBottom: 220 }]}
           showsVerticalScrollIndicator={false}
         >
           {history.length === 0 ? (
@@ -754,7 +693,20 @@ export default function RoundtableScreen() {
           )}
         </ScrollView>
 
-        {/* Floating Input Dock with Mention Shortcuts & Autocomplete Dropup */}
+        {/* Bottom Fade Gradient Mask */}
+        <View
+          style={[
+            styles.bottomFadeOverlay,
+            Platform.OS === 'web'
+              ? ({
+                  background: `linear-gradient(to top, ${theme.bg} 50%, ${theme.bg}CC 80%, ${theme.bg}00 100%)`,
+                } as any)
+              : { backgroundColor: 'transparent' },
+          ]}
+          pointerEvents="none"
+        />
+
+        {/* Floating Input Dock with Integrated Council Controls & Mention Autocomplete */}
         <View
           style={[
             styles.dockContainer,
@@ -765,6 +717,80 @@ export default function RoundtableScreen() {
             },
           ]}
         >
+          {/* Integrated Council Header & Active Member Chips */}
+          <View style={styles.councilBarTitleRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 16 }}>🪷</Text>
+              <Text style={[styles.councilBarTitle, { color: theme.primary, fontFamily: serif }]}>
+                Vedic Council
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.inviteBtn, { backgroundColor: theme.primaryContainer }]}
+              onPress={() => setInviteModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.inviteBtnText, { color: theme.onPrimaryContainer, fontFamily: label }]}>
+                ➕ Invite Legend
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Active Council Member Chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.councilChipsScroll}
+          >
+            {activeCouncil.map((charName) => {
+              const profile = getLegendInfo(charName);
+              const isMuted = mutedCouncil.includes(charName);
+
+              return (
+                <View
+                  key={charName}
+                  style={[
+                    styles.councilChip,
+                    {
+                      backgroundColor: isMuted ? theme.surfaceContainerLowest : profile.accent,
+                      borderColor: isMuted ? theme.outlineVariant : profile.color,
+                      opacity: isMuted ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    onPress={() => handleInsertMention(charName)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.councilChipName, { color: theme.text, fontFamily: label }]}>
+                      @{charName}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Mute Toggle */}
+                  <TouchableOpacity
+                    style={[styles.chipActionBtn, { backgroundColor: theme.surface }]}
+                    onPress={() => handleToggleMute(charName)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 11 }}>{isMuted ? '🔇' : '🔊'}</Text>
+                  </TouchableOpacity>
+
+                  {/* Dismiss Button */}
+                  {activeCouncil.length > 1 && (
+                    <TouchableOpacity
+                      style={[styles.chipActionBtn, { backgroundColor: theme.surface }]}
+                      onPress={() => handleDismissCharacter(charName)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontSize: 10, color: theme.secondary }}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </ScrollView>
+
           {/* Autocomplete Dropup when typing @ */}
           {showMentionDropup && (
             <View
@@ -866,35 +892,6 @@ export default function RoundtableScreen() {
               </Text>
             </TouchableOpacity>
           )}
-
-          {/* @Mention Shortcuts */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.mentionChipsScroll}
-          >
-            <Text style={[styles.mentionLabel, { color: theme.secondary, fontFamily: label }]}>
-              Address:
-            </Text>
-            {activeCouncil.map((name) => (
-              <TouchableOpacity
-                key={name}
-                style={[
-                  styles.mentionChip,
-                  {
-                    backgroundColor: theme.surfaceContainerLowest,
-                    borderColor: theme.outlineVariant,
-                  },
-                ]}
-                onPress={() => handleInsertMention(name)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.mentionChipText, { color: theme.text, fontFamily: label }]}>
-                  @{name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
 
           {/* Input Row */}
           <View style={styles.inputRow}>
@@ -1047,7 +1044,6 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     flex: 1,
-    paddingTop: 72,
     alignItems: 'center',
   },
   councilBar: {
@@ -1087,6 +1083,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 8,
   },
   councilChip: {
     flexDirection: 'row',
@@ -1376,6 +1373,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  topFadeOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    zIndex: 10,
+  },
+  bottomFadeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 220,
+    zIndex: 5,
+  },
   dockContainer: {
     position: 'absolute',
     bottom: 16,
@@ -1388,6 +1401,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
+    zIndex: 20,
   },
   mentionChipsScroll: {
     flexDirection: 'row',
@@ -1425,6 +1439,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     fontSize: 14,
+    ...(Platform.OS === 'web' && { outlineStyle: 'none' as any }),
   },
   sendBtn: {
     width: 40,
