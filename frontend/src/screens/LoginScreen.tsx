@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { supabase } from '../services/supabase';
 import { API_BASE_URL } from '../services/api';
 
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { Card, Pressable, FadeSlide } from '../components/AnimatedComponents';
+import { Feather } from '@expo/vector-icons';
+
+
 
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
 const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
@@ -17,9 +20,11 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(false);
   const [resending, setResending] = useState(false);
+
 
   const login = async () => {
     if (!email.includes('@')) {
@@ -121,17 +126,38 @@ export default function LoginScreen() {
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
               value={email}
               onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={theme.isDark ? '#666' : '#999'}
               autoCapitalize="none"
               keyboardType="email-address"
             />
 
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>PASSWORD</Text>
-            <TextInput
-              style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter your password"
+                placeholderTextColor={theme.isDark ? '#666' : '#999'}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword((prev) => !prev)}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={18}
+                  color={theme.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+
+
+
 
 
             <Pressable onPress={login} disabled={loading}>
@@ -213,12 +239,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 8,
   },
+  passwordWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  passwordInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingLeft: 14,
+    paddingRight: 44,
+    paddingVertical: 12,
+    fontSize: 14,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 12,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  eyeIcon: {
+    fontSize: 18,
+  },
   button: {
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 14,
   },
+
   buttonText: {
     color: '#09090B',
     fontWeight: '700',

@@ -8,26 +8,33 @@ const bold = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGro
 export const StreamingText: React.FC<{
   text: string;
   speed?: number;
+  animate?: boolean;
   style?: any;
-}> = ({ text, speed = 8, style }) => {
+}> = ({ text, speed = 8, animate = true, style }) => {
   const { theme } = useTheme();
-  const [displayed, setDisplayed] = useState('');
-  const [idx, setIdx] = useState(0);
+  const [displayed, setDisplayed] = useState(animate ? '' : text);
+  const [idx, setIdx] = useState(animate ? 0 : text.length);
 
   useEffect(() => {
+    if (!animate) {
+      setDisplayed(text);
+      setIdx(text.length);
+      return;
+    }
     setDisplayed('');
     setIdx(0);
-  }, [text]);
+  }, [text, animate]);
 
   useEffect(() => {
-    if (idx < text.length) {
+    if (animate && idx < text.length) {
       const t = setTimeout(() => {
         setDisplayed((p) => p + text[idx]);
         setIdx((p) => p + 1);
       }, speed);
       return () => clearTimeout(t);
     }
-  }, [idx, text, speed]);
+  }, [idx, text, speed, animate]);
+
 
   // Parse markdown bold (***text***, **text**, and *text*) tokens into bold Text components
   const renderFormatted = (raw: string) => {

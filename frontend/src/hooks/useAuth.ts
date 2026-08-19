@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
+import { purgeAllSessions } from '../services/chatStorage';
 
 export const useAuth = () => {
   const [user, setUser] = useState<any>(null);
@@ -8,14 +9,22 @@ export const useAuth = () => {
   useEffect(() => {
     // Get current session
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      const u = data.session?.user ?? null;
+      setUser(u);
+      if (!u) {
+        purgeAllSessions();
+      }
       setLoading(false);
     });
 
     // Listen to auth changes
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
+      (event, session) => {
+        const u = session?.user ?? null;
+        setUser(u);
+        if (event === 'SIGNED_OUT' || !u) {
+          purgeAllSessions();
+        }
       }
     );
 
