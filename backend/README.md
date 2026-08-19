@@ -1,16 +1,16 @@
 # 🐍 Python Multi-LLM RAG Backend (Chatbot Mythology)
 
-A high-performance **FastAPI Retrieval-Augmented Generation (RAG) Backend** designed to power the Chatbot Mythology mobile and web applications. It maps modern user dilemmas to analogous narrative scenarios, character decisions, and philosophical principles from the **Ramayana** and **Mahabharata**.
+A high performance **FastAPI Retrieval-Augmented Generation (RAG) Backend** designed to power the Chatbot Mythology mobile and web applications. It maps modern user dilemmas to analogous narrative scenarios, character decisions, and philosophical principles from the **Ramayana** and **Mahabharata**.
 
 ---
 
 ## 🌟 Key Features
 
-* 🦙 **Multi-LLM Provider Architecture**: Seamlessly switch between **Ollama (Local - 100% Free)**, **OpenAI (Cloud)**, and **Google Gemini (Cloud)** via configuration or per-request overrides.
-* 🗄️ **Master JSON & Vector Dual Storage**: Maintains `data/epic_scenarios.json` as a readable master source of truth on disk, while indexing dense vector embeddings in **ChromaDB** for sub-100ms vector retrieval.
-* 🧘 **Guidance Mode**: Solves modern real-world dilemmas (*"family business conflict"*, *"whistleblowing"*) by retrieving character solutions (Rama, Krishna, Arjuna, Vibhishana).
-* 📖 **Knowledge Mode**: Direct factual Q&A on ancient scriptures with shloka citations.
-* 📱 **Expo / React Native Compatible**: 100% compatible with the React Native mobile frontend (`POST /chat`).
+- 🦙 **Multi-LLM Provider Architecture**: Seamlessly switch between **Ollama (Local - 100% Free)**, **OpenAI (Cloud)**, and **Google Gemini (Cloud)** via configuration or per-request overrides.
+- 🗄️ **Master JSON & Vector Dual Storage**: Maintains `data/epic_scenarios.json` as a readable master source of truth on disk, while indexing dense vector embeddings in **ChromaDB** for sub-100ms vector retrieval.
+- 🧘 **Guidance Mode**: Solves modern real-world dilemmas (_"family business conflict"_, _"whistleblowing"_) by retrieving character solutions (Rama, Krishna, Arjuna, Vibhishana).
+- 📖 **Knowledge Mode**: Direct factual Q&A on ancient scriptures with shloka citations.
+- 📱 **Expo / React Native Compatible**: 100% compatible with the React Native mobile frontend (`POST /chat`).
 
 ---
 
@@ -44,8 +44,9 @@ A high-performance **FastAPI Retrieval-Augmented Generation (RAG) Backend** desi
 ## 🚀 Quick Start Guide
 
 ### 1. Prerequisites
-* **Python**: 3.10+
-* **Ollama (Optional for Local LLM)**: Running on `http://localhost:11434` with model `nomic-embed-text` installed.
+
+- **Python**: 3.10+
+- **Ollama (Optional for Local LLM)**: Running on `http://localhost:11434` with model `nomic-embed-text` installed.
 
 ### 2. Environment Setup
 
@@ -67,8 +68,8 @@ source venv/bin/activate
 uvicorn app.main:app --reload --port 8000
 ```
 
-* 🌐 **Interactive Swagger API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
-* 🩺 **Health Check Endpoint**: [http://localhost:8000/health](http://localhost:8000/health)
+- 🌐 **Interactive Swagger API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- 🩺 **Health Check Endpoint**: [http://localhost:8000/health](http://localhost:8000/health)
 
 ---
 
@@ -77,6 +78,7 @@ uvicorn app.main:app --reload --port 8000
 ### `POST /chat`
 
 #### Request Payload:
+
 ```json
 {
   "message": "My business partner is misusing company funds, what should I do?",
@@ -87,6 +89,7 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 #### Response Payload:
+
 ```json
 {
   "reply": "Wisdom mapped from Krishna's teachings on Dharma and duty...",
