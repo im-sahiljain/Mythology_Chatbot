@@ -10,9 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   useWindowDimensions,
-  ActivityIndicator,
 } from 'react-native';
-
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { apiService, SourceCitation, FullChatResponse } from '../../src/services/api';
 import { StreamingText } from '../../src/components/StreamingText';
@@ -34,12 +32,9 @@ import {
   setActiveSessionId,
   createNewSession,
   subscribeToSessions,
-  syncUserSessionsFromDb,
-  fetchSessionDetailFromDb,
   ChatMessage,
   ChatSession,
 } from '../../src/services/chatStorage';
-
 
 export const TOPIC_MATRIX = [
   {
@@ -89,24 +84,18 @@ export default function FullChatScreen() {
   const [loading, setLoading] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [showMatrix, setShowMatrix] = useState(true);
-  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
-  const [isSessionLoading, setIsSessionLoading] = useState<boolean>(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
   const isNarrow = screenWidth < 600;
 
   useEffect(() => {
-    const syncState = async () => {
-      let loaded = loadAllSessions();
-      if (loaded.length === 0) {
-        loaded = await syncUserSessionsFromDb();
-      }
+    const syncState = () => {
+      const loaded = loadAllSessions();
       setSessions(loaded);
 
       if (!params.id) {
         // Navigated directly to /full-chat -> Fresh consultation page without query param!
-        setIsSessionLoading(false);
         setCurrentSessionId('');
         setHistory([]);
         setCurrentStage(null);
@@ -116,45 +105,34 @@ export default function FullChatScreen() {
       }
 
       const active = loaded.find((s) => s.id === params.id);
-      if (active && active.history && active.history.length > 0) {
-        setIsSessionLoading(false);
+      if (active) {
         setCurrentSessionId(active.id);
         setActiveSessionId(active.id);
-        setHistory(active.history);
+        setHistory(active.history || []);
         setCurrentStage(active.stage || null);
-        setShowMatrix(false);
-        return;
-      }
-
-      setIsSessionLoading(true);
-      setCurrentSessionId(params.id as string);
-      setActiveSessionId(params.id as string);
-      const fetchedMsgs = await fetchSessionDetailFromDb(params.id as string);
-      setIsSessionLoading(false);
-      if (fetchedMsgs.length > 0) {
-        setHistory(fetchedMsgs);
-        setShowMatrix(false);
+        setShowMatrix(!active.history || active.history.length === 0);
       } else {
+        setCurrentSessionId('');
         setHistory([]);
+        setCurrentStage(null);
+        setInput('');
         setShowMatrix(true);
       }
     };
-
 
     syncState();
 
     const unsubscribe = subscribeToSessions((allSessions, activeId) => {
       setSessions(allSessions);
       if (!params.id) return;
-      const target = allSessions.find((s) => s.id === params.id);
-      if (target && target.history && target.history.length > 0) {
+      const target = allSessions.find((s) => s.id === (params.id || activeId));
+      if (target) {
         setCurrentSessionId(target.id);
-        setHistory(target.history);
+        setHistory(target.history || []);
         setCurrentStage(target.stage || null);
-        setShowMatrix(false);
+        setShowMatrix(!target.history || target.history.length === 0);
       }
     });
-
 
     return unsubscribe;
   }, [params.id]);
@@ -268,13 +246,10 @@ export default function FullChatScreen() {
         activeId
       );
 
-      const asstId = (Date.now() + 1).toString();
-      setNewlyAddedId(asstId);
-
       const finalHistory: ChatMessage[] = [
         ...updatedHistory,
         {
-          id: asstId,
+          id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: res.reply,
           stage: res.stage,
@@ -284,7 +259,6 @@ export default function FullChatScreen() {
       ];
 
       updateSessionState(finalHistory, res.stage, activeId);
-
     } catch (err: any) {
       const isQuotaError = err?.quotaExceeded || err?.status === 403 || (err?.message && err.message.toLowerCase().includes('guest limit'));
       const errorContent = isQuotaError
@@ -336,25 +310,14 @@ export default function FullChatScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Center Circular Loader during session switch */}
-        {isSessionLoading ? (
-          <View style={styles.centerLoaderContainer}>
-            <ActivityIndicator size="large" color={theme.primaryContainer} />
-            <Text style={[styles.centerLoaderText, { color: theme.textSecondary, fontFamily: body }]}>
-              Loading consultation...
-            </Text>
-          </View>
-        ) : (
+        {/* Hero Section & Core Contrast (Shown only before chat starts) */}
+        {history.length === 0 && (
           <>
-            {/* Hero Section & Core Contrast (Shown only before chat starts) */}
-            {history.length === 0 && (
-              <>
-                {/* Section 1: Hero Header */}
-                <View style={styles.heroSection}>
-                  <Text style={[styles.displayTitle, { color: theme.primary, fontFamily: serif }]}>
-                    Epic Scholar Hub
-                  </Text>
-
+            {/* Section 1: Hero Header */}
+            <View style={styles.heroSection}>
+              <Text style={[styles.displayTitle, { color: theme.primary, fontFamily: serif }]}>
+                Epic Scholar Hub
+              </Text>
               <Text style={[styles.displaySubtitle, { color: theme.secondary, fontFamily: body }]}>
                 Traverse the dual pillars of ancient wisdom. Delve into profound philosophical inquiries
                 across the grand epics.
@@ -517,33 +480,25 @@ export default function FullChatScreen() {
 
                       <StreamingText
                         text={msg.content}
-                        animate={msg.id === newlyAddedId}
                         style={[
                           styles.scholarText,
                           { color: theme.text, fontFamily: serif },
                         ]}
                       />
 
-
                       {/* Source Citation Cards */}
                       {msg.sources && msg.sources.length > 0 && (
                         <SourceCard sources={msg.sources} />
                       )}
 
-                      {/* Socratic Force Resolve CTA: Shown strictly on the latest active interviewing bubble before final counsel */}
-                      {msg.role === 'assistant' &&
-                        msg.stage === 'interviewing' &&
-                        currentStage === 'interviewing' &&
-                        index === history.length - 1 &&
-                        (!msg.sources || msg.sources.length === 0) &&
-                        !msg.content.includes('Final Epic Counsel') && (
+                      {/* Socratic Force Resolve CTA if in Interviewing stage */}
+                      {msg.stage === 'interviewing' && (
                         <TouchableOpacity
                           style={[
                             styles.forceResolveBtn,
                             { backgroundColor: theme.bgSecondary, borderColor: theme.primaryContainer },
                           ]}
                           onPress={() => handleSend(undefined, true)}
-                          activeOpacity={0.8}
                         >
                           <Text
                             style={[
@@ -555,7 +510,6 @@ export default function FullChatScreen() {
                           </Text>
                         </TouchableOpacity>
                       )}
-
                     </View>
                   </View>
                 ) : (
@@ -606,11 +560,8 @@ export default function FullChatScreen() {
             )}
           </View>
         )}
-          </>
-        )}
 
         <View style={{ height: 110 }} />
-
       </ScrollView>
 
       {/* Floating Bottom Input Pill with Fade */}
@@ -1012,20 +963,16 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   forceResolveBtn: {
-    marginTop: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    alignSelf: 'flex-start',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   forceResolveText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
   },
-
   userBubble: {
     alignSelf: 'flex-end',
     maxWidth: '85%',
@@ -1152,16 +1099,4 @@ const styles = StyleSheet.create({
   sessionMeta: {
     fontSize: 11,
   },
-  centerLoaderContainer: {
-    paddingVertical: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-  },
-  centerLoaderText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    letterSpacing: 0.2,
-  },
 });
-

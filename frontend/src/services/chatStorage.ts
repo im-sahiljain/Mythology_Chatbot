@@ -1,5 +1,4 @@
-import { apiService, SourceCitation } from './api';
-
+import { SourceCitation } from './api';
 
 export const SESSIONS_STORAGE_KEY = 'vedic_chat_all_sessions_v3';
 export const ACTIVE_SESSION_KEY = 'vedic_chat_active_session_id_v3';
@@ -74,22 +73,13 @@ export function getModeBadgeInfo(mode?: ChatMode, character?: string) {
     };
   }
 
-  if (mode === 'persona') {
+  if (mode === 'persona' || character) {
     const charName = character || 'Persona';
     const icon = CHARACTER_ICONS[charName.toLowerCase()] || '👑';
     return {
       icon,
       label: charName,
       route: '/(tabs)/persona',
-      colorKey: 'primary',
-    };
-  }
-
-  if (mode === 'full-chat' || !mode) {
-    return {
-      icon: '🏛️',
-      label: 'Universal Epic Scholar',
-      route: '/(tabs)/full-chat',
       colorKey: 'primary',
     };
   }
@@ -105,11 +95,11 @@ export function getModeBadgeInfo(mode?: ChatMode, character?: string) {
       return { icon: '💬', label: 'Dialogue', route: '/(tabs)/progressive', colorKey: 'accent' };
     case 'counselor':
       return { icon: '🧘', label: 'Counselor', route: '/(tabs)/counselor', colorKey: 'accent' };
+    case 'full-chat':
     default:
-      return { icon: '🏛️', label: 'Universal Epic Scholar', route: '/(tabs)/full-chat', colorKey: 'primary' };
+      return { icon: '🏛️', label: 'Scholar Hub', route: '/(tabs)/full-chat', colorKey: 'primary' };
   }
 }
-
 
 // Purge all legacy chat transcript data from localStorage on load
 if (typeof window !== 'undefined' && window.localStorage) {
@@ -143,87 +133,6 @@ export function setActiveSessionId(id: string) {
   inMemoryActiveId = id;
   notifyListeners(inMemorySessions, inMemoryActiveId);
 }
-
-export function purgeAllSessions() {
-  inMemorySessions = [];
-  inMemoryActiveId = null;
-  notifyListeners([], null);
-}
-
-export async function syncUserSessionsFromDb(): Promise<ChatSession[]> {
-  try {
-    const dbSessions = await apiService.listSessionsFromDb();
-    if (Array.isArray(dbSessions) && dbSessions.length > 0) {
-      const formatted: ChatSession[] = dbSessions.map((s: any) => {
-        const existing = inMemorySessions.find((ex) => ex.id === s.id);
-        return {
-          id: s.id,
-          title: s.title || 'Untitled Consultation',
-          mode: s.mode || 'full-chat',
-          character: s.character,
-          council: s.council,
-          updatedAt: s.updatedAt || Date.now(),
-          stage: s.stage || null,
-          history: (existing && existing.history && existing.history.length > 0) ? existing.history : (s.history || []),
-        };
-      });
-      inMemorySessions = formatted;
-      if (!inMemoryActiveId && formatted.length > 0) {
-        inMemoryActiveId = formatted[0].id;
-      }
-      notifyListeners(inMemorySessions, inMemoryActiveId);
-      return formatted;
-    }
-  } catch (err) {
-    console.warn('Failed to sync sessions from DB:', err);
-  }
-  return inMemorySessions;
-}
-
-export async function fetchSessionDetailFromDb(sessionId: string): Promise<ChatMessage[]> {
-  try {
-    const detail = await apiService.loadSessionFromDb(sessionId);
-    if (detail && Array.isArray(detail.history)) {
-      const msgs: ChatMessage[] = detail.history.map((m: any) => ({
-        id: m.id || Date.now().toString(),
-        role: m.role,
-        content: m.content,
-        character: m.character,
-        stage: m.stage,
-        sources: m.sources || [],
-        searched_vector_db: m.searched_vector_db,
-      }));
-      let sess = inMemorySessions.find((s) => s.id === sessionId);
-      if (sess) {
-        sess.history = msgs;
-        if (detail.stage) sess.stage = detail.stage;
-        if (detail.title) sess.title = detail.title;
-        if (detail.character) sess.character = detail.character;
-        if (detail.council) sess.council = detail.council;
-      } else {
-        sess = {
-          id: detail.id || sessionId,
-          title: detail.title || 'Consultation',
-          mode: detail.mode || 'full-chat',
-          character: detail.character,
-          council: detail.council,
-          updatedAt: Date.now(),
-          stage: detail.stage || null,
-          history: msgs,
-        };
-        inMemorySessions = [sess, ...inMemorySessions];
-      }
-      notifyListeners(inMemorySessions, sessionId);
-      return msgs;
-    }
-  } catch (err) {
-    console.warn('Failed to load session detail from DB:', err);
-  }
-  return [];
-}
-
-
-
 
 export function createNewSession(
   title: string = 'New Consultation',

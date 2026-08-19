@@ -7,17 +7,13 @@ import {
   ActivityIndicator,
   Platform,
   TextInput,
-  TouchableOpacity,
   Pressable as RNPressable,
 } from 'react-native';
-
 import { useRouter } from 'expo-router';
 import { useTheme } from '../src/context/ThemeContext';
 import { apiService, API_BASE_URL, AdminOverview, TabUsageStat, LatencyAnalytics, CharacterStat, AdminUserItem, UserChatSessionDetail } from '../src/services/api';
-import { Feather } from '@expo/vector-icons';
 
 import { supabase } from '../src/services/supabase';
-
 
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
 const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
@@ -33,10 +29,8 @@ export default function AdminDashboardScreen() {
   // Admin Portal Login States
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminLoginLoading, setAdminLoginLoading] = useState(false);
   const [adminLoginError, setAdminLoginError] = useState<string | null>(null);
-
 
   // Analytics Data States
   const [overview, setOverview] = useState<AdminOverview | null>(null);
@@ -183,37 +177,17 @@ export default function AdminDashboardScreen() {
             style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.outlineVariant, fontFamily: body }]}
             value={adminEmail}
             onChangeText={setAdminEmail}
-            placeholder="admin@mythology.ai"
-            placeholderTextColor={theme.isDark ? '#666' : '#999'}
             autoCapitalize="none"
             keyboardType="email-address"
           />
 
           <Text style={[styles.inputLabel, { color: theme.textSecondary, fontFamily: bold, marginTop: 12 }]}>PASSWORD</Text>
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              style={[styles.passwordInput, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.outlineVariant, fontFamily: body }]}
-              value={adminPassword}
-              onChangeText={setAdminPassword}
-              secureTextEntry={!showAdminPassword}
-              placeholder="Enter admin access key"
-              placeholderTextColor={theme.isDark ? '#666' : '#999'}
-            />
-            <TouchableOpacity
-              style={styles.eyeBtn}
-              onPress={() => setShowAdminPassword((prev) => !prev)}
-              activeOpacity={0.6}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Feather
-                name={showAdminPassword ? 'eye-off' : 'eye'}
-                size={18}
-                color={theme.textSecondary}
-              />
-            </TouchableOpacity>
-          </View>
-
-
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.outlineVariant, fontFamily: body }]}
+            value={adminPassword}
+            onChangeText={setAdminPassword}
+            secureTextEntry
+          />
 
 
           <RNPressable
@@ -638,28 +612,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
   },
-  passwordWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  passwordInput: {
-    width: '100%',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingLeft: 14,
-    paddingRight: 44,
-    paddingVertical: 12,
-    fontSize: 14,
-  },
-  eyeBtn: {
-    position: 'absolute',
-    right: 12,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
   errorBanner: {
     borderWidth: 1,
     borderRadius: 8,
@@ -667,5 +619,4 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 });
-
 

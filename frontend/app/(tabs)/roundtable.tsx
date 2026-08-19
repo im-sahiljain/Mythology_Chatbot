@@ -21,11 +21,9 @@ import {
   createNewSession,
   setActiveSessionId,
   subscribeToSessions,
-  fetchSessionDetailFromDb,
   ChatMessage,
   ChatSession,
 } from '../../src/services/chatStorage';
-
 import { SourceCard } from '../../src/components/SourceCard';
 import { VedicTopBar } from '../../src/components/VedicTopBar';
 import { VedicDrawer } from '../../src/components/VedicDrawer';
@@ -175,7 +173,6 @@ export default function RoundtableScreen() {
   const [showMentionDropup, setShowMentionDropup] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSessionLoading, setIsSessionLoading] = useState<boolean>(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
@@ -234,10 +231,11 @@ export default function RoundtableScreen() {
 
   // Session Synchronization
   useEffect(() => {
-    const syncState = async () => {
+    const syncState = () => {
+      const loaded = loadAllSessions();
+
       if (!params.id) {
         // Fresh /roundtable page
-        setIsSessionLoading(false);
         setSessionId('');
         setHistory([]);
         setInput('');
@@ -246,56 +244,39 @@ export default function RoundtableScreen() {
         return;
       }
 
-      const loaded = loadAllSessions();
       const active = loaded.find((s) => s.id === params.id && s.mode === 'roundtable');
-
-      if (active && active.history && active.history.length > 0) {
-        setIsSessionLoading(false);
+      if (active) {
         setSessionId(active.id);
         setActiveSessionId(active.id);
-        setHistory(active.history);
+        setHistory(active.history || []);
         if (active.council && active.council.length > 0) {
           setActiveCouncil(active.council);
         }
-        return;
-      }
-
-      setIsSessionLoading(true);
-      setSessionId(params.id);
-      setActiveSessionId(params.id);
-      const dbMsgs = await fetchSessionDetailFromDb(params.id);
-      setIsSessionLoading(false);
-
-      if (dbMsgs && dbMsgs.length > 0) {
-        setHistory(dbMsgs);
-        if (active && active.council && active.council.length > 0) {
-          setActiveCouncil(active.council);
-        }
       } else {
+        setSessionId('');
         setHistory([]);
+        setInput('');
+        setActiveCouncil(['Sita', 'Krishna']);
+        setMutedCouncil([]);
       }
     };
-
 
     syncState();
 
     const unsubscribe = subscribeToSessions((allSessions, activeId) => {
       if (!params.id) return;
       const target = allSessions.find((s) => s.id === params.id);
-      if (target && target.history && target.history.length > 0) {
+      if (target) {
         setSessionId(target.id);
-        setHistory(target.history);
+        setHistory(target.history || []);
         if (target.council && target.council.length > 0) {
           setActiveCouncil(target.council);
         }
       }
     });
 
-
-
     return unsubscribe;
   }, [params.id]);
-
 
   const saveRoundtableSession = (
     newHistory: ChatMessage[],
@@ -499,17 +480,9 @@ export default function RoundtableScreen() {
           contentContainerStyle={[styles.chatContent, { paddingTop: 80, paddingBottom: 220 }]}
           showsVerticalScrollIndicator={false}
         >
-          {isSessionLoading ? (
-            <View style={styles.centerLoaderContainer}>
-              <ActivityIndicator size="large" color={theme.primaryContainer} />
-              <Text style={[styles.centerLoaderText, { color: theme.secondary, fontFamily: body }]}>
-                Loading Council Dialogue...
-              </Text>
-            </View>
-          ) : history.length === 0 ? (
+          {history.length === 0 ? (
             <FadeSlide delay={50} distance={15}>
               <View style={styles.welcomeContainer}>
-
                 <View style={styles.heroBadge}>
                   <Text style={[styles.heroBadgeText, { color: theme.primary, fontFamily: label }]}>
                     MULTI-LEGEND SABHA
@@ -1552,16 +1525,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  centerLoaderContainer: {
-    paddingVertical: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-  },
-  centerLoaderText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    letterSpacing: 0.2,
-  },
 });
-

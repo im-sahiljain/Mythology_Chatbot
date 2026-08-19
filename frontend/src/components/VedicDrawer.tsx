@@ -21,15 +21,10 @@ import {
   deleteSession,
   subscribeToSessions,
   getModeBadgeInfo,
-  purgeAllSessions,
-  syncUserSessionsFromDb,
   ChatSession,
 } from '../services/chatStorage';
-
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
-import { apiService } from '../services/api';
-
 
 
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
@@ -104,9 +99,6 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
     if (visible) {
       setSessions(loadAllSessions());
       setActiveId(getActiveSessionId());
-      if (user) {
-        syncUserSessionsFromDb();
-      }
     }
 
     const unsubscribe = subscribeToSessions((updated, currentId) => {
@@ -115,7 +107,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
     });
 
     return unsubscribe;
-  }, [visible, user]);
+  }, [visible]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -171,11 +163,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
       pathname: targetRoute as any,
       params: { id: sessionId },
     });
-    try {
-      router.setParams({ id: sessionId });
-    } catch (_) {}
   };
-
 
   const handleNewChat = () => {
     setNewChatPickerVisible((prev) => !prev);
@@ -353,9 +341,10 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
 
         {/* 2. MY CHATS */}
         {(() => {
-          const displaySessions = sessions;
+          const displaySessions = sessions.filter(
+            (s) => (s.history && s.history.length > 0) || s.id === activeSessionId
+          );
           return (
-
             <>
               <View style={styles.sectionHeaderRow}>
                 <Text style={[styles.sectionHeader, { color: theme.primary, fontFamily: label }]}>
@@ -489,13 +478,10 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
           <TouchableOpacity
             style={[styles.menuItemSimple, { marginTop: 4 }]}
             onPress={async () => {
-              try { await apiService.logout(); } catch (_) {}
               await supabase.auth.signOut();
-              purgeAllSessions();
               onClose();
               router.replace('/login');
             }}
-
             activeOpacity={0.7}
           >
             <Text style={styles.itemIcon}>🚪</Text>
