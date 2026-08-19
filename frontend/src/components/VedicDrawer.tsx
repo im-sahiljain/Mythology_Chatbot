@@ -23,6 +23,9 @@ import {
   getModeBadgeInfo,
   ChatSession,
 } from '../services/chatStorage';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../services/supabase';
+
 
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
 const label = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
@@ -78,8 +81,10 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   onSelectAction,
 }) => {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveId] = useState<string | null>(null);
@@ -226,23 +231,24 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
         <View style={styles.profileRow}>
           <View style={[styles.avatarBadge, { backgroundColor: theme.primaryContainer }]}>
             <Text style={[styles.avatarText, { color: theme.onPrimaryContainer, fontFamily: serif }]}>
-              S
+              {user ? (user.user_metadata?.full_name?.[0] || user.email?.[0] || 'S').toUpperCase() : 'G'}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.seekerTitle, { color: theme.primary, fontFamily: serif }]}>
-              Seeker of Truth
+            <Text style={[styles.seekerTitle, { color: theme.primary, fontFamily: serif }]} numberOfLines={1}>
+              {user ? (user.user_metadata?.full_name || user.email?.split('@')[0]) : 'Guest Seeker'}
             </Text>
-            <Text style={[styles.seekerSubtitle, { color: theme.secondary, fontFamily: body }]}>
-              Path of Karma
+            <Text style={[styles.seekerSubtitle, { color: theme.secondary, fontFamily: body }]} numberOfLines={1}>
+              {user ? user.email : 'Free Explorer'}
             </Text>
-            <View style={[styles.levelBadge, { backgroundColor: theme.secondaryContainer }]}>
-              <Text style={[styles.levelText, { color: theme.onSecondaryContainer, fontFamily: label }]}>
-                VEDIC LEVEL 4
+            <View style={[styles.levelBadge, { backgroundColor: user ? 'rgba(16, 185, 129, 0.15)' : theme.secondaryContainer }]}>
+              <Text style={[styles.levelText, { color: user ? '#10B981' : theme.onSecondaryContainer, fontFamily: label }]}>
+                {user ? '✨ UNLIMITED TURNS' : '⚡ GUEST (3 TURNS)'}
               </Text>
             </View>
           </View>
         </View>
+
 
         <TouchableOpacity
           style={[styles.closeBtn, { borderColor: theme.outlineVariant }]}
@@ -459,13 +465,47 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
           PREFERENCES & SYSTEM
         </Text>
 
+
+
         <TouchableOpacity style={styles.menuItemSimple} onPress={toggleTheme} activeOpacity={0.7}>
           <Text style={styles.itemIcon}>{theme.isDark ? '☀️' : '🌙'}</Text>
           <Text style={[styles.itemTitleSimple, { color: theme.text, fontFamily: body }]}>
             {theme.isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
           </Text>
         </TouchableOpacity>
+
+        {user ? (
+          <TouchableOpacity
+            style={[styles.menuItemSimple, { marginTop: 4 }]}
+            onPress={async () => {
+              await supabase.auth.signOut();
+              onClose();
+              router.replace('/login');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.itemIcon}>🚪</Text>
+            <Text style={[styles.itemTitleSimple, { color: '#EF4444', fontFamily: body }]}>
+              Sign Out
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.menuItemSimple, { backgroundColor: 'rgba(217, 119, 6, 0.12)', marginTop: 6 }]}
+            onPress={() => {
+              onClose();
+              router.push('/login');
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.itemIcon}>🔑</Text>
+            <Text style={[styles.itemTitleSimple, { color: theme.accent, fontFamily: label }]}>
+              Sign In with Email
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
+
 
       {/* Drawer Footer */}
       <View style={[styles.footer, { borderTopColor: theme.outlineVariant }]}>

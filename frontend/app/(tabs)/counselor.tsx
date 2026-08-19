@@ -52,14 +52,20 @@ export default function CounselorScreen() {
         },
       ]);
     } catch (err: any) {
+      const isQuota = err?.quotaExceeded || err?.status === 403 || (err?.message && err.message.toLowerCase().includes('guest limit'));
+      const errorContent = isQuota
+        ? '⚡ **Free Guest Limit Reached (3 Messages)**\n\nYou have used all 3 free guest turns. Please sign in or create a free account to unlock unlimited Vedic consultations!'
+        : (err?.message || 'Unable to connect to the counselor engine. Please ensure backend is running.');
+
       setHistory([
         ...newHistory,
         {
           role: 'assistant',
-          content: 'Unable to connect to the counselor engine. Please ensure backend is running.',
+          content: errorContent,
         },
       ]);
     } finally {
+
       setLoading(false);
     }
   };

@@ -20,8 +20,10 @@ chroma_db/
 **/chroma_db/
 chromadb_dump.json
 *.sqlite3
+*.db
 **/chroma/
 chroma/
+
 
 # Node & Dependencies
 node_modules/

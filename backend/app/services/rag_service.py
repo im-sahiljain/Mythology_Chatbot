@@ -164,7 +164,8 @@ RULES:
 5. Keep your response crisp, impactful, and under 170 words.
 """
         else:
-            active_character = "Epic Scholar"
+            active_character = "Universal Epic Scholar"
+
             system_prompt = f"""
             You are a Wise Epic Guide of the Indian Epics (Ramayana & Mahabharata).
 Your role is to offer warm, wise, and practical help for the user's dilemma by sharing relevant stories and lessons from the epics.

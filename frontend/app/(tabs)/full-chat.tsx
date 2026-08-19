@@ -259,18 +259,24 @@ export default function FullChatScreen() {
       ];
 
       updateSessionState(finalHistory, res.stage, activeId);
-    } catch {
+    } catch (err: any) {
+      const isQuotaError = err?.quotaExceeded || err?.status === 403 || (err?.message && err.message.toLowerCase().includes('guest limit'));
+      const errorContent = isQuotaError
+        ? '⚡ **Free Guest Limit Reached (3 Messages)**\n\nYou have used all 3 free guest turns. Please sign in or create a free account to unlock unlimited Vedic consultations!'
+        : (err?.message || 'Unable to connect to Vedic counseling backend. Please verify your connection.');
+
       const fallback: ChatMessage[] = [
         ...updatedHistory,
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: 'Unable to connect to Vedic counseling backend. Please verify your connection.',
+          content: errorContent,
           stage: 'resolved',
         },
       ];
       updateSessionState(fallback, 'resolved', activeId);
     } finally {
+
       setLoading(false);
       setTimeout(() => {
         scrollRef.current?.scrollToEnd({ animated: true });
