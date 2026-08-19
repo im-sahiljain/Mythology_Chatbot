@@ -24,8 +24,12 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleStartMode = (mode: 'full-chat' | 'persona' | 'roundtable') => {
+  const handleStartMode = (mode: 'full-chat' | 'persona' | 'roundtable' | 'scholar') => {
     setModalVisible(false);
+    if (mode === 'scholar') {
+      router.push('/(tabs)');
+      return;
+    }
     if (mode === 'persona') {
       router.push('/(tabs)/persona');
       return;

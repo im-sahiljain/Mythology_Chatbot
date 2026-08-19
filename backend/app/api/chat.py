@@ -5,17 +5,91 @@ from app.db.session import get_db
 from app.core.security import get_current_user_optional, AuthContext
 from app.core.telemetry import record_api_telemetry
 from app.models.schemas import (
+    GeneralChatRequest,
     CharacterChatRequest,
     ChatResponse,
     RoundtableChatRequest,
     RoundtableChatResponse,
 )
+from app.services.rag_service import RAGService
 from app.services.strategy_service import StrategyService
 from app.api.sessions import auto_save_chat_turn
 
 
 router = APIRouter()
+rag_service = RAGService()
 strategy_service = StrategyService()
+
+@router.post("/chat", response_model=ChatResponse, status_code=status.HTTP_200_OK)
+async def chat_endpoint(
+    request: GeneralChatRequest,
+    auth: AuthContext = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+) -> ChatResponse:
+    """
+    General Chat Endpoint (POST /chat).
+    Searches across all epic stories in Ramayana & Mahabharata without character bias,
+    returning guidance from an Epic Scholar.
+    """
+    if not request.message or not request.message.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message field cannot be empty."
+        )
+
+    start_time = time.time()
+    try:
+        response_data = rag_service.query(
+            message=request.message,
+            mode=request.mode or "guidance",
+            provider=request.provider
+        )
+        latency_ms = (time.time() - start_time) * 1000
+
+        # Record Telemetry in PostgreSQL
+        record_api_telemetry(
+            db=db,
+            endpoint="/chat",
+            tab_mode="scholar",
+            latency_ms=latency_ms,
+            status_code=200,
+            user_id=auth.user_id,
+            guest_id=auth.guest_id,
+            provider_used=response_data.get("provider_used", "gemini"),
+            prompt_text=request.message,
+            completion_text=response_data.get("reply", "")
+        )
+
+        auto_save_chat_turn(
+            db=db,
+            auth=auth,
+            session_id=getattr(request, 'session_id', None),
+            mode="guidance",
+            user_message=request.message,
+            assistant_reply=response_data.get("reply", ""),
+            character="Universal Epic Scholar",
+            sources=response_data.get("sources", [])
+        )
+
+        return ChatResponse(**response_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        latency_ms = (time.time() - start_time) * 1000
+        record_api_telemetry(
+            db=db,
+            endpoint="/chat",
+            tab_mode="scholar",
+            latency_ms=latency_ms,
+            status_code=500,
+            user_id=auth.user_id,
+            guest_id=auth.guest_id,
+            prompt_text=request.message
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing chat request: {str(e)}"
+        )
 
 @router.post("/chat-character", response_model=ChatResponse, status_code=status.HTTP_200_OK)
 async def chat_character_endpoint(
@@ -153,6 +227,7 @@ async def chat_roundtable_endpoint(
             stage=response_data.get("stage"),
             sources=response_data.get("sources", [])
         )
+
 
         return RoundtableChatResponse(**response_data)
     except HTTPException:
