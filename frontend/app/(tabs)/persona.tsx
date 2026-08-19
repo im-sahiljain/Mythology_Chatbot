@@ -722,14 +722,6 @@ export default function PersonaScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.micBtn}
-            onPress={() => sendQuery('Seek wisdom on overcoming fear and duty')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.micIcon, { color: theme.secondary }]}>🎙️</Text>
-          </TouchableOpacity>
-
           <TextInput
             style={[
               styles.textInput,
@@ -1140,6 +1132,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingHorizontal: 8,
     paddingVertical: Platform.OS === 'ios' ? 8 : 6,
+    ...(Platform.OS === 'web' && { outlineStyle: 'none' as any }),
   },
   sendCircleBtn: {
     width: 38,

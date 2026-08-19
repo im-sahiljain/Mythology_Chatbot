@@ -579,14 +579,6 @@ export default function FullChatScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.micBtn}
-            onPress={() => handleSend('Tell me how Dharma is defined in both epics.')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.micIcon, { color: theme.secondary }]}>🎙️</Text>
-          </TouchableOpacity>
-
           <TextInput
             style={[
               styles.textInput,
@@ -1039,6 +1031,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingHorizontal: 8,
     paddingVertical: Platform.OS === 'ios' ? 8 : 6,
+    ...(Platform.OS === 'web' && { outlineStyle: 'none' as any }),
   },
   sendCircleBtn: {
     width: 38,
