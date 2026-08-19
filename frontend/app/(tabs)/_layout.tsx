@@ -33,9 +33,12 @@ export default function TabLayout() {
           },
         }}
       >
-        <Tabs.Screen name="index" options={{ title: "Vedic Wisdom" }} />
-        <Tabs.Screen name="full-chat" options={{ title: "Full Chat" }} />
+        <Tabs.Screen name="index" options={{ title: "Scholar" }} />
         <Tabs.Screen name="persona" options={{ title: "Persona" }} />
+        <Tabs.Screen name="adaptive" options={{ title: "Adaptive" }} />
+        <Tabs.Screen name="two-turn" options={{ title: "2-Turn" }} />
+        <Tabs.Screen name="progressive" options={{ title: "Dialogue" }} />
+        <Tabs.Screen name="full-chat" options={{ title: "Full Chat" }} />
         <Tabs.Screen name="roundtable" options={{ title: "Roundtable" }} />
       </Tabs>
     </View>
