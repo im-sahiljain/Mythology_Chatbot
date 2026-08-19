@@ -1,10 +1,12 @@
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-class GeneralChatRequest(BaseModel):
-    message: str = Field(..., description="User's dilemma, query, or prompt text", json_schema_extra={"example": "I feel conflicted because my company favors the founder's son over my most hardworking junior. What should I do?"})
-    mode: Optional[str] = Field(default="guidance", description="Mode: 'guidance' (Scenario Match) or 'knowledge' (Raw Verses)")
-    provider: Optional[str] = Field(default=None, description="Optional LLM provider override: 'ollama', 'openai', or 'gemini'")
+class SourceCitation(BaseModel):
+    scenario_title: Optional[str] = None
+    epic: Optional[str] = None
+    character: Optional[str] = None
+    verse_citations: List[str] = []
+    summary_snippet: Optional[str] = None
 
 class CharacterChatRequest(BaseModel):
     message: str = Field(..., description="User's dilemma, query, or prompt text", json_schema_extra={"example": "I feel conflicted because my company favors the founder's son over my most hardworking junior. What should I do?"})
@@ -14,32 +16,6 @@ class CharacterChatRequest(BaseModel):
     force_resolve: Optional[bool] = Field(default=False, description="Manual override to trigger final counsel immediately")
     mode: Optional[str] = Field(default="guidance", description="Mode: 'guidance' (Scenario Match) or 'knowledge' (Raw Verses)")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider override: 'ollama', 'openai', or 'gemini'")
-
-class SourceCitation(BaseModel):
-    scenario_title: Optional[str] = None
-    epic: Optional[str] = None
-    character: Optional[str] = None
-    verse_citations: List[str] = []
-    summary_snippet: Optional[str] = None
-
-class ConversationalChatRequest(BaseModel):
-    message: str = Field(..., description="Latest message or follow-up question answer from user", json_schema_extra={"example": "I feel burned out at work."})
-    chat_history: List[Dict[str, str]] = Field(default=[], description="Full conversation history: [{'role': 'user'|'assistant', 'content': '...'}]")
-    character: Optional[str] = Field(default="Epic Counselor", description="Persona to chat with (e.g. 'Epic Counselor', 'Krishna', 'Sita', 'Vibhishana')")
-    provider: Optional[str] = Field(default=None, description="Optional LLM provider override")
-
-class ConversationalChatResponse(BaseModel):
-    reply: str
-    follow_up_questions: List[str] = Field(default=[], description="3 AI-generated dynamic follow-up options for the user")
-    character: str
-    provider_used: str
-    sources: List[SourceCitation] = []
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., description="User's dilemma, query, or prompt text")
-    mode: Optional[str] = Field(default="guidance", description="Mode: 'guidance' or 'knowledge'")
-    character: Optional[str] = Field(default=None, description="Optional character persona for roleplay")
-    provider: Optional[str] = Field(default=None, description="Optional LLM provider override")
 
 class ChatResponse(BaseModel):
     reply: str
