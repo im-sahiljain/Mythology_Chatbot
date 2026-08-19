@@ -37,6 +37,8 @@ export interface ChatSession {
 
 type SessionChangeListener = (sessions: ChatSession[], activeId: string | null) => void;
 const listeners: Set<SessionChangeListener> = new Set();
+let inMemorySessions: ChatSession[] = [];
+let inMemoryActiveId: string | null = null;
 
 export const subscribeToSessions = (listener: SessionChangeListener) => {
   listeners.add(listener);
@@ -99,121 +101,37 @@ export function getModeBadgeInfo(mode?: ChatMode, character?: string) {
   }
 }
 
-export function loadAllSessions(): ChatSession[] {
+// Purge all legacy chat transcript data from localStorage on load
+if (typeof window !== 'undefined' && window.localStorage) {
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const sessionMap = new Map<string, ChatSession>();
-
-      // 1. Read legacy v1 sessions
-      const v1 = window.localStorage.getItem('vedic_chat_all_sessions');
-      if (v1) {
-        try {
-          const parsed = JSON.parse(v1);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((s) => {
-              if (s?.id) {
-                sessionMap.set(s.id, {
-                  ...s,
-                  mode: s.mode || 'full-chat',
-                });
-              }
-            });
-          }
-        } catch {}
-      }
-
-      // 2. Read v2 sessions
-      const v2 = window.localStorage.getItem('vedic_chat_all_sessions_v2');
-      if (v2) {
-        try {
-          const parsed = JSON.parse(v2);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((s) => {
-              if (s?.id) {
-                sessionMap.set(s.id, {
-                  ...s,
-                  mode: s.mode || 'full-chat',
-                });
-              }
-            });
-          }
-        } catch {}
-      }
-
-      // 3. Read v3 sessions (latest)
-      const v3 = window.localStorage.getItem(SESSIONS_STORAGE_KEY);
-      if (v3) {
-        try {
-          const parsed = JSON.parse(v3);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((s) => {
-              if (s?.id) {
-                sessionMap.set(s.id, {
-                  ...s,
-                  mode: s.mode || 'full-chat',
-                });
-              }
-            });
-          }
-        } catch {}
-      }
-
-      const mergedList = Array.from(sessionMap.values());
-      mergedList.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-
-      const activeId = getActiveSessionId();
-      // Prune inactive 0-message empty sessions so they don't clutter storage
-      const cleanedList = mergedList.filter(
-        (s) => (s.history && s.history.length > 0) || s.id === activeId
-      );
-
-      if (cleanedList.length >= 0) {
-        window.localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(cleanedList));
-      }
-
-      return cleanedList;
-    }
+    window.localStorage.removeItem('vedic_chat_all_sessions');
+    window.localStorage.removeItem('vedic_chat_all_sessions_v2');
+    window.localStorage.removeItem('vedic_chat_all_sessions_v3');
+    window.localStorage.removeItem('vedic_chat_active_session_id_v3');
   } catch (err) {
-    console.warn('Failed to load sessions:', err);
+    console.warn('Error purging local chat storage:', err);
   }
-  return [];
+}
+
+export function loadAllSessions(): ChatSession[] {
+  return inMemorySessions;
 }
 
 export function saveAllSessions(sessions: ChatSession[], activeId?: string) {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
-      if (activeId) {
-        window.localStorage.setItem(ACTIVE_SESSION_KEY, activeId);
-      }
-    }
-    notifyListeners(sessions, activeId || getActiveSessionId());
-  } catch (err) {
-    console.warn('Failed to save sessions:', err);
+  inMemorySessions = sessions;
+  if (activeId !== undefined) {
+    inMemoryActiveId = activeId;
   }
+  notifyListeners(inMemorySessions, inMemoryActiveId);
 }
 
 export function getActiveSessionId(): string | null {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return window.localStorage.getItem(ACTIVE_SESSION_KEY);
-    }
-  } catch (err) {
-    console.warn('Failed to get active session ID:', err);
-  }
-  return null;
+  return inMemoryActiveId;
 }
 
 export function setActiveSessionId(id: string) {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(ACTIVE_SESSION_KEY, id);
-    }
-    const sessions = loadAllSessions();
-    notifyListeners(sessions, id);
-  } catch (err) {
-    console.warn('Failed to set active session ID:', err);
-  }
+  inMemoryActiveId = id;
+  notifyListeners(inMemorySessions, inMemoryActiveId);
 }
 
 export function createNewSession(
@@ -222,20 +140,6 @@ export function createNewSession(
   character?: string,
   council?: string[]
 ): ChatSession {
-  const currentSessions = loadAllSessions();
-  const activeId = getActiveSessionId();
-
-  // Re-use an existing 0-message session if one is already active or available
-  const existingEmpty = currentSessions.find(
-    (s) => s.history.length === 0 && s.mode === mode && s.character === character
-  );
-
-  if (existingEmpty) {
-    if (council && council.length > 0) existingEmpty.council = council;
-    setActiveSessionId(existingEmpty.id);
-    return existingEmpty;
-  }
-
   const newId = Date.now().toString();
   const newSession: ChatSession = {
     id: newId,
@@ -248,22 +152,16 @@ export function createNewSession(
     history: [],
   };
 
-  // Prune any previous 0-message empty sessions before creating new
-  const cleaned = currentSessions.filter(
-    (s) => (s.history && s.history.length > 0) || s.id === activeId
-  );
-
-  const sessions = [newSession, ...cleaned];
-  saveAllSessions(sessions, newId);
+  inMemorySessions = [newSession, ...inMemorySessions];
+  inMemoryActiveId = newId;
+  notifyListeners(inMemorySessions, newId);
   return newSession;
 }
 
 export function deleteSession(id: string) {
-  const current = loadAllSessions();
-  const filtered = current.filter((s) => s.id !== id);
-  let activeId = getActiveSessionId();
-  if (activeId === id) {
-    activeId = filtered.length > 0 ? filtered[0].id : null;
+  inMemorySessions = inMemorySessions.filter((s) => s.id !== id);
+  if (inMemoryActiveId === id) {
+    inMemoryActiveId = inMemorySessions.length > 0 ? inMemorySessions[0].id : null;
   }
-  saveAllSessions(filtered, activeId || undefined);
+  notifyListeners(inMemorySessions, inMemoryActiveId);
 }

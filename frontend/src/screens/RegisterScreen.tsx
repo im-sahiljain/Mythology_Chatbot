@@ -13,14 +13,16 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { theme } = useTheme();
 
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const register = async () => {
     if (!email || !password) {
-      alert('Please fill in all fields');
+      alert('Please fill in all required fields');
       return;
     }
     if (password !== confirmPassword) {
@@ -37,20 +39,73 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    setLoading(false);
+    console.log('🔄 [Register] Calling supabase.auth.signUp for:', email.trim());
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim() || 'Seeker',
+          },
+        },
+      });
+      setLoading(false);
 
-    if (error) {
-      alert(error.message);
-      return;
+      if (error) {
+        console.error('❌ [Supabase Register Error Details]:', {
+          message: error.message,
+          name: error.name,
+          status: (error as any).status,
+          fullErrorObj: error
+        });
+        alert(`Registration Error: ${error.message}\n(Check browser console F12 for full details)`);
+        return;
+      }
+
+      console.log('✅ [Register Success Data]:', data);
+      if (data?.session) {
+        router.replace('/(tabs)');
+      } else {
+        setEmailSent(true);
+      }
+    } catch (err: any) {
+      setLoading(false);
+      console.error('❌ [Register Exception]:', err);
+      alert(`Unexpected Network Error: ${err?.message || err}\nPlease check network/CORS settings or open F12 Console.`);
     }
 
-    alert('Account created successfully!');
-    router.replace('/login');
   };
+
+  if (emailSent) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.bg }]}>
+        <FadeSlide delay={50}>
+          <Card style={styles.card}>
+            <View style={{ alignItems: 'center', marginVertical: 20 }}>
+              <Text style={{ fontSize: 48, marginBottom: 16 }}>📩</Text>
+              <Text style={[styles.title, { color: theme.text, fontFamily: serif, textAlign: 'center' }]}>
+                Check Your Inbox
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: body, textAlign: 'center', marginTop: 8 }]}>
+                We have sent a confirmation link to{'\n'}
+                <Text style={{ color: theme.accent, fontWeight: '700' }}>{email}</Text>
+              </Text>
+              <Text style={{ fontSize: 13, color: theme.textTertiary, textAlign: 'center', marginTop: 14, lineHeight: 20 }}>
+                Click the link in the email to activate your account and enjoy unlimited consultations.
+              </Text>
+
+              <Pressable onPress={() => router.replace('/login')} style={{ width: '100%', marginTop: 24 }}>
+                <View style={[styles.button, { backgroundColor: theme.accent }]}>
+                  <Text style={[styles.buttonText, { fontFamily: bold }]}>Go to Sign In</Text>
+                </View>
+              </Pressable>
+            </View>
+          </Card>
+        </FadeSlide>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
@@ -59,16 +114,21 @@ export default function RegisterScreen() {
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.text, fontFamily: serif }]}>Create Account</Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: body }]}>
-              Join to explore Vedic wisdom with AI
+              Join to unlock unlimited Vedic consultations
             </Text>
           </View>
 
           <View style={styles.form}>
+            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>YOUR NAME</Text>
+            <TextInput
+              style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
+              value={fullName}
+              onChangeText={setFullName}
+            />
+
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>EMAIL</Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              placeholder="name@example.com"
-              placeholderTextColor={theme.textTertiary}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -78,8 +138,6 @@ export default function RegisterScreen() {
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>PASSWORD</Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              placeholder="At least 6 characters"
-              placeholderTextColor={theme.textTertiary}
               secureTextEntry
               value={password}
               onChangeText={setPassword}
@@ -88,17 +146,16 @@ export default function RegisterScreen() {
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>CONFIRM PASSWORD</Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              placeholder="Repeat password"
-              placeholderTextColor={theme.textTertiary}
               secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
 
+
             <Pressable onPress={register} disabled={loading}>
               <View style={[styles.button, { backgroundColor: theme.accent, opacity: loading ? 0.6 : 1 }]}>
                 <Text style={[styles.buttonText, { fontFamily: bold }]}>
-                  {loading ? 'Creating...' : 'Create Account'}
+                  {loading ? 'Sending Link...' : 'Sign Up with Email'}
                 </Text>
               </View>
             </Pressable>
@@ -108,7 +165,15 @@ export default function RegisterScreen() {
                 Already have an account?{' '}
               </Text>
               <Pressable onPress={() => router.push('/login')}>
-                <Text style={[styles.linkText, { color: theme.accent, fontFamily: bold }]}>Login</Text>
+                <Text style={[styles.linkText, { color: theme.accent, fontFamily: bold }]}>Sign In</Text>
+              </Pressable>
+            </View>
+
+            <View style={{ marginTop: 14, alignItems: 'center' }}>
+              <Pressable onPress={() => router.replace('/(tabs)')}>
+                <Text style={[styles.skipText, { color: theme.textTertiary, fontFamily: body }]}>
+                  Continue as Guest (3 turns) →
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -182,5 +247,9 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 13,
+  },
+  skipText: {
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
 });

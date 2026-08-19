@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
 import { supabase } from '../services/supabase';
+import { API_BASE_URL } from '../services/api';
+
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { Card, Pressable, FadeSlide } from '../components/AnimatedComponents';
@@ -16,6 +18,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const login = async () => {
     if (!email.includes('@')) {
@@ -28,18 +32,62 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    setUnconfirmedEmail(false);
+    console.log('🔄 [Login] Calling /api/auth/login for:', email.trim());
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      setLoading(false);
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        const errMsg = errJson.detail || 'Invalid login credentials';
+        console.error('❌ [Login Error]:', errMsg);
+        if (errMsg.toLowerCase().includes('email not confirmed')) {
+          setUnconfirmedEmail(true);
+        } else {
+          alert(`Sign In Error: ${errMsg}`);
+        }
+        return;
+      }
+
+      const authData = await res.json();
+      if (authData.access_token) {
+        await supabase.auth.setSession({
+          access_token: authData.access_token,
+          refresh_token: authData.access_token,
+        });
+      }
+
+      console.log('✅ [Login Success]');
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      setLoading(false);
+      console.error('❌ [Login Exception]:', err);
+      alert(`Unexpected Network Error: ${err?.message || err}`);
+    }
+
+
+  };
+
+  const resendConfirmation = async () => {
+    if (!email) return;
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
     });
-    setLoading(false);
+    setResending(false);
 
     if (error) {
       alert(error.message);
-      return;
+    } else {
+      alert('✨ Verification email resent! Please check your inbox.');
     }
-
-    router.replace('/(tabs)');
   };
 
   return (
@@ -53,12 +101,24 @@ export default function LoginScreen() {
             </Text>
           </View>
 
+          {unconfirmedEmail && (
+            <View style={[styles.unconfirmedBanner, { backgroundColor: 'rgba(234, 179, 8, 0.12)', borderColor: 'rgba(234, 179, 8, 0.3)' }]}>
+              <Text style={{ fontSize: 13, color: '#EAB308', fontFamily: bold }}>Email Not Verified Yet</Text>
+              <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 4, lineHeight: 18 }}>
+                Please click the confirmation link sent to your inbox to activate your account.
+              </Text>
+              <Pressable onPress={resendConfirmation} disabled={resending} style={{ marginTop: 8 }}>
+                <Text style={{ color: theme.accent, fontSize: 12, fontWeight: '700', textDecorationLine: 'underline' }}>
+                  {resending ? 'Resending...' : 'Resend Verification Link →'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           <View style={styles.form}>
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>EMAIL</Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              placeholder="name@example.com"
-              placeholderTextColor={theme.textTertiary}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -68,12 +128,11 @@ export default function LoginScreen() {
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>PASSWORD</Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              placeholder="••••••••"
-              placeholderTextColor={theme.textTertiary}
               secureTextEntry
               value={password}
               onChangeText={setPassword}
             />
+
 
             <Pressable onPress={login} disabled={loading}>
               <View style={[styles.button, { backgroundColor: theme.accent, opacity: loading ? 0.6 : 1 }]}>
@@ -95,7 +154,7 @@ export default function LoginScreen() {
             <View style={{ marginTop: 14, alignItems: 'center' }}>
               <Pressable onPress={() => router.replace('/(tabs)')}>
                 <Text style={[styles.skipText, { color: theme.textTertiary, fontFamily: body }]}>
-                  Continue as Guest →
+                  Continue as Guest (3 turns) →
                 </Text>
               </Pressable>
             </View>
@@ -129,6 +188,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  unconfirmedBanner: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
   },
   form: {
     gap: 4,

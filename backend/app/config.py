@@ -22,6 +22,17 @@ class Settings:
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
     
+    # Database & Supabase Configuration (Strictly from .env)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
+
+
+
+
+    
     # Path Configuration
     DATA_DIR: Path = BASE_DIR / "data"
     CHROMA_DB_DIR: Path = BASE_DIR / "chroma_db"
@@ -29,3 +40,4 @@ class Settings:
     NALANDA_LIBRARY_DIR: Path = DATA_DIR / "nalanda_library"
 
 settings = Settings()
+

@@ -347,7 +347,7 @@ Provide a wise, simple, and direct follow-up response:
             return {
                 "stage": "follow_up",
                 "reply": llm_res["reply"],
-                "character": "Epic Mentor",
+                "character": "Universal Epic Scholar",
                 "sources": sources,
                 "searched_vector_db": needs_search,
                 "provider_used": llm_res["provider_used"]
@@ -387,7 +387,7 @@ RULES:
             return {
                 "stage": "interviewing",
                 "reply": llm_res["reply"],
-                "character": "Epic Counselor",
+                "character": "Universal Epic Scholar",
                 "sources": [],
                 "searched_vector_db": False,
                 "provider_used": llm_res["provider_used"]
@@ -398,11 +398,12 @@ RULES:
             return {
                 "stage": "resolved",
                 "reply": f"✨ **Final Epic Counsel**\n\n{rag_res['reply']}",
-                "character": rag_res.get("character", "Epic Scholar"),
+                "character": "Universal Epic Scholar",
                 "sources": rag_res.get("sources", []),
                 "searched_vector_db": True,
                 "provider_used": rag_res["provider_used"]
             }
+
 
     def _decide_followup_search(self, user_message: str, history_text: str, provider: str = None) -> tuple[bool, str]:
         """
