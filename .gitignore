@@ -11,16 +11,18 @@ __pycache__/
 *.env
 .env*.local
 venv/
+**/venv/
 .venv/
 **/env/
 
-# Local dumps & legacy data
+# Vector DB & Local Data Dumps
+chroma_db/
+**/chroma_db/
 chromadb_dump.json
-**/chromadb_dump.json
+*.sqlite3
 *.db
-data/chroma/
-**/data/chroma/
-
+**/chroma/
+chroma/
 
 
 # Node & Dependencies
