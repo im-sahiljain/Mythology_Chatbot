@@ -101,34 +101,7 @@ export interface ChatResponse {
   sources: SourceCitation[];
 }
 
-export interface CompletenessResponse {
-  status: 'needs_clarification' | 'resolved';
-  completeness_score: number;
-  reply: string;
-  options: string[];
-  provider_used?: string;
-  sources: SourceCitation[];
-}
 
-export interface TwoTurnResponse {
-  turn: number;
-  reply: string;
-  options: string[];
-  sources: SourceCitation[];
-}
-
-export interface ProgressiveResponse {
-  reply: string;
-  sources: SourceCitation[];
-}
-
-export interface SocraticResponse {
-  status: 'interviewing' | 'resolved';
-  reply: string;
-  character: string;
-  provider_used?: string;
-  sources: SourceCitation[];
-}
 
 export interface FullChatResponse {
   stage: 'interviewing' | 'resolved' | 'follow_up';
@@ -236,16 +209,7 @@ export interface UserChatSessionDetail {
 }
 
 export const apiService = {
-  // 1. Universal Epic Scholar (POST /chat)
-  async universalChat(message: string, provider?: string): Promise<ChatResponse> {
-    const res = await customFetch(`${API_BASE_URL}/chat`, {
-      method: 'POST',
-      body: JSON.stringify({ message, mode: 'guidance', provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch universal chat response');
-  },
-
-  // 2. Character Persona Mode (POST /chat-character)
+  // 1. Character Persona Mode (POST /chat-character)
   async characterChat(
     message: string,
     character: string,
@@ -305,41 +269,7 @@ export const apiService = {
     return handleApiResponse(res, 'Failed to fetch roundtable response');
   },
 
-  // 4. Strategy 1: Completeness Evaluator (POST /strategy/completeness)
-  async completenessStrategy(message: string, provider?: string): Promise<CompletenessResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/completeness`, {
-      method: 'POST',
-      body: JSON.stringify({ message, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch completeness response');
-  },
 
-  // 5. Strategy 2: Two-Turn Decision Tree (POST /strategy/two-turn)
-  async twoTurnStrategy(message: string, turn: number = 1, selected_option?: string, provider?: string): Promise<TwoTurnResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/two-turn`, {
-      method: 'POST',
-      body: JSON.stringify({ message, turn, selected_option, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch two-turn response');
-  },
-
-  // 6. Strategy 3: Progressive Hybrid Search (POST /strategy/progressive)
-  async progressiveStrategy(message: string, chat_history: { role: string; content: string }[], provider?: string): Promise<ProgressiveResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/progressive`, {
-      method: 'POST',
-      body: JSON.stringify({ message, chat_history, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch progressive response');
-  },
-
-  // 7. Strategy 4: Autonomous Socratic Interviewer (POST /strategy/socratic)
-  async socraticStrategy(message: string, chat_history: { role: string; content: string }[], force_resolve?: boolean, provider?: string): Promise<SocraticResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/socratic`, {
-      method: 'POST',
-      body: JSON.stringify({ message, chat_history, force_resolve, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch socratic response');
-  },
 
   // 8. Strategy 5: Full Chat with Continuous Follow-Up Memory (POST /strategy/full-chat)
   async fullChatStrategy(

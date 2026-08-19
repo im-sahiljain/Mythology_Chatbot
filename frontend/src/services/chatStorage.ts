@@ -7,12 +7,7 @@ export const ACTIVE_SESSION_KEY = 'vedic_chat_active_session_id_v3';
 export type ChatMode =
   | 'full-chat'
   | 'persona'
-  | 'roundtable'
-  | 'scholar'
-  | 'adaptive'
-  | 'two-turn'
-  | 'progressive'
-  | 'counselor';
+  | 'roundtable';
 
 export interface ChatMessage {
   id: string;
@@ -85,29 +80,12 @@ export function getModeBadgeInfo(mode?: ChatMode, character?: string) {
     };
   }
 
-  if (mode === 'full-chat' || !mode) {
-    return {
-      icon: '🏛️',
-      label: 'Universal Epic Scholar',
-      route: '/(tabs)/full-chat',
-      colorKey: 'primary',
-    };
-  }
-
-  switch (mode) {
-    case 'scholar':
-      return { icon: '📜', label: 'Scholar', route: '/(tabs)', colorKey: 'accent' };
-    case 'adaptive':
-      return { icon: '⚖️', label: 'Adaptive', route: '/(tabs)/adaptive', colorKey: 'accent' };
-    case 'two-turn':
-      return { icon: '🔄', label: '2-Turn', route: '/(tabs)/two-turn', colorKey: 'accent' };
-    case 'progressive':
-      return { icon: '💬', label: 'Dialogue', route: '/(tabs)/progressive', colorKey: 'accent' };
-    case 'counselor':
-      return { icon: '🧘', label: 'Counselor', route: '/(tabs)/counselor', colorKey: 'accent' };
-    default:
-      return { icon: '🏛️', label: 'Universal Epic Scholar', route: '/(tabs)/full-chat', colorKey: 'primary' };
-  }
+  return {
+    icon: '🏛️',
+    label: 'Universal Epic Scholar',
+    route: '/(tabs)/full-chat',
+    colorKey: 'primary',
+  };
 }
 
 
