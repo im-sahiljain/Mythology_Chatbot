@@ -54,6 +54,14 @@ export const APP_NAVIGATION_TABS: NavTabItem[] = [
     icon: '👑',
     tag: 'Featured',
   },
+  {
+    id: 'roundtable',
+    route: '/(tabs)/roundtable',
+    title: 'Vedic Roundtable',
+    subtitle: 'Multi-legend council debate',
+    icon: '🪷',
+    tag: 'Council',
+  },
 ];
 
 interface VedicDrawerProps {
@@ -156,14 +164,17 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
     setNewChatPickerVisible((prev) => !prev);
   };
 
-  const handleNewChatWithMode = (mode: 'full-chat' | 'persona') => {
+  const handleNewChatWithMode = (mode: 'full-chat' | 'persona' | 'roundtable') => {
     setNewChatPickerVisible(false);
     onClose();
     if (mode === 'persona') {
       router.push('/(tabs)/persona');
       return;
     }
-
+    if (mode === 'roundtable') {
+      router.push('/(tabs)/roundtable');
+      return;
+    }
     if (mode === 'full-chat') {
       router.push('/(tabs)/full-chat');
       return;
@@ -567,6 +578,38 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
               </View>
               <Text style={[styles.modeDesc, { color: theme.secondary, fontFamily: body }]}>
                 1st-person avatar consultation with Krishna, Sita, Arjuna, and sages
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Option 3: Vedic Roundtable (Council) */}
+          <TouchableOpacity
+            style={[
+              styles.modeOptionCard,
+              {
+                backgroundColor: theme.surfaceContainerLowest,
+                borderColor: theme.outlineVariant,
+              },
+            ]}
+            onPress={() => handleNewChatWithMode('roundtable')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.modeIconCircle, { backgroundColor: theme.primaryContainer }]}>
+              <Text style={{ fontSize: 22 }}>🪷</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.modeTitleRow}>
+                <Text style={[styles.modeTitle, { color: theme.text, fontFamily: label }]}>
+                  Vedic Roundtable
+                </Text>
+                <View style={[styles.modeTag, { backgroundColor: theme.secondaryContainer }]}>
+                  <Text style={[styles.modeTagText, { color: theme.onSecondaryContainer, fontFamily: label }]}>
+                    Council
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.modeDesc, { color: theme.secondary, fontFamily: body }]}>
+                Multi-legend council debate with @mentions, custom invites, and mute controls
               </Text>
             </View>
           </TouchableOpacity>

@@ -6,6 +6,7 @@ export const ACTIVE_SESSION_KEY = 'vedic_chat_active_session_id_v3';
 export type ChatMode =
   | 'full-chat'
   | 'persona'
+  | 'roundtable'
   | 'scholar'
   | 'adaptive'
   | 'two-turn'
@@ -16,6 +17,8 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  character?: string;
+  action?: 'speak' | 'join' | 'depart';
   stage?: 'interviewing' | 'resolved' | 'follow_up';
   sources?: SourceCitation[];
   searched_vector_db?: boolean;
@@ -26,6 +29,7 @@ export interface ChatSession {
   title: string;
   mode?: ChatMode;
   character?: string;
+  council?: string[];
   updatedAt: number;
   stage: 'interviewing' | 'resolved' | 'follow_up' | null;
   history: ChatMessage[];
@@ -48,14 +52,25 @@ const notifyListeners = (sessions: ChatSession[], activeId: string | null) => {
 export const CHARACTER_ICONS: Record<string, string> = {
   krishna: '🪶',
   sita: '🌸',
+  rama: '🏹',
   arjuna: '🎯',
   karna: '🌅',
-  vibhishana: '🛡️',
-  drona: '🏹',
+  bhishma: '🛡️',
+  vibhishana: '🕊️',
+  drona: '📜',
   sugriva: '👑',
 };
 
 export function getModeBadgeInfo(mode?: ChatMode, character?: string) {
+  if (mode === 'roundtable') {
+    return {
+      icon: '🪷',
+      label: 'Roundtable',
+      route: '/(tabs)/roundtable',
+      colorKey: 'primary',
+    };
+  }
+
   if (mode === 'persona' || character) {
     const charName = character || 'Persona';
     const icon = CHARACTER_ICONS[charName.toLowerCase()] || '👑';
@@ -204,7 +219,8 @@ export function setActiveSessionId(id: string) {
 export function createNewSession(
   title: string = 'New Consultation',
   mode: ChatMode = 'full-chat',
-  character?: string
+  character?: string,
+  council?: string[]
 ): ChatSession {
   const currentSessions = loadAllSessions();
   const activeId = getActiveSessionId();
@@ -215,6 +231,7 @@ export function createNewSession(
   );
 
   if (existingEmpty) {
+    if (council && council.length > 0) existingEmpty.council = council;
     setActiveSessionId(existingEmpty.id);
     return existingEmpty;
   }
@@ -225,6 +242,7 @@ export function createNewSession(
     title,
     mode,
     character,
+    council,
     updatedAt: Date.now(),
     stage: null,
     history: [],

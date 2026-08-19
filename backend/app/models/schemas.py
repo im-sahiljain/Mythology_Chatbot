@@ -61,3 +61,26 @@ class ScenarioCard(BaseModel):
     narrative_context: Dict[str, Any]
     resolution_and_advice: Dict[str, Any]
     scripture_citations: Dict[str, Any]
+
+class RoundtableSpeakerReply(BaseModel):
+    character: str
+    action: str = Field(default="speak", description="'speak' | 'join' | 'depart'")
+    content: str
+    sources: List[SourceCitation] = []
+    stage: Optional[str] = Field(default=None, description="'interviewing' | 'resolved' | 'follow_up'")
+
+class RoundtableChatRequest(BaseModel):
+    message: str = Field(..., description="User's message or question to the council")
+    council_characters: List[str] = Field(default=["Sita", "Krishna"], description="List of currently active council legends")
+    muted_characters: Optional[List[str]] = Field(default=[], description="List of characters currently muted")
+    chat_history: Optional[List[Dict[str, Any]]] = Field(default=[], description="Shared conversation history")
+    force_resolve: Optional[bool] = Field(default=False, description="Manual override to force immediate counsel resolution")
+    session_id: Optional[str] = Field(default=None, description="Session ID")
+    provider: Optional[str] = Field(default=None, description="Optional LLM provider override")
+
+class RoundtableChatResponse(BaseModel):
+    replies: List[RoundtableSpeakerReply]
+    active_council: List[str]
+    muted_council: List[str] = []
+    stage: Optional[str] = Field(default="resolved", description="Current conversation stage: 'interviewing' | 'resolved' | 'follow_up'")
+    provider_used: str

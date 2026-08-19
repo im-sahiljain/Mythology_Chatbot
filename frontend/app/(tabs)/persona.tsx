@@ -597,50 +597,14 @@ export default function PersonaScreen() {
         {hasStartedConsultation && (
           <View style={styles.dialogueSection}>
             <View style={styles.dialogueHeader}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.dialogueTitle,
-                    { color: theme.primary, fontFamily: serif },
-                  ]}
-                >
-                  Dialogue with {selectedGuide.name}
-                </Text>
-                {history.some((m) => m.role === 'user') && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                    {currentStage === 'interviewing' ? (
-                      <>
-                        <View style={[styles.stageBadge, { backgroundColor: theme.primaryContainer }]}>
-                          <Text style={[styles.stageBadgeText, { color: theme.onPrimaryContainer, fontFamily: label }]}>
-                            🔮 Inquiring Context ({Math.min(history.filter((m) => m.role === 'user').length, 3)}/3)
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={[styles.forceResolveBtn, { borderColor: theme.primaryContainer }]}
-                          onPress={() => sendQuery('', true)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={[styles.forceResolveBtnText, { color: theme.primaryContainer, fontFamily: label }]}>
-                            ⚡ Seek Counsel Now
-                          </Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : currentStage === 'resolved' ? (
-                      <View style={[styles.stageBadge, { backgroundColor: theme.secondaryContainer }]}>
-                        <Text style={[styles.stageBadgeText, { color: theme.onSecondaryContainer, fontFamily: label }]}>
-                          ✨ Grounded Counsel
-                        </Text>
-                      </View>
-                    ) : (
-                      <View style={[styles.stageBadge, { backgroundColor: theme.bgSecondary }]}>
-                        <Text style={[styles.stageBadgeText, { color: theme.textTertiary, fontFamily: label }]}>
-                          💬 Continuous Guidance
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
+              <Text
+                style={[
+                  styles.dialogueTitle,
+                  { color: theme.primary, fontFamily: serif },
+                ]}
+              >
+                Dialogue with {selectedGuide.name}
+              </Text>
             </View>
 
             {history.map((msg, index) => (

@@ -24,7 +24,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleStartMode = (mode: 'full-chat' | 'persona' | 'scholar') => {
+  const handleStartMode = (mode: 'full-chat' | 'persona' | 'roundtable' | 'scholar') => {
     setModalVisible(false);
     if (mode === 'scholar') {
       router.push('/(tabs)');
@@ -34,7 +34,10 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
       router.push('/(tabs)/persona');
       return;
     }
-
+    if (mode === 'roundtable') {
+      router.push('/(tabs)/roundtable');
+      return;
+    }
     if (mode === 'full-chat') {
       router.push('/(tabs)/full-chat');
       return;
@@ -205,6 +208,38 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                 </View>
                 <Text style={[styles.modeDesc, { color: theme.secondary, fontFamily: body }]}>
                   1st-person avatar consultation with Krishna, Sita, Arjuna, and sages
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Mode Option 3: Vedic Roundtable (Council) */}
+            <TouchableOpacity
+              style={[
+                styles.modeOptionCard,
+                {
+                  backgroundColor: theme.surfaceContainerLowest,
+                  borderColor: theme.outlineVariant,
+                },
+              ]}
+              onPress={() => handleStartMode('roundtable')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.modeIconCircle, { backgroundColor: theme.primaryContainer }]}>
+                <Text style={{ fontSize: 22 }}>🪷</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.modeTitleRow}>
+                  <Text style={[styles.modeTitle, { color: theme.text, fontFamily: label }]}>
+                    Vedic Roundtable
+                  </Text>
+                  <View style={[styles.modeTag, { backgroundColor: theme.secondaryContainer }]}>
+                    <Text style={[styles.modeTagText, { color: theme.onSecondaryContainer, fontFamily: label }]}>
+                      Council
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.modeDesc, { color: theme.secondary, fontFamily: body }]}>
+                  Multi-legend council debate with @mentions, custom invites, and mute controls
                 </Text>
               </View>
             </TouchableOpacity>
