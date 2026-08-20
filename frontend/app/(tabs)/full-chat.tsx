@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,20 +10,40 @@ import {
   Modal,
   KeyboardAvoidingView,
   useWindowDimensions,
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { apiService, SourceCitation, FullChatResponse } from '../../src/services/api';
-import { StreamingText } from '../../src/components/StreamingText';
-import { SourceCard } from '../../src/components/SourceCard';
-import { useTheme } from '../../src/context/ThemeContext';
-import { FadeSlide, Pressable, TypingDots } from '../../src/components/AnimatedComponents';
-import { VedicDrawer } from '../../src/components/VedicDrawer';
-import { VedicTopBar } from '../../src/components/VedicTopBar';
+} from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import {
+  apiService,
+  SourceCitation,
+  FullChatResponse,
+} from "../../src/services/api";
+import { StreamingText } from "../../src/components/StreamingText";
+import { SourceCard } from "../../src/components/SourceCard";
+import { useTheme } from "../../src/context/ThemeContext";
+import {
+  FadeSlide,
+  Pressable,
+  TypingDots,
+} from "../../src/components/AnimatedComponents";
+import { VedicDrawer } from "../../src/components/VedicDrawer";
+import { VedicTopBar } from "../../src/components/VedicTopBar";
 
-const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
-const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
-const bold = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
-const label = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_600SemiBold';
+const serif =
+  Platform.OS === "web"
+    ? "'EB Garamond', Georgia, serif"
+    : "EBGaramond_700Bold";
+const body =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_400Regular";
+const bold =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_700Bold";
+const label =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_600SemiBold";
 
 import {
   loadAllSessions,
@@ -32,42 +52,41 @@ import {
   setActiveSessionId,
   createNewSession,
   subscribeToSessions,
+  fetchSessionDetailFromDb,
   ChatMessage,
   ChatSession,
-} from '../../src/services/chatStorage';
+} from "../../src/services/chatStorage";
 
 export const TOPIC_MATRIX = [
   {
-    id: 'dharma',
-    title: 'Dharma & Duty',
-    icon: '⚖️',
-    description:
-      'Explore the unwavering righteousness of Rama versus the complex, contextual duties faced by Arjuna on the battlefield.',
-    query: 'Analyze the contrast between Rama’s absolute dharma and Arjuna’s battlefield dilemma.',
+    category: "Workplace & Ethics",
+    icon: "⚖️",
+    description: "Corporate dilemmas, favoritism, and professional Dharma.",
+    prompt:
+      "I feel conflicted because my company favors the founder’s son over my most hardworking junior. What should I do?",
   },
   {
-    id: 'karma',
-    title: 'Karma & Action',
-    icon: '🔄',
+    category: "Family & Loyalties",
+    icon: "🏠",
     description:
-      'Analyze the ripples of destiny and choice, from Dasharatha’s ancient boon to the inescapable vows of Bhishma.',
-    query: 'How does karma and destiny shape outcomes in Dasharatha’s boons and Bhishma’s vows?',
+      "Parental expectations, sibling rivalry, and personal boundaries.",
+    prompt:
+      "My parents want me to take over our family business, but my true calling is in social work. How do I navigate this?",
   },
   {
-    id: 'leadership',
-    title: 'Leadership & Statecraft',
-    icon: '👑',
+    category: "Leadership & Vision",
+    icon: "👑",
     description:
-      'Contrast the ideal, harmonious governance of Ramarajya with the pragmatic, realpolitik strategies of Krishna.',
-    query: 'Compare the ideal governance of Ramarajya with Krishna’s pragmatic statecraft.',
+      "Difficult decisions, team morale, and organizational conflict.",
+    prompt:
+      "I have to lay off 20% of my team to save the company from bankruptcy. How do I balance compassion with survival?",
   },
   {
-    id: 'grief',
-    title: 'Grief & Loss',
-    icon: '💧',
-    description:
-      'Understand the profound human emotional landscape through Sita’s isolation and the devastating aftermath of the Kurukshetra war.',
-    query: 'What do the epics teach about handling profound grief, loss, and isolation?',
+    category: "Personal Truth & Integrity",
+    icon: "🪷",
+    description: "Inner struggles, standing up for truth, and moral courage.",
+    prompt:
+      "I discovered financial irregularities committed by my mentor who helped build my career. Should I report it?",
   },
 ];
 
@@ -77,10 +96,12 @@ export default function FullChatScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string>('');
+  const [currentSessionId, setCurrentSessionId] = useState<string>("");
   const [history, setHistory] = useState<ChatMessage[]>([]);
-  const [currentStage, setCurrentStage] = useState<'interviewing' | 'resolved' | 'follow_up' | null>(null);
-  const [input, setInput] = useState('');
+  const [currentStage, setCurrentStage] = useState<
+    "interviewing" | "resolved" | "follow_up" | null
+  >(null);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [showMatrix, setShowMatrix] = useState(true);
@@ -96,10 +117,10 @@ export default function FullChatScreen() {
 
       if (!params.id) {
         // Navigated directly to /full-chat -> Fresh consultation page without query param!
-        setCurrentSessionId('');
+        setCurrentSessionId("");
         setHistory([]);
         setCurrentStage(null);
-        setInput('');
+        setInput("");
         setShowMatrix(true);
         return;
       }
@@ -108,15 +129,27 @@ export default function FullChatScreen() {
       if (active) {
         setCurrentSessionId(active.id);
         setActiveSessionId(active.id);
-        setHistory(active.history || []);
-        setCurrentStage(active.stage || null);
-        setShowMatrix(!active.history || active.history.length === 0);
+        if (active.history && active.history.length > 0) {
+          setHistory(active.history);
+          setCurrentStage(active.stage || null);
+          setShowMatrix(false);
+        } else {
+          fetchSessionDetailFromDb(active.id).then((msgs) => {
+            if (msgs && msgs.length > 0) {
+              setHistory(msgs);
+              setShowMatrix(false);
+            }
+          });
+        }
       } else {
-        setCurrentSessionId('');
-        setHistory([]);
-        setCurrentStage(null);
-        setInput('');
-        setShowMatrix(true);
+        fetchSessionDetailFromDb(params.id as string).then((msgs) => {
+          if (msgs && msgs.length > 0) {
+            setCurrentSessionId(params.id as string);
+            setActiveSessionId(params.id as string);
+            setHistory(msgs);
+            setShowMatrix(false);
+          }
+        });
       }
     };
 
@@ -126,11 +159,11 @@ export default function FullChatScreen() {
       setSessions(allSessions);
       if (!params.id) return;
       const target = allSessions.find((s) => s.id === (params.id || activeId));
-      if (target) {
+      if (target && target.history && target.history.length > 0) {
         setCurrentSessionId(target.id);
-        setHistory(target.history || []);
+        setHistory(target.history);
         setCurrentStage(target.stage || null);
-        setShowMatrix(!target.history || target.history.length === 0);
+        setShowMatrix(false);
       }
     });
 
@@ -139,8 +172,8 @@ export default function FullChatScreen() {
 
   const updateSessionState = (
     newHistory: ChatMessage[],
-    newStage: 'interviewing' | 'resolved' | 'follow_up' | null,
-    overrideSessionId?: string
+    newStage: "interviewing" | "resolved" | "follow_up" | null,
+    overrideSessionId?: string,
   ) => {
     setHistory(newHistory);
     setCurrentStage(newStage);
@@ -151,17 +184,17 @@ export default function FullChatScreen() {
 
     setSessions((prev) => {
       const existingIdx = prev.findIndex((s) => s.id === activeId);
-      let sessionTitle = 'New Consultation';
-      const firstUserMsg = newHistory.find((m) => m.role === 'user');
+      let sessionTitle = "New Consultation";
+      const firstUserMsg = newHistory.find((m) => m.role === "user");
       if (firstUserMsg) {
         sessionTitle = firstUserMsg.content.slice(0, 32);
-        if (firstUserMsg.content.length > 32) sessionTitle += '...';
+        if (firstUserMsg.content.length > 32) sessionTitle += "...";
       }
 
       const updated: ChatSession = {
         id: activeId,
         title: sessionTitle,
-        mode: 'full-chat',
+        mode: "full-chat",
         updatedAt: Date.now(),
         stage: newStage,
         history: newHistory,
@@ -181,7 +214,7 @@ export default function FullChatScreen() {
   };
 
   const handleStartNewChat = () => {
-    router.push('/(tabs)/full-chat');
+    router.push("/(tabs)/full-chat");
   };
 
   const handleSwitchSession = (sessionId: string) => {
@@ -199,16 +232,22 @@ export default function FullChatScreen() {
     }
   };
 
-  const handleSend = async (forcedQuery?: string, isForceResolve: boolean = false) => {
+  const handleSend = async (
+    forcedQuery?: string,
+    isForceResolve: boolean = false,
+  ) => {
     const textToSend = (forcedQuery || input).trim();
     if ((!textToSend && !isForceResolve) || loading) return;
 
-    if (!forcedQuery) setInput('');
+    if (!forcedQuery) setInput("");
     setShowMatrix(false);
 
     let activeId = currentSessionId;
     if (!activeId) {
-      const newSession = createNewSession(textToSend.slice(0, 32) || 'New Consultation', 'full-chat');
+      const newSession = createNewSession(
+        textToSend.slice(0, 32) || "New Consultation",
+        "full-chat",
+      );
       activeId = newSession.id;
       setCurrentSessionId(activeId);
       setActiveSessionId(activeId);
@@ -219,7 +258,7 @@ export default function FullChatScreen() {
     if (textToSend) {
       const userMsg: ChatMessage = {
         id: Date.now().toString(),
-        role: 'user',
+        role: "user",
         content: textToSend,
       };
       updatedHistory.push(userMsg);
@@ -240,17 +279,17 @@ export default function FullChatScreen() {
       }));
 
       const res: FullChatResponse = await apiService.fullChatStrategy(
-        textToSend || 'Please give me your final grounded counsel.',
+        textToSend || "Please give me your final grounded counsel.",
         apiHistory,
         isForceResolve,
-        activeId
+        activeId,
       );
 
       const finalHistory: ChatMessage[] = [
         ...updatedHistory,
         {
           id: (Date.now() + 1).toString(),
-          role: 'assistant',
+          role: "assistant",
           content: res.reply,
           stage: res.stage,
           sources: res.sources || [],
@@ -260,23 +299,26 @@ export default function FullChatScreen() {
 
       updateSessionState(finalHistory, res.stage, activeId);
     } catch (err: any) {
-      const isQuotaError = err?.quotaExceeded || err?.status === 403 || (err?.message && err.message.toLowerCase().includes('guest limit'));
+      const isQuotaError =
+        err?.quotaExceeded ||
+        err?.status === 403 ||
+        (err?.message && err.message.toLowerCase().includes("guest limit"));
       const errorContent = isQuotaError
-        ? '⚡ **Free Guest Limit Reached (3 Messages)**\n\nYou have used all 3 free guest turns. Please sign in or create a free account to unlock unlimited Vedic consultations!'
-        : (err?.message || 'Unable to connect to Vedic counseling backend. Please verify your connection.');
+        ? "⚡ **Free Guest Limit Reached (3 Messages)**\n\nYou have used all 3 free guest turns. Please sign in or create a free account to unlock unlimited Vedic consultations!"
+        : err?.message ||
+          "Unable to connect to Vedic counseling backend. Please verify your connection.";
 
       const fallback: ChatMessage[] = [
         ...updatedHistory,
         {
           id: (Date.now() + 1).toString(),
-          role: 'assistant',
+          role: "assistant",
           content: errorContent,
-          stage: 'resolved',
+          stage: "resolved",
         },
       ];
-      updateSessionState(fallback, 'resolved', activeId);
+      updateSessionState(fallback, "resolved", activeId);
     } finally {
-
       setLoading(false);
       setTimeout(() => {
         scrollRef.current?.scrollToEnd({ animated: true });
@@ -287,16 +329,19 @@ export default function FullChatScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* Slide-out Navigation Drawer */}
       <VedicDrawer
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         onSelectAction={(key) => {
-          if (key === 'contemplation') handleSend('Provide a daily Vedic reflection on karma and duty.');
-          else if (key === 'lineage') handleSend('Explain the lineage of Raghu and Kuru epics.');
-          else if (key === 'dharma') handleSend('How do I assess my moral duty in complex times?');
+          if (key === "contemplation")
+            handleSend("Provide a daily Vedic reflection on karma and duty.");
+          else if (key === "lineage")
+            handleSend("Explain the lineage of Raghu and Kuru epics.");
+          else if (key === "dharma")
+            handleSend("How do I assess my moral duty in complex times?");
         }}
       />
 
@@ -315,22 +360,48 @@ export default function FullChatScreen() {
           <>
             {/* Section 1: Hero Header */}
             <View style={styles.heroSection}>
-              <Text style={[styles.displayTitle, { color: theme.primary, fontFamily: serif }]}>
+              <Text
+                style={[
+                  styles.displayTitle,
+                  { color: theme.primary, fontFamily: serif },
+                ]}
+              >
                 Epic Scholar Hub
               </Text>
-              <Text style={[styles.displaySubtitle, { color: theme.secondary, fontFamily: body }]}>
-                Traverse the dual pillars of ancient wisdom. Delve into profound philosophical inquiries
-                across the grand epics.
+              <Text
+                style={[
+                  styles.displaySubtitle,
+                  { color: theme.secondary, fontFamily: body },
+                ]}
+              >
+                Traverse the dual pillars of ancient wisdom. Delve into profound
+                philosophical inquiries across the grand epics.
               </Text>
             </View>
 
             {/* Section 2: Vedic Filigree Divider */}
             <View style={styles.filigreeWrap}>
-              <View style={[styles.filigreeLine, { backgroundColor: theme.outlineVariant }]} />
-              <View style={[styles.filigreeIconWrap, { backgroundColor: theme.bg }]}>
-                <Text style={[styles.filigreeIcon, { color: theme.outlineVariant }]}>✦</Text>
+              <View
+                style={[
+                  styles.filigreeLine,
+                  { backgroundColor: theme.outlineVariant },
+                ]}
+              />
+              <View
+                style={[styles.filigreeIconWrap, { backgroundColor: theme.bg }]}
+              >
+                <Text
+                  style={[styles.filigreeIcon, { color: theme.outlineVariant }]}
+                >
+                  ✦
+                </Text>
               </View>
-              <View style={[styles.filigreeLine, { backgroundColor: theme.outlineVariant }]} />
+              <View
+                style={[
+                  styles.filigreeLine,
+                  { backgroundColor: theme.outlineVariant },
+                ]}
+              />
             </View>
 
             {/* Section 5: Core Contrast Card (Principles vs Strategies) */}
@@ -344,10 +415,34 @@ export default function FullChatScreen() {
               ]}
             >
               {/* Ornamental Gold Manuscript Corner Brackets */}
-              <View style={[styles.cornerBracket, styles.cornerTL, { borderColor: theme.outlineVariant }]} />
-              <View style={[styles.cornerBracket, styles.cornerTR, { borderColor: theme.outlineVariant }]} />
-              <View style={[styles.cornerBracket, styles.cornerBL, { borderColor: theme.outlineVariant }]} />
-              <View style={[styles.cornerBracket, styles.cornerBR, { borderColor: theme.outlineVariant }]} />
+              <View
+                style={[
+                  styles.cornerBracket,
+                  styles.cornerTL,
+                  { borderColor: theme.outlineVariant },
+                ]}
+              />
+              <View
+                style={[
+                  styles.cornerBracket,
+                  styles.cornerTR,
+                  { borderColor: theme.outlineVariant },
+                ]}
+              />
+              <View
+                style={[
+                  styles.cornerBracket,
+                  styles.cornerBL,
+                  { borderColor: theme.outlineVariant },
+                ]}
+              />
+              <View
+                style={[
+                  styles.cornerBracket,
+                  styles.cornerBR,
+                  { borderColor: theme.outlineVariant },
+                ]}
+              />
 
               <View style={styles.contrastHeader}>
                 <View
@@ -365,29 +460,61 @@ export default function FullChatScreen() {
                     CORE CONTRAST
                   </Text>
                 </View>
-                <Text style={[styles.contrastTitle, { color: theme.primary, fontFamily: serif }]}>
+                <Text
+                  style={[
+                    styles.contrastTitle,
+                    { color: theme.primary, fontFamily: serif },
+                  ]}
+                >
                   Principles vs Strategies
                 </Text>
               </View>
 
-              <View style={[styles.contrastColumns, isNarrow && { flexDirection: 'column' }]}>
+              <View
+                style={[
+                  styles.contrastColumns,
+                  isNarrow && { flexDirection: "column" },
+                ]}
+              >
                 {/* Ramayana Column */}
                 <View style={styles.epicColumn}>
                   <View style={styles.epicColTitleRow}>
                     <Text style={styles.epicColIcon}>📖</Text>
-                    <Text style={[styles.epicColTitle, { color: theme.text, fontFamily: serif }]}>
+                    <Text
+                      style={[
+                        styles.epicColTitle,
+                        { color: theme.text, fontFamily: serif },
+                      ]}
+                    >
                       The Ramayana
                     </Text>
                   </View>
-                  <Text style={[styles.epicColDesc, { color: theme.textSecondary, fontFamily: body }]}>
-                    Emphasizes absolute adherence to moral law (Dharma) regardless of personal cost.
-                    It paints a world of clear ideals, where victory is achieved through unwavering righteousness.
+                  <Text
+                    style={[
+                      styles.epicColDesc,
+                      { color: theme.textSecondary, fontFamily: body },
+                    ]}
+                  >
+                    Emphasizes absolute adherence to moral law (Dharma)
+                    regardless of personal cost. It paints a world of clear
+                    ideals, where victory is achieved through unwavering
+                    righteousness.
                   </Text>
                   <View style={styles.bulletList}>
-                    <Text style={[styles.bulletItem, { color: theme.text, fontFamily: body }]}>
+                    <Text
+                      style={[
+                        styles.bulletItem,
+                        { color: theme.text, fontFamily: body },
+                      ]}
+                    >
                       ✓ Idealism and Devotion
                     </Text>
-                    <Text style={[styles.bulletItem, { color: theme.text, fontFamily: body }]}>
+                    <Text
+                      style={[
+                        styles.bulletItem,
+                        { color: theme.text, fontFamily: body },
+                      ]}
+                    >
                       ✓ Clear moral binaries & vows
                     </Text>
                   </View>
@@ -398,26 +525,55 @@ export default function FullChatScreen() {
                   style={[
                     styles.epicColumn,
                     isNarrow
-                      ? { borderTopWidth: 1, paddingTop: 16, borderLeftWidth: 0 }
-                      : { borderLeftWidth: 1, borderTopWidth: 0, paddingLeft: 16 },
+                      ? {
+                          borderTopWidth: 1,
+                          paddingTop: 16,
+                          borderLeftWidth: 0,
+                        }
+                      : {
+                          borderLeftWidth: 1,
+                          borderTopWidth: 0,
+                          paddingLeft: 16,
+                        },
                     { borderColor: theme.outlineVariant },
                   ]}
                 >
                   <View style={styles.epicColTitleRow}>
                     <Text style={styles.epicColIcon}>📜</Text>
-                    <Text style={[styles.epicColTitle, { color: theme.text, fontFamily: serif }]}>
+                    <Text
+                      style={[
+                        styles.epicColTitle,
+                        { color: theme.text, fontFamily: serif },
+                      ]}
+                    >
                       The Mahabharata
                     </Text>
                   </View>
-                  <Text style={[styles.epicColDesc, { color: theme.textSecondary, fontFamily: body }]}>
-                    Navigates the gray areas of morality, where Dharma is contextual and survival often requires
-                    strategic pragmatism, reflecting human complexities.
+                  <Text
+                    style={[
+                      styles.epicColDesc,
+                      { color: theme.textSecondary, fontFamily: body },
+                    ]}
+                  >
+                    Navigates the gray areas of morality, where Dharma is
+                    contextual and survival often requires strategic pragmatism,
+                    reflecting human complexities.
                   </Text>
                   <View style={styles.bulletList}>
-                    <Text style={[styles.bulletItem, { color: theme.text, fontFamily: body }]}>
+                    <Text
+                      style={[
+                        styles.bulletItem,
+                        { color: theme.text, fontFamily: body },
+                      ]}
+                    >
                       ✓ Pragmatism & Realpolitik
                     </Text>
-                    <Text style={[styles.bulletItem, { color: theme.text, fontFamily: body }]}>
+                    <Text
+                      style={[
+                        styles.bulletItem,
+                        { color: theme.text, fontFamily: body },
+                      ]}
+                    >
                       ✓ Nuanced moral ambiguities
                     </Text>
                   </View>
@@ -432,7 +588,7 @@ export default function FullChatScreen() {
           <View style={styles.conversationStream}>
             {history.map((msg, index) => (
               <FadeSlide key={msg.id || index} delay={30} distance={10}>
-                {msg.role === 'assistant' ? (
+                {msg.role === "assistant" ? (
                   <View
                     style={[
                       styles.scholarCard,
@@ -454,7 +610,10 @@ export default function FullChatScreen() {
                         <Text
                           style={[
                             styles.scholarBadgeLabel,
-                            { color: theme.primaryContainer, fontFamily: label },
+                            {
+                              color: theme.primaryContainer,
+                              fontFamily: label,
+                            },
                           ]}
                         >
                           UNIVERSAL EPIC SCHOLAR
@@ -469,7 +628,10 @@ export default function FullChatScreen() {
                             <Text
                               style={[
                                 styles.vectorPillText,
-                                { color: theme.onSecondaryContainer, fontFamily: label },
+                                {
+                                  color: theme.onSecondaryContainer,
+                                  fontFamily: label,
+                                },
                               ]}
                             >
                               RAG Grounded
@@ -492,18 +654,24 @@ export default function FullChatScreen() {
                       )}
 
                       {/* Socratic Force Resolve CTA if in Interviewing stage */}
-                      {msg.stage === 'interviewing' && (
+                      {msg.stage === "interviewing" && (
                         <TouchableOpacity
                           style={[
                             styles.forceResolveBtn,
-                            { backgroundColor: theme.bgSecondary, borderColor: theme.primaryContainer },
+                            {
+                              backgroundColor: theme.bgSecondary,
+                              borderColor: theme.primaryContainer,
+                            },
                           ]}
                           onPress={() => handleSend(undefined, true)}
                         >
                           <Text
                             style={[
                               styles.forceResolveText,
-                              { color: theme.primaryContainer, fontFamily: label },
+                              {
+                                color: theme.primaryContainer,
+                                fontFamily: label,
+                              },
                             ]}
                           >
                             ⚡ Give Me Grounded Counsel Now (Skip Questions)
@@ -568,11 +736,11 @@ export default function FullChatScreen() {
       <View
         style={[
           styles.floatingInputWrapper,
-          Platform.OS === 'web'
+          Platform.OS === "web"
             ? ({
                 background: `linear-gradient(to top, ${theme.bg} 40%, ${theme.bg}BB 65%, ${theme.bg}00 100%)`,
               } as any)
-            : { backgroundColor: 'transparent' },
+            : { backgroundColor: "transparent" },
         ]}
       >
         <View
@@ -586,10 +754,7 @@ export default function FullChatScreen() {
           ]}
         >
           <TextInput
-            style={[
-              styles.textInput,
-              { color: theme.text, fontFamily: body },
-            ]}
+            style={[styles.textInput, { color: theme.text, fontFamily: body }]}
             placeholder="Ask anything across Ramayana & Mahabharata..."
             placeholderTextColor={theme.textTertiary}
             value={input}
@@ -607,7 +772,9 @@ export default function FullChatScreen() {
             disabled={loading}
             activeOpacity={0.8}
           >
-            <Text style={[styles.sendIcon, { color: theme.onPrimaryContainer }]}>
+            <Text
+              style={[styles.sendIcon, { color: theme.onPrimaryContainer }]}
+            >
               ➤
             </Text>
           </TouchableOpacity>
@@ -622,24 +789,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topFloatingHeader: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     zIndex: 100,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 48 : 12,
+    paddingTop: Platform.OS === "ios" ? 48 : 12,
     paddingBottom: 16,
   },
   floatingPillBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.12,
@@ -647,8 +814,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   floatingPillGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     height: 44,
     borderRadius: 22,
     paddingHorizontal: 12,
@@ -661,8 +828,8 @@ const styles = StyleSheet.create({
   },
   pillIconTouch: {
     padding: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   pillIconText: {
     fontSize: 18,
@@ -679,34 +846,34 @@ const styles = StyleSheet.create({
     paddingTop: 72,
     paddingHorizontal: 16,
     maxWidth: 960,
-    alignSelf: 'center',
-    width: '100%',
+    alignSelf: "center",
+    width: "100%",
   },
   heroSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   displayTitle: {
-    fontSize: Platform.OS === 'web' ? 36 : 28,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontSize: Platform.OS === "web" ? 36 : 28,
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   displaySubtitle: {
     fontSize: 15,
-    textAlign: 'center',
+    textAlign: "center",
     maxWidth: 620,
     lineHeight: 23,
     marginBottom: 20,
   },
   searchBox: {
-    width: '100%',
+    width: "100%",
     maxWidth: 720,
     borderRadius: 16,
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -721,7 +888,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
-    paddingVertical: Platform.OS === 'ios' ? 8 : 6,
+    paddingVertical: Platform.OS === "ios" ? 8 : 6,
   },
   seekBtn: {
     paddingHorizontal: 18,
@@ -730,14 +897,14 @@ const styles = StyleSheet.create({
   },
   seekBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   filigreeWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginVertical: 20,
-    width: '100%',
+    width: "100%",
   },
   filigreeLine: {
     flex: 1,
@@ -755,37 +922,37 @@ const styles = StyleSheet.create({
   },
   matrixSectionTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 14,
   },
   matrixGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 14,
   },
   topicCard: {
-    width: Platform.OS === 'web' ? '48.5%' : '100%',
+    width: Platform.OS === "web" ? "48.5%" : "100%",
     borderRadius: 16,
     borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: 'rgba(0,0,0,0.03)',
+    overflow: "hidden",
+    shadowColor: "rgba(0,0,0,0.03)",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.8,
     shadowRadius: 6,
     elevation: 2,
-    position: 'relative',
+    position: "relative",
   },
   topicCardAccent: {
     height: 4,
-    width: '100%',
+    width: "100%",
   },
   topicCardInner: {
     padding: 16,
   },
   topicHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
   topicIcon: {
@@ -793,11 +960,11 @@ const styles = StyleSheet.create({
   },
   topicArrow: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   topicTitle: {
     fontSize: 19,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 6,
   },
   topicDesc: {
@@ -808,16 +975,16 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     padding: 22,
-    position: 'relative',
+    position: "relative",
     marginBottom: 24,
-    shadowColor: 'rgba(146,113,13,0.08)',
+    shadowColor: "rgba(146,113,13,0.08)",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.8,
     shadowRadius: 12,
     elevation: 3,
   },
   cornerBracket: {
-    position: 'absolute',
+    position: "absolute",
     width: 14,
     height: 14,
     borderWidth: 1.5,
@@ -827,7 +994,7 @@ const styles = StyleSheet.create({
   cornerBL: { bottom: 8, left: 8, borderRightWidth: 0, borderTopWidth: 0 },
   cornerBR: { bottom: 8, right: 8, borderLeftWidth: 0, borderTopWidth: 0 },
   contrastHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 18,
   },
   contrastBadge: {
@@ -842,10 +1009,10 @@ const styles = StyleSheet.create({
   },
   contrastTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   contrastColumns: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    flexDirection: Platform.OS === "web" ? "row" : "column",
     gap: 16,
   },
   epicColumn: {
@@ -853,13 +1020,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   epicColumnRight: {
-    borderLeftWidth: Platform.OS === 'web' ? 1 : 0,
-    borderTopWidth: Platform.OS === 'web' ? 0 : 1,
-    paddingTop: Platform.OS === 'web' ? 0 : 16,
+    borderLeftWidth: Platform.OS === "web" ? 1 : 0,
+    borderTopWidth: Platform.OS === "web" ? 0 : 1,
+    paddingTop: Platform.OS === "web" ? 0 : 16,
   },
   epicColTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 8,
   },
@@ -868,7 +1035,7 @@ const styles = StyleSheet.create({
   },
   epicColTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   epicColDesc: {
     fontSize: 13.5,
@@ -882,7 +1049,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   contrastActionWrap: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
   },
   compareBtn: {
@@ -899,34 +1066,34 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   streamHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 14,
     paddingHorizontal: 4,
   },
   streamTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   toggleMatrixText: {
     fontSize: 12,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
   scholarCard: {
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 14,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: 'rgba(0,0,0,0.04)',
+    overflow: "hidden",
+    position: "relative",
+    shadowColor: "rgba(0,0,0,0.04)",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.8,
     shadowRadius: 6,
     elevation: 2,
   },
   scholarAccentStripe: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
@@ -937,8 +1104,8 @@ const styles = StyleSheet.create({
     paddingLeft: 18,
   },
   scholarBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 8,
   },
@@ -968,14 +1135,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   forceResolveText: {
     fontSize: 12,
   },
   userBubble: {
-    alignSelf: 'flex-end',
-    maxWidth: '85%',
+    alignSelf: "flex-end",
+    maxWidth: "85%",
     borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 16,
@@ -987,37 +1154,37 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   loaderCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginBottom: 14,
   },
   loaderText: {
     fontSize: 13,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   floatingInputWrapper: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+    paddingBottom: Platform.OS === "ios" ? 24 : 12,
     paddingTop: 24,
-    alignItems: 'center',
+    alignItems: "center",
     zIndex: 50,
   },
   floatingInputPill: {
-    width: '100%',
+    width: "100%",
     maxWidth: 760,
     borderRadius: 24,
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
     shadowOffset: { width: 0, height: 4 },
@@ -1036,51 +1203,51 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingHorizontal: 8,
-    paddingVertical: Platform.OS === 'ios' ? 8 : 6,
-    ...(Platform.OS === 'web' && { outlineStyle: 'none' as any }),
+    paddingVertical: Platform.OS === "ios" ? 8 : 6,
+    ...(Platform.OS === "web" && { outlineStyle: "none" as any }),
   },
   sendCircleBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 4,
   },
   sendIcon: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 16,
   },
   modalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
     borderRadius: 18,
     borderWidth: 1,
     padding: 18,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingBottom: 12,
     borderBottomWidth: 1,
     marginBottom: 14,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   newChatBtn: {
     paddingVertical: 10,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 14,
   },
   newChatBtnText: {

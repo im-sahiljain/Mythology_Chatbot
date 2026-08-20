@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import {
   TouchableWithoutFeedback,
   Animated,
   Easing,
-} from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
-import { useTheme } from '../context/ThemeContext';
+} from "react-native";
+import { useRouter, usePathname } from "expo-router";
+import { useTheme } from "../context/ThemeContext";
 import {
   loadAllSessions,
   getActiveSessionId,
@@ -20,16 +20,27 @@ import {
   createNewSession,
   deleteSession,
   subscribeToSessions,
+  syncUserSessionsFromDb,
+  clearAllLocalSessions,
   getModeBadgeInfo,
   ChatSession,
-} from '../services/chatStorage';
-import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../services/supabase';
+} from "../services/chatStorage";
+import { apiService } from "../services/api";
+import { useAuth } from "../hooks/useAuth";
+import { supabase } from "../services/supabase";
 
-
-const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
-const label = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
-const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
+const serif =
+  Platform.OS === "web"
+    ? "'EB Garamond', Georgia, serif"
+    : "EBGaramond_700Bold";
+const label =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_700Bold";
+const body =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_400Regular";
 
 export interface NavTabItem {
   id: string;
@@ -42,28 +53,28 @@ export interface NavTabItem {
 
 export const APP_NAVIGATION_TABS: NavTabItem[] = [
   {
-    id: 'full-chat',
-    route: '/(tabs)/full-chat',
-    title: 'Full Interactive Chat',
-    subtitle: 'Topic matrix & deep comparison',
-    icon: '🏛️',
-    tag: 'Stitch Hub',
+    id: "full-chat",
+    route: "/(tabs)/full-chat",
+    title: "Full Interactive Chat",
+    subtitle: "Topic matrix & deep comparison",
+    icon: "🏛️",
+    tag: "Universal",
   },
   {
-    id: 'persona',
-    route: '/(tabs)/persona',
-    title: 'Speak with Legends',
-    subtitle: '1st-person avatar consultation',
-    icon: '👑',
-    tag: 'Featured',
+    id: "persona",
+    route: "/(tabs)/persona",
+    title: "Speak with Legends",
+    subtitle: "1st-person avatar consultation",
+    icon: "👑",
+    tag: "Avatar",
   },
   {
-    id: 'roundtable',
-    route: '/(tabs)/roundtable',
-    title: 'Vedic Roundtable',
-    subtitle: 'Multi-legend council debate',
-    icon: '🪷',
-    tag: 'Council',
+    id: "roundtable",
+    route: "/(tabs)/roundtable",
+    title: "Vedic Roundtable",
+    subtitle: "Multi-legend council debate",
+    icon: "🪷",
+    tag: "Council",
   },
 ];
 
@@ -85,7 +96,6 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   const router = useRouter();
   const pathname = usePathname();
 
-
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveId] = useState<string | null>(null);
   const [newChatPickerVisible, setNewChatPickerVisible] = useState(false);
@@ -99,6 +109,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
     if (visible) {
       setSessions(loadAllSessions());
       setActiveId(getActiveSessionId());
+      syncUserSessionsFromDb();
     }
 
     const unsubscribe = subscribeToSessions((updated, currentId) => {
@@ -110,7 +121,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   }, [visible]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') {
+    if (Platform.OS !== "web") {
       if (visible) {
         setModalVisible(true);
         Animated.parallel([
@@ -151,14 +162,14 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
     try {
       router.push(route as any);
     } catch (err) {
-      console.warn('Navigation error:', err);
+      console.warn("Navigation error:", err);
     }
   };
 
   const handleSelectSession = (sessionId: string, route?: string) => {
     setActiveSessionId(sessionId);
     onClose();
-    const targetRoute = route || '/(tabs)/full-chat';
+    const targetRoute = route || "/(tabs)/full-chat";
     router.push({
       pathname: targetRoute as any,
       params: { id: sessionId },
@@ -169,19 +180,21 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
     setNewChatPickerVisible((prev) => !prev);
   };
 
-  const handleNewChatWithMode = (mode: 'full-chat' | 'persona' | 'roundtable') => {
+  const handleNewChatWithMode = (
+    mode: "full-chat" | "persona" | "roundtable",
+  ) => {
     setNewChatPickerVisible(false);
     onClose();
-    if (mode === 'persona') {
-      router.push('/(tabs)/persona');
+    if (mode === "persona") {
+      router.push("/(tabs)/persona");
       return;
     }
-    if (mode === 'roundtable') {
-      router.push('/(tabs)/roundtable');
+    if (mode === "roundtable") {
+      router.push("/(tabs)/roundtable");
       return;
     }
-    if (mode === 'full-chat') {
-      router.push('/(tabs)/full-chat');
+    if (mode === "full-chat") {
+      router.push("/(tabs)/full-chat");
       return;
     }
   };
@@ -199,15 +212,15 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
 
   const checkIsActive = (route: string) => {
     if (!pathname) return false;
-    if (route === '/(tabs)') {
+    if (route === "/(tabs)") {
       return (
-        pathname === '/' ||
-        pathname === '/(tabs)' ||
-        pathname === '/(tabs)/index' ||
-        pathname === '/index'
+        pathname === "/" ||
+        pathname === "/(tabs)" ||
+        pathname === "/(tabs)/index" ||
+        pathname === "/index"
       );
     }
-    return pathname.includes(route.replace('/(tabs)', ''));
+    return pathname.includes(route.replace("/(tabs)", ""));
   };
 
   const formatSessionTime = (timestamp: number) => {
@@ -219,36 +232,87 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
       date.getFullYear() === now.getFullYear();
 
     if (isToday) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     }
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   const drawerInnerContent = (
     <>
       {/* Profile Header */}
-      <View style={[styles.header, { borderBottomColor: theme.outlineVariant }]}>
+      <View
+        style={[styles.header, { borderBottomColor: theme.outlineVariant }]}
+      >
         <View style={styles.profileRow}>
-          <View style={[styles.avatarBadge, { backgroundColor: theme.primaryContainer }]}>
-            <Text style={[styles.avatarText, { color: theme.onPrimaryContainer, fontFamily: serif }]}>
-              {user ? (user.user_metadata?.full_name?.[0] || user.email?.[0] || 'S').toUpperCase() : 'G'}
+          <View
+            style={[
+              styles.avatarBadge,
+              { backgroundColor: theme.primaryContainer },
+            ]}
+          >
+            <Text
+              style={[
+                styles.avatarText,
+                { color: theme.onPrimaryContainer, fontFamily: serif },
+              ]}
+            >
+              {user
+                ? (
+                    user.user_metadata?.full_name?.[0] ||
+                    user.email?.[0] ||
+                    "S"
+                  ).toUpperCase()
+                : "G"}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.seekerTitle, { color: theme.primary, fontFamily: serif }]} numberOfLines={1}>
-              {user ? (user.user_metadata?.full_name || user.email?.split('@')[0]) : 'Guest Seeker'}
+            <Text
+              style={[
+                styles.seekerTitle,
+                { color: theme.primary, fontFamily: serif },
+              ]}
+              numberOfLines={1}
+            >
+              {user
+                ? user.user_metadata?.full_name || user.email?.split("@")[0]
+                : "Guest Seeker"}
             </Text>
-            <Text style={[styles.seekerSubtitle, { color: theme.secondary, fontFamily: body }]} numberOfLines={1}>
-              {user ? user.email : 'Free Explorer'}
+            <Text
+              style={[
+                styles.seekerSubtitle,
+                { color: theme.secondary, fontFamily: body },
+              ]}
+              numberOfLines={1}
+            >
+              {user ? user.email : "Free Explorer"}
             </Text>
-            <View style={[styles.levelBadge, { backgroundColor: user ? 'rgba(16, 185, 129, 0.15)' : theme.secondaryContainer }]}>
-              <Text style={[styles.levelText, { color: user ? '#10B981' : theme.onSecondaryContainer, fontFamily: label }]}>
-                {user ? '✨ UNLIMITED TURNS' : '⚡ GUEST (3 TURNS)'}
+            <View
+              style={[
+                styles.levelBadge,
+                {
+                  backgroundColor: user
+                    ? "rgba(16, 185, 129, 0.15)"
+                    : theme.secondaryContainer,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.levelText,
+                  {
+                    color: user ? "#10B981" : theme.onSecondaryContainer,
+                    fontFamily: label,
+                  },
+                ]}
+              >
+                {user ? "✨ UNLIMITED TURNS" : "⚡ GUEST (3 TURNS)"}
               </Text>
             </View>
           </View>
         </View>
-
 
         <TouchableOpacity
           style={[styles.closeBtn, { borderColor: theme.outlineVariant }]}
@@ -265,7 +329,12 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* 1. Navigation Modes */}
-        <Text style={[styles.sectionHeader, { color: theme.primary, fontFamily: label }]}>
+        <Text
+          style={[
+            styles.sectionHeader,
+            { color: theme.primary, fontFamily: label },
+          ]}
+        >
           COUNSEL & EXPLORATION MODES
         </Text>
 
@@ -277,8 +346,12 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
               style={[
                 styles.tabItem,
                 {
-                  backgroundColor: isActive ? theme.bgSecondary : theme.surfaceContainerLowest,
-                  borderColor: isActive ? theme.primaryContainer : theme.outlineVariant,
+                  backgroundColor: isActive
+                    ? theme.bgSecondary
+                    : theme.surfaceContainerLowest,
+                  borderColor: isActive
+                    ? theme.primaryContainer
+                    : theme.outlineVariant,
                   borderWidth: isActive ? 1.5 : 1,
                 },
               ]}
@@ -291,7 +364,10 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   <Text
                     style={[
                       styles.tabTitle,
-                      { color: isActive ? theme.primary : theme.text, fontFamily: isActive ? label : body },
+                      {
+                        color: isActive ? theme.primary : theme.text,
+                        fontFamily: isActive ? label : body,
+                      },
                     ]}
                   >
                     {tab.title}
@@ -324,34 +400,50 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   )}
                 </View>
                 <Text
-                  style={[styles.tabSubtitle, { color: theme.secondary, fontFamily: body }]}
+                  style={[
+                    styles.tabSubtitle,
+                    { color: theme.secondary, fontFamily: body },
+                  ]}
                   numberOfLines={1}
                 >
                   {tab.subtitle}
                 </Text>
               </View>
               {isActive && (
-                <View style={[styles.activeDot, { backgroundColor: theme.primaryContainer }]} />
+                <View
+                  style={[
+                    styles.activeDot,
+                    { backgroundColor: theme.primaryContainer },
+                  ]}
+                />
               )}
             </TouchableOpacity>
           );
         })}
 
-        <View style={[styles.divider, { backgroundColor: theme.outlineVariant }]} />
+        <View
+          style={[styles.divider, { backgroundColor: theme.outlineVariant }]}
+        />
 
         {/* 2. MY CHATS */}
         {(() => {
-          const displaySessions = sessions.filter(
-            (s) => (s.history && s.history.length > 0) || s.id === activeSessionId
-          );
+          const displaySessions = sessions;
           return (
             <>
               <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionHeader, { color: theme.primary, fontFamily: label }]}>
+                <Text
+                  style={[
+                    styles.sectionHeader,
+                    { color: theme.primary, fontFamily: label },
+                  ]}
+                >
                   MY CHATS ({displaySessions.length})
                 </Text>
                 <TouchableOpacity
-                  style={[styles.newChatHeaderBtn, { backgroundColor: theme.primaryContainer }]}
+                  style={[
+                    styles.newChatHeaderBtn,
+                    { backgroundColor: theme.primaryContainer },
+                  ]}
                   onPress={handleNewChat}
                   activeOpacity={0.8}
                 >
@@ -378,13 +470,17 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                       style={[
                         styles.chatSessionItem,
                         {
-                          backgroundColor: isSelected ? theme.bgSecondary : 'transparent',
+                          backgroundColor: isSelected
+                            ? theme.bgSecondary
+                            : "transparent",
                         },
                       ]}
                     >
                       <TouchableOpacity
                         style={styles.chatSessionMainTouch}
-                        onPress={() => handleSelectSession(s.id, modeInfo.route)}
+                        onPress={() =>
+                          handleSelectSession(s.id, modeInfo.route)
+                        }
                         activeOpacity={0.7}
                       >
                         <Text
@@ -397,7 +493,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                           ]}
                           numberOfLines={1}
                         >
-                          {s.title || 'Untitled Consultation'}
+                          {s.title || "Untitled Consultation"}
                         </Text>
 
                         <View
@@ -432,7 +528,14 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                         activeOpacity={0.6}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <Text style={[styles.chatDeleteIcon, { color: theme.textTertiary }]}>✕</Text>
+                        <Text
+                          style={[
+                            styles.chatDeleteIcon,
+                            { color: theme.textTertiary },
+                          ]}
+                        >
+                          ✕
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   );
@@ -449,7 +552,12 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   onPress={handleNewChat}
                 >
                   <Text style={{ fontSize: 20 }}>📜</Text>
-                  <Text style={[styles.emptyChatText, { color: theme.secondary, fontFamily: body }]}>
+                  <Text
+                    style={[
+                      styles.emptyChatText,
+                      { color: theme.secondary, fontFamily: body },
+                    ]}
+                  >
                     No saved chats yet. Tap to begin your first inquiry!
                   </Text>
                 </TouchableOpacity>
@@ -458,19 +566,33 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
           );
         })()}
 
-        <View style={[styles.divider, { backgroundColor: theme.outlineVariant }]} />
+        <View
+          style={[styles.divider, { backgroundColor: theme.outlineVariant }]}
+        />
 
         {/* 4. Preferences & System */}
-        <Text style={[styles.sectionHeader, { color: theme.textTertiary, fontFamily: label }]}>
+        <Text
+          style={[
+            styles.sectionHeader,
+            { color: theme.textTertiary, fontFamily: label },
+          ]}
+        >
           PREFERENCES & SYSTEM
         </Text>
 
-
-
-        <TouchableOpacity style={styles.menuItemSimple} onPress={toggleTheme} activeOpacity={0.7}>
-          <Text style={styles.itemIcon}>{theme.isDark ? '☀️' : '🌙'}</Text>
-          <Text style={[styles.itemTitleSimple, { color: theme.text, fontFamily: body }]}>
-            {theme.isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+        <TouchableOpacity
+          style={styles.menuItemSimple}
+          onPress={toggleTheme}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.itemIcon}>{theme.isDark ? "☀️" : "🌙"}</Text>
+          <Text
+            style={[
+              styles.itemTitleSimple,
+              { color: theme.text, fontFamily: body },
+            ]}
+          >
+            {theme.isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
           </Text>
         </TouchableOpacity>
 
@@ -478,38 +600,57 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
           <TouchableOpacity
             style={[styles.menuItemSimple, { marginTop: 4 }]}
             onPress={async () => {
+              await apiService.logout();
               await supabase.auth.signOut();
+              clearAllLocalSessions();
               onClose();
-              router.replace('/login');
+              router.replace("/login");
             }}
             activeOpacity={0.7}
           >
             <Text style={styles.itemIcon}>🚪</Text>
-            <Text style={[styles.itemTitleSimple, { color: '#EF4444', fontFamily: body }]}>
+            <Text
+              style={[
+                styles.itemTitleSimple,
+                { color: "#EF4444", fontFamily: body },
+              ]}
+            >
               Sign Out
             </Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.menuItemSimple, { backgroundColor: 'rgba(217, 119, 6, 0.12)', marginTop: 6 }]}
+            style={[
+              styles.menuItemSimple,
+              { backgroundColor: "rgba(217, 119, 6, 0.12)", marginTop: 6 },
+            ]}
             onPress={() => {
               onClose();
-              router.push('/login');
+              router.push("/login");
             }}
             activeOpacity={0.7}
           >
             <Text style={styles.itemIcon}>🔑</Text>
-            <Text style={[styles.itemTitleSimple, { color: theme.accent, fontFamily: label }]}>
+            <Text
+              style={[
+                styles.itemTitleSimple,
+                { color: theme.accent, fontFamily: label },
+              ]}
+            >
               Sign In with Email
             </Text>
           </TouchableOpacity>
         )}
       </ScrollView>
 
-
       {/* Drawer Footer */}
       <View style={[styles.footer, { borderTopColor: theme.outlineVariant }]}>
-        <Text style={[styles.footerText, { color: theme.textTertiary, fontFamily: serif }]}>
+        <Text
+          style={[
+            styles.footerText,
+            { color: theme.textTertiary, fontFamily: serif },
+          ]}
+        >
           VedicRAG AI • 475+ Curated Scenarios
         </Text>
       </View>
@@ -541,18 +682,36 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
           ]}
         >
           {/* Modal Header */}
-          <View style={[styles.modalHeader, { borderBottomColor: theme.outlineVariant }]}>
+          <View
+            style={[
+              styles.modalHeader,
+              { borderBottomColor: theme.outlineVariant },
+            ]}
+          >
             <View>
-              <Text style={[styles.modalTitle, { color: theme.primary, fontFamily: serif }]}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { color: theme.primary, fontFamily: serif },
+                ]}
+              >
                 Start New Inquiry
               </Text>
-              <Text style={[styles.modalSubtitle, { color: theme.secondary, fontFamily: body }]}>
+              <Text
+                style={[
+                  styles.modalSubtitle,
+                  { color: theme.secondary, fontFamily: body },
+                ]}
+              >
                 Choose how you wish to seek Vedic wisdom
               </Text>
             </View>
             <TouchableOpacity
               onPress={() => setNewChatPickerVisible(false)}
-              style={[styles.modalCloseBtn, { borderColor: theme.outlineVariant }]}
+              style={[
+                styles.modalCloseBtn,
+                { borderColor: theme.outlineVariant },
+              ]}
             >
               <Text style={{ fontSize: 16, color: theme.text }}>✕</Text>
             </TouchableOpacity>
@@ -567,25 +726,51 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                 borderColor: theme.outlineVariant,
               },
             ]}
-            onPress={() => handleNewChatWithMode('full-chat')}
+            onPress={() => handleNewChatWithMode("full-chat")}
             activeOpacity={0.8}
           >
-            <View style={[styles.modeIconCircle, { backgroundColor: theme.primaryContainer }]}>
+            <View
+              style={[
+                styles.modeIconCircle,
+                { backgroundColor: theme.primaryContainer },
+              ]}
+            >
               <Text style={{ fontSize: 22 }}>🏛️</Text>
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.modeTitleRow}>
-                <Text style={[styles.modeTitle, { color: theme.text, fontFamily: label }]}>
+                <Text
+                  style={[
+                    styles.modeTitle,
+                    { color: theme.text, fontFamily: label },
+                  ]}
+                >
                   Full Interactive Chat
                 </Text>
-                <View style={[styles.modeTag, { backgroundColor: theme.secondaryContainer }]}>
-                  <Text style={[styles.modeTagText, { color: theme.onSecondaryContainer, fontFamily: label }]}>
-                    Stitch Hub
+                <View
+                  style={[
+                    styles.modeTag,
+                    { backgroundColor: theme.secondaryContainer },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.modeTagText,
+                      { color: theme.onSecondaryContainer, fontFamily: label },
+                    ]}
+                  >
+                    Universal
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.modeDesc, { color: theme.secondary, fontFamily: body }]}>
-                Multi-turn inquiry with vector scripture citations & deep epic comparison
+              <Text
+                style={[
+                  styles.modeDesc,
+                  { color: theme.secondary, fontFamily: body },
+                ]}
+              >
+                Multi-turn inquiry with vector scripture citations & deep epic
+                comparison
               </Text>
             </View>
           </TouchableOpacity>
@@ -599,25 +784,51 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                 borderColor: theme.outlineVariant,
               },
             ]}
-            onPress={() => handleNewChatWithMode('persona')}
+            onPress={() => handleNewChatWithMode("persona")}
             activeOpacity={0.8}
           >
-            <View style={[styles.modeIconCircle, { backgroundColor: theme.secondaryContainer }]}>
+            <View
+              style={[
+                styles.modeIconCircle,
+                { backgroundColor: theme.secondaryContainer },
+              ]}
+            >
               <Text style={{ fontSize: 22 }}>👑</Text>
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.modeTitleRow}>
-                <Text style={[styles.modeTitle, { color: theme.text, fontFamily: label }]}>
+                <Text
+                  style={[
+                    styles.modeTitle,
+                    { color: theme.text, fontFamily: label },
+                  ]}
+                >
                   Speak with Legends
                 </Text>
-                <View style={[styles.modeTag, { backgroundColor: theme.primaryContainer }]}>
-                  <Text style={[styles.modeTagText, { color: theme.onPrimaryContainer, fontFamily: label }]}>
+                <View
+                  style={[
+                    styles.modeTag,
+                    { backgroundColor: theme.primaryContainer },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.modeTagText,
+                      { color: theme.onPrimaryContainer, fontFamily: label },
+                    ]}
+                  >
                     Avatar
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.modeDesc, { color: theme.secondary, fontFamily: body }]}>
-                1st-person avatar consultation with Krishna, Sita, Arjuna, and sages
+              <Text
+                style={[
+                  styles.modeDesc,
+                  { color: theme.secondary, fontFamily: body },
+                ]}
+              >
+                1st-person avatar consultation with Krishna, Sita, Arjuna, and
+                sages
               </Text>
             </View>
           </TouchableOpacity>
@@ -631,25 +842,51 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                 borderColor: theme.outlineVariant,
               },
             ]}
-            onPress={() => handleNewChatWithMode('roundtable')}
+            onPress={() => handleNewChatWithMode("roundtable")}
             activeOpacity={0.8}
           >
-            <View style={[styles.modeIconCircle, { backgroundColor: theme.primaryContainer }]}>
+            <View
+              style={[
+                styles.modeIconCircle,
+                { backgroundColor: theme.primaryContainer },
+              ]}
+            >
               <Text style={{ fontSize: 22 }}>🪷</Text>
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.modeTitleRow}>
-                <Text style={[styles.modeTitle, { color: theme.text, fontFamily: label }]}>
+                <Text
+                  style={[
+                    styles.modeTitle,
+                    { color: theme.text, fontFamily: label },
+                  ]}
+                >
                   Vedic Roundtable
                 </Text>
-                <View style={[styles.modeTag, { backgroundColor: theme.secondaryContainer }]}>
-                  <Text style={[styles.modeTagText, { color: theme.onSecondaryContainer, fontFamily: label }]}>
+                <View
+                  style={[
+                    styles.modeTag,
+                    { backgroundColor: theme.secondaryContainer },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.modeTagText,
+                      { color: theme.onSecondaryContainer, fontFamily: label },
+                    ]}
+                  >
                     Council
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.modeDesc, { color: theme.secondary, fontFamily: body }]}>
-                Multi-legend council debate with @mentions, custom invites, and mute controls
+              <Text
+                style={[
+                  styles.modeDesc,
+                  { color: theme.secondary, fontFamily: body },
+                ]}
+              >
+                Multi-legend council debate with @mentions, custom invites, and
+                mute controls
               </Text>
             </View>
           </TouchableOpacity>
@@ -659,42 +896,43 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   );
 
   // Web rendering with hardware-accelerated cubic-bezier transitions
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     return (
       <>
         <div
           onClick={onClose}
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
             zIndex: 99999,
-            backgroundColor: 'rgba(0, 0, 0, 0.45)',
-            backdropFilter: 'blur(5px)',
-            WebkitBackdropFilter: 'blur(5px)',
-            display: 'flex',
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+            backdropFilter: "blur(5px)",
+            WebkitBackdropFilter: "blur(5px)",
+            display: "flex",
             opacity: visible ? 1 : 0,
-            visibility: visible ? 'visible' : 'hidden',
-            pointerEvents: visible ? 'auto' : 'none',
-            transition: 'opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
+            visibility: visible ? "visible" : "hidden",
+            pointerEvents: visible ? "auto" : "none",
+            transition:
+              "opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '320px',
-              maxWidth: '85vw',
-              height: '100%',
+              width: "320px",
+              maxWidth: "85vw",
+              height: "100%",
               backgroundColor: theme.surface,
               borderRight: `1px solid ${theme.outlineVariant}`,
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '10px 0 30px rgba(0,0,0,0.22)',
-              transform: visible ? 'translateX(0)' : 'translateX(-100%)',
-              transition: 'transform 0.34s cubic-bezier(0.16, 1, 0.3, 1)',
-              willChange: 'transform',
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "10px 0 30px rgba(0,0,0,0.22)",
+              transform: visible ? "translateX(0)" : "translateX(-100%)",
+              transition: "transform 0.34s cubic-bezier(0.16, 1, 0.3, 1)",
+              willChange: "transform",
             }}
           >
             {drawerInnerContent}
@@ -741,31 +979,31 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    flexDirection: 'row',
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    flexDirection: "row",
   },
   drawer: {
     width: DRAWER_WIDTH,
-    maxWidth: '85%',
-    height: '100%',
+    maxWidth: "85%",
+    height: "100%",
     borderRightWidth: 1,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 16,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
-    paddingTop: Platform.OS === 'ios' ? 54 : 20,
+    paddingTop: Platform.OS === "ios" ? 54 : 20,
     borderBottomWidth: 1,
   },
   profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     flex: 1,
   },
@@ -773,16 +1011,16 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   seekerTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     lineHeight: 22,
   },
   seekerSubtitle: {
@@ -790,7 +1028,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   levelBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -805,8 +1043,8 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   menuList: {
     flex: 1,
@@ -816,9 +1054,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
     marginTop: 6,
     paddingHorizontal: 4,
@@ -826,7 +1064,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 10,
     letterSpacing: 1,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   newChatHeaderBtn: {
     paddingHorizontal: 8,
@@ -835,20 +1073,20 @@ const styles = StyleSheet.create({
   },
   newChatHeaderBtnText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   chatSessionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderRadius: 8,
     marginBottom: 2,
     paddingRight: 6,
   },
   chatSessionMainTouch: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingVertical: 8,
     paddingLeft: 8,
@@ -858,14 +1096,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   chatSessionTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 6,
   },
   chatSessionTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     flex: 1,
   },
   modeBadgePill: {
@@ -876,7 +1114,7 @@ const styles = StyleSheet.create({
   modeBadgeText: {
     fontSize: 8.5,
     letterSpacing: 0.3,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   chatSessionMeta: {
     fontSize: 10.5,
@@ -892,19 +1130,19 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    alignItems: 'center',
+    borderStyle: "dashed",
+    alignItems: "center",
     gap: 6,
     marginBottom: 8,
   },
   emptyChatText: {
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 16,
   },
   tabItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingVertical: 9,
     paddingHorizontal: 12,
@@ -915,13 +1153,13 @@ const styles = StyleSheet.create({
     fontSize: 19,
   },
   tabTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   tabTitle: {
     fontSize: 13.5,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   tabSubtitle: {
     fontSize: 10.5,
@@ -947,8 +1185,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   menuItemSimple: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingVertical: 10,
     paddingHorizontal: 8,
@@ -963,7 +1201,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   footerText: {
     fontSize: 12,
@@ -971,21 +1209,21 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 16,
     zIndex: 100000,
   },
   modalBackdrop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   modalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 480,
     borderRadius: 20,
     borderWidth: 1,
@@ -997,15 +1235,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     paddingBottom: 14,
     borderBottomWidth: 1,
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   modalSubtitle: {
     fontSize: 13,
@@ -1016,12 +1254,12 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   modeOptionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 14,
     padding: 14,
     borderRadius: 16,
@@ -1031,18 +1269,18 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   modeTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 3,
   },
   modeTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   modeTag: {
     paddingHorizontal: 7,
@@ -1051,7 +1289,7 @@ const styles = StyleSheet.create({
   },
   modeTagText: {
     fontSize: 9.5,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   modeDesc: {
     fontSize: 12,

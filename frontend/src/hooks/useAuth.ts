@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
+import { clearAllLocalSessions, syncUserSessionsFromDb } from '../services/chatStorage';
 
 export const useAuth = () => {
   const [user, setUser] = useState<any>(null);
@@ -14,8 +15,16 @@ export const useAuth = () => {
 
     // Listen to auth changes
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
+      (event, session) => {
+        const newUser = session?.user ?? null;
+        setUser(newUser);
+        if (event === 'SIGNED_OUT') {
+          clearAllLocalSessions();
+          syncUserSessionsFromDb();
+        } else if (event === 'SIGNED_IN') {
+          clearAllLocalSessions();
+          syncUserSessionsFromDb();
+        }
       }
     );
 

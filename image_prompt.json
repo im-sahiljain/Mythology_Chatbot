@@ -1,0 +1,549 @@
+{
+  "total_characters": 54,
+  "style_preset": "Cinematic Vedic High-Fantasy / Classical Indian Fine Art",
+  "resolution": "1024x1024",
+  "characters": [
+    {
+      "id": 1,
+      "name": "Krishna",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Divine Strategist",
+      "nature": "Omniscient, serene, cosmic wisdom, divine grace, playful yet authoritative counselor",
+      "aspect_ratio": "1:1",
+      "prompt": "Magnificent high-fantasy portrait of Lord Krishna as the Divine Charioteer and Cosmic Guide in the Kurukshetra battlefield. Dark sapphire skin, enchanting compassionate eyes, golden crown with a luminous peacock feather, wearing silk yellow pitambara robes. Divine radiant aura, serene enigmatic smile, holding reins of white horses with glowing cosmic dust in the background. Cinematic volumetric lighting, ultra-detailed 8k masterpiece, traditional Indian royal jewelry, sacred Vedic aesthetic.",
+      "cloudinary_url": "https://res.cloudinary.com/dagkrnoap/image/upload/v1787224483/vedic_mythology/characters/persona_01_krishna.webp"
+    },
+    {
+      "id": 2,
+      "name": "Rama",
+      "epic": "Ramayana",
+      "category": "Major Heroes & Guides",
+      "role": "Maryada Purushottam",
+      "nature": "Unwavering righteousness, calmness, moral dignity, supreme archer and noble king",
+      "aspect_ratio": "1:1",
+      "prompt": "Majestic portrait of Lord Rama, the Maryada Purushottam, standing with regal poise in the forest hermitage. Radiant golden-bronze complexion, calm and righteous noble gaze, wearing ascetic royal ochre robes with golden armlets, carrying the sacred Kodanda bow across his shoulder and a golden quiver of arrows. Divine soft sunlight breaking through ancient sal trees, sacred serenity, intricate ancient Indian iconography, cinematic high resolution.",
+      "cloudinary_url": "https://res.cloudinary.com/dagkrnoap/image/upload/v1787224527/vedic_mythology/characters/persona_02_rama.webp"
+    },
+    {
+      "id": 3,
+      "name": "Arjuna",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Moral Hesitation & Duty",
+      "nature": "Supreme focus, introspective warrior, conflicted yet heroic, devotion to truth",
+      "aspect_ratio": "1:1",
+      "prompt": "Heroic portrait of Arjuna (Partha), the supreme archer on the battlefield chariot. Holding the formidable celestial Gandiva bow, intense concentrated gaze reflecting moral introspection and unwavering determination, wearing engraved silver-bronze armor with royal blue scarf. Windblown hair, battlefield embers and dust glowing in the sunset light, divine energy crackling around his arrows, hyper-detailed warrior art, epic cinematic realism."
+    },
+    {
+      "id": 4,
+      "name": "Hanuman",
+      "epic": "Ramayana",
+      "category": "Major Heroes & Guides",
+      "role": "Supreme Devotion",
+      "nature": "Selfless service, boundless strength, humble bhakti, fearless loyalty",
+      "aspect_ratio": "1:1",
+      "prompt": "Divine and powerful portrait of Lord Hanuman in deep devotional reverence (Bhakti). Muscular golden-furred Vanara warrior with folded hands (Anjali Mudra), warm compassionate glowing amber eyes, wearing sacred rudraksha beads, golden crown (Mukut), and red dhoti. A glowing golden mace (Gada) rests by his side, divine rays emanating from his heart, sacred mountain backdrop with drifting clouds, cinematic lighting, ultra-detailed Vedic art."
+    },
+    {
+      "id": 5,
+      "name": "Yudhishthira",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Dharma King",
+      "nature": "Truthfulness, justice, philosophical contemplation, stoic righteousness",
+      "aspect_ratio": "1:1",
+      "prompt": "Stately portrait of King Yudhishthira (Dharmaraja) seated on an ancient carved stone throne. Calm, contemplative expression representing absolute truth and justice, wearing royal silk robes in deep maroon and gold, a subtle royal crown, holding the staff of righteousness. Soft amber courtroom lighting with scrolls and scales in the background, dignified regal aura, detailed traditional Indian royal finery."
+    },
+    {
+      "id": 6,
+      "name": "Bhima",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Protector & Valor",
+      "nature": "Towering strength, fierce protector, fiery spirit, deeply compassionate heart",
+      "aspect_ratio": "1:1",
+      "prompt": "Mighty portrait of Bhimasena, the powerhouse warrior of the Pandavas. Towering muscular physique, determined protective expression, holding a colossal spiked iron mace (Gada) with veins of raw strength, wearing tiger-skin accents over iron armor. Roaring storm and lightning in the backdrop, fierce valor, earthy warm color palette, cinematic dynamic lighting, hyper-realistic epic fantasy art."
+    },
+    {
+      "id": 7,
+      "name": "Lakshmana",
+      "epic": "Ramayana",
+      "category": "Major Heroes & Guides",
+      "role": "Brotherly Loyalty",
+      "nature": "Fierce guardian, unyielding brotherhood, vigilant alertness, absolute devotion",
+      "aspect_ratio": "1:1",
+      "prompt": "Vigilant portrait of Prince Lakshmana standing guard at twilight in the Dandaka forest. Alert, sharp warrior eyes, youthful yet fierce countenance, holding a ready bow with arrow nocked, wearing warrior robes of crimson and forest green with leather bracers. Fireflies and mystical forest flora softly glowing, unwavering loyalty and vigilance, cinematic rim lighting, ultra-detailed."
+    },
+    {
+      "id": 8,
+      "name": "Karna",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Unwavering Loyalty",
+      "nature": "Tragic hero, boundless generosity, steadfast honor, solar brilliance",
+      "aspect_ratio": "1:1",
+      "prompt": "Dramatic portrait of Karna (Radheya / Suryaputra) at sunrise by the sacred river. Glowing golden armor fused into his skin (Kavacha) and radiant celestial earrings (Kundala) catching the blinding golden dawn sun rays, holding water offerings with open palms, noble melancholy in his fierce warrior eyes. Sun god Surya glowing in the sky, golden mist, deeply emotional and epic atmosphere, ultra-fine detailing."
+    },
+    {
+      "id": 9,
+      "name": "Vibhishana",
+      "epic": "Ramayana",
+      "category": "Major Heroes & Guides",
+      "role": "Righteous Whistleblowing",
+      "nature": "Moral courage, choosing truth over kinship, devout seeker, inner fortitude",
+      "aspect_ratio": "1:1",
+      "prompt": "Noble portrait of Vibhishana, the righteous prince of Lanka. Elegant aristocratic Rakshasa features, luminous white tilak, gentle steadfast gaze of a devotee who chose Dharma over kingdom, wearing ornate silver-and-amethyst royal vestments. Soft celestial glow contrasting the fiery silhouette of Lanka in the distance, serene moral conviction, rich high-fantasy concept art."
+    },
+    {
+      "id": 10,
+      "name": "Bhishma",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Solemn Duty & Vows",
+      "nature": "Iron discipline, supreme patriarch, bound by vow, indomitable will",
+      "aspect_ratio": "1:1",
+      "prompt": "Grand and venerable portrait of Bhishma Pitamaha (Ganga-putra). Flowing silver hair and white beard, battle-hardened dignified visage, ancient wisdom in his steely eyes, wearing immaculate white armor with gold trims and a white cape. Holding a magnificent royal bow, the sacred Ganges river softly flowing behind him in twilight, tragic majesty, cinematic monumental scale."
+    },
+    {
+      "id": 11,
+      "name": "Abhimanyu",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Fearless Youth",
+      "nature": "Bravery beyond years, heroic sacrifice, fearless spirit in the Chakravyuha",
+      "aspect_ratio": "1:1",
+      "prompt": "Heroic and poignant portrait of young warrior prince Abhimanyu in the center of the Chakravyuha formation. Youthful, fearless expression with fiery determination, wearing battle-scarred golden armor, holding a broken chariot wheel as an improvised weapon with his sword in hand. Dusty atmospheric battle mist, golden god rays piercing through war clouds, unforgettable courage, epic dynamic painting."
+    },
+    {
+      "id": 12,
+      "name": "Vidura",
+      "epic": "Mahabharata",
+      "category": "Major Heroes & Guides",
+      "role": "Moral Conscience",
+      "nature": "Voice of reason, statecraft genius, uncompromised honesty, profound calm",
+      "aspect_ratio": "1:1",
+      "prompt": "Intellectual and serene portrait of Mahatman Vidura in the royal library of Hastinapura. Thoughtful, observant eyes holding deep political and ethical wisdom, wearing simple yet elegant ivory khadi silk robes, holding an inscribed palm-leaf scripture manuscript. Warm oil lamp lighting, ancient Vedic scrolls and brass astrolabes surrounding him, profound clarity and moral integrity."
+    },
+    {
+      "id": 13,
+      "name": "Sita",
+      "epic": "Ramayana",
+      "category": "Queens & Heroines",
+      "role": "Moral Dignity & Dharma",
+      "nature": "Earthborn grace, supreme fortitude, unblemished purity, moral sovereignty",
+      "aspect_ratio": "1:1",
+      "prompt": "Ethereal and dignified portrait of Goddess Sita seated beneath a blooming Ashoka tree. Radiant serene countenance filled with inner strength and quiet defiance, wearing simple earth-toned silk saree, delicate sacred lotus flowers in her hair, surrounded by dewdrops and gentle deer. Soft morning sun filtering through lush green canopy, timeless beauty and moral majesty, classical Indian fine art style."
+    },
+    {
+      "id": 14,
+      "name": "Draupadi",
+      "epic": "Mahabharata",
+      "category": "Queens & Heroines",
+      "role": "Justice & Fortitude",
+      "nature": "Fiery queen, unwavering demand for justice, intense intellect, indomitable spirit",
+      "aspect_ratio": "1:1",
+      "prompt": "Fierce and commanding portrait of Queen Draupadi (Yajnaseni), born from the sacred fire altar. Luminous dark skin, piercing intense eyes of royal defiance and dignity, flowing untied jet-black tresses, wearing opulent royal red-and-gold saree with intricate temple jewelry. Glowing embers and soft sacred flame reflections dancing in the dark background, unforgettable strength, cinematic royal realism."
+    },
+    {
+      "id": 15,
+      "name": "Kunti",
+      "epic": "Mahabharata",
+      "category": "Queens & Heroines",
+      "role": "Sacrifice & Motherhood",
+      "nature": "Protective matriarch, bearer of heavy secrets, enduring resilience, deep maternal love",
+      "aspect_ratio": "1:1",
+      "prompt": "Heartfelt portrait of Rajmata Kunti, matriarch of the Pandavas. Graceful aged beauty with profound emotional depth in her warm eyes, wearing royal sage-like indigo and silver saree, holding a sacred earthen lamp in contemplation. Soft moonlight over the Hastinapura palace terrace, melancholy yet immense maternal strength, intimate cinematic portraiture."
+    },
+    {
+      "id": 16,
+      "name": "Gandhari",
+      "epic": "Mahabharata",
+      "category": "Queens & Heroines",
+      "role": "Impartiality & Grief",
+      "nature": "Supreme tapasya, voluntary asceticism, painful honesty, mother of sorrow",
+      "aspect_ratio": "1:1",
+      "prompt": "Striking and solemn portrait of Queen Gandhari. Wearing a silk blindfold tied across her eyes in solemn devotion and austerity, dignified royal posture, regal dark emerald and gold attire with subtle antique jewelry. Divine inner radiance shining from her serene face, shadowed royal palace corridor with dramatic chiaroscuro lighting, tragic ascetic power."
+    },
+    {
+      "id": 17,
+      "name": "Savitri",
+      "epic": "Mahabharata",
+      "category": "Queens & Heroines",
+      "role": "Devotion Conquers Death",
+      "nature": "Intellectual prowess, fearless love, defying fate, supreme eloquence",
+      "aspect_ratio": "1:1",
+      "prompt": "Luminous portrait of Princess Savitri standing in an ancient twilight forest confronting the realm of shadow. Unshakable resolve and boundless intellectual radiance in her eyes, wearing forest hermitage saffron-pink robes, holding sacred kusha grass. Mystical ethereal aura surrounding her as she dialogues with the unseen cosmic forces, magical realism, warm and enchanting lighting."
+    },
+    {
+      "id": 18,
+      "name": "Damayanti",
+      "epic": "Mahabharata",
+      "category": "Queens & Heroines",
+      "role": "Love & Resilience",
+      "nature": "Steadfast fidelity, discerning intellect, resilience across exile and separation",
+      "aspect_ratio": "1:1",
+      "prompt": "Enchanting portrait of Queen Damayanti. Exquisite royal grace, intelligent sparkling eyes that chose true mortal love over celestial gods, wearing a silk saree woven with peacock motifs and traditional pearl garlands. A celestial golden swan (Hamsa) perched near her hands whispering cosmic messages, lush lotus pond backdrop at sunset, poetic Vedic romance art."
+    },
+    {
+      "id": 19,
+      "name": "Tara",
+      "epic": "Ramayana",
+      "category": "Queens & Heroines",
+      "role": "Strategic Counsel",
+      "nature": "Diplomatic genius, sharp foresight, political intellect, queen of Kishkindha",
+      "aspect_ratio": "1:1",
+      "prompt": "Regal portrait of Queen Tara of Kishkindha. Intelligent, perceptive gaze of an astute political advisor, adorned in golden tribal-royal jewelry, intricate crown, and vibrant forest-amber silks. Ancient rock-cut Kishkindha royal court background with flaming torches, charismatic and commanding presence, rich visual texture."
+    },
+    {
+      "id": 20,
+      "name": "Mandodari",
+      "epic": "Ramayana",
+      "category": "Queens & Heroines",
+      "role": "Moral Conscience",
+      "nature": "Dignified queen, moral compass, sorrowful foresight, devoted wife",
+      "aspect_ratio": "1:1",
+      "prompt": "Poignant and elegant portrait of Queen Mandodari in the golden palace of Lanka. Aristocratic beauty with sorrowful, wise eyes counseling righteousness against the tide of doom, wearing shimmering black and gold silk with celestial gemstone ornaments. Golden architecture of Lanka glowing under a full moon, emotional depth and atmospheric grandeur."
+    },
+    {
+      "id": 21,
+      "name": "Shakuntala",
+      "epic": "Mahabharata",
+      "category": "Queens & Heroines",
+      "role": "Purity & Dignity",
+      "nature": "In harmony with nature, innocent love, enduring integrity, mother of Bharata",
+      "aspect_ratio": "1:1",
+      "prompt": "Dreamlike portrait of Shakuntala in Sage Kanva’s hermitage grove. Natural transcendent beauty, wearing bark-cloth and delicate white jasmine floral ornaments, surrounded by blooming lotus flowers, gentle fawns, and singing birds. Soft pastel sunbeams filtering through mystical morning mist, idyllic Vedic pastoral elegance."
+    },
+    {
+      "id": 22,
+      "name": "Subhadra",
+      "epic": "Mahabharata",
+      "category": "Queens & Heroines",
+      "role": "Grace & Valor",
+      "nature": "Spirited princess, royal dignity, sister of Krishna, brave mother of Abhimanyu",
+      "aspect_ratio": "1:1",
+      "prompt": "Vibrant and graceful portrait of Princess Subhadra, sister of Krishna and Balarama. Lively courageous eyes, warm radiant smile, dressed in rich turquoise and gold royal Vrishni silk, adorned with intricate gold necklaces and headpiece. Chariot backdrop in the sea-breeze city of Dwarka, spirited and loving royal presence."
+    },
+    {
+      "id": 23,
+      "name": "Ravana",
+      "epic": "Ramayana",
+      "category": "Kings & Antagonists",
+      "role": "Hubris & Brilliance",
+      "nature": "Scholarly mastery, towering ego, ferocious devotion to Shiva, complex conqueror",
+      "aspect_ratio": "1:1",
+      "prompt": "Towering and dramatic portrait of King Ravana, the ten-headed sovereign of Lanka. Formidable dark-bronze warrior physique, fierce commanding eyes, golden crown with intricate demon motifs, playing the Rudra Veena crafted from his own sinews. Fiery volcanic skies and golden towers of Lanka behind him, cosmic power and tragic pride, ultra-detailed cinematic art."
+    },
+    {
+      "id": 24,
+      "name": "Duryodhana",
+      "epic": "Mahabharata",
+      "category": "Kings & Antagonists",
+      "role": "Ambition & Stubbornness",
+      "nature": "Unbending pride, passionate loyalty to Karna, fatal envy, fearless warrior",
+      "aspect_ratio": "1:1",
+      "prompt": "Imperious portrait of Crown Prince Duryodhana (Suyodhana). Stern chiseled jaw, piercing defiant eyes brimming with unyielding ambition, wearing heavy gilded steel armor, purple royal cape, and wielding a heavy spiked golden mace (Gada). Hastinapura assembly hall backdrop with brooding shadows, regal defiance, intense dramatic lighting."
+    },
+    {
+      "id": 25,
+      "name": "Sugriva",
+      "epic": "Ramayana",
+      "category": "Kings & Antagonists",
+      "role": "Alliance King",
+      "nature": "Loyal ally, overcoming fear, royal gratitude, sovereign of the Vanaras",
+      "aspect_ratio": "1:1",
+      "prompt": "Commanding portrait of King Sugriva crowned upon the rocky throne of Kishkindha. Powerful Vanara features, noble golden fur, wearing a gemstone-encrusted royal crown and pearl garlands, holding a royal sceptre. Sunset overlooking the sprawling mountain kingdom of Kishkindha with Vanara legions gathered, heroic unity, cinematic scale."
+    },
+    {
+      "id": 26,
+      "name": "Dasharatha",
+      "epic": "Ramayana",
+      "category": "Kings & Antagonists",
+      "role": "Fatherly Affection",
+      "nature": "Bound by duty, agonizing parental love, majestic monarch, tragic sacrifice",
+      "aspect_ratio": "1:1",
+      "prompt": "Sorrowful and dignified portrait of Emperor Dasharatha in the court of Ayodhya. Noble aged monarch with deep lines of love and grief etched on his face, wearing grand Suryavanshi royal regalia with crown and gold-embroidered robes. Golden throne room with burning oil lamps, profound fatherly emotion, classic regal tragedy."
+    },
+    {
+      "id": 27,
+      "name": "Janaka",
+      "epic": "Ramayana",
+      "category": "Kings & Antagonists",
+      "role": "Philosopher King",
+      "nature": "Karma yogi, detached ruler, profound spiritual illumination, loving father",
+      "aspect_ratio": "1:1",
+      "prompt": "Illuminated portrait of Raja Janaka of Mithila. Serene meditative gaze reflecting detached spiritual wisdom while holding the plough of fertility, wearing simple royal ascetic robes of ochre and white. Lush wheat and barley fields meeting the distant Himalayan peaks under golden morning skies, harmony of kingship and enlightenment."
+    },
+    {
+      "id": 28,
+      "name": "Bharata",
+      "epic": "Ramayana",
+      "category": "Kings & Antagonists",
+      "role": "Selfless Stewardship",
+      "nature": "Absolute renunciation, selflessness, regent of sandals, pure devotion",
+      "aspect_ratio": "1:1",
+      "prompt": "Heart-touching portrait of Prince Bharata seated on the grass in Nandigrama as an ascetic regent. Dressed in hermit bark garments, reverently placing Lord Rama’s golden sandals (Padukas) upon the royal throne, tears of pure devotion and surrender in his eyes. Soft twilight over a humble thatched ashram, unparalleled selflessness, emotional masterpiece."
+    },
+    {
+      "id": 29,
+      "name": "Dhritarashtra",
+      "epic": "Mahabharata",
+      "category": "Kings & Antagonists",
+      "role": "Blind Attachment",
+      "nature": "Physical and moral blindness, internal conflict, fatherly obsession, tragic monarch",
+      "aspect_ratio": "1:1",
+      "prompt": "Atmospheric portrait of blind King Dhritarashtra on the throne of Hastinapura. Sightless white-filmed eyes, massive powerful physique of the Kuru elders, expression torn between moral conscience and helpless affection for his sons, wearing heavy golden crown and dark velvet robes. Deep shadows and burning torchlight in the cavernous courtroom, psychological tension."
+    },
+    {
+      "id": 30,
+      "name": "Shantanu",
+      "epic": "Mahabharata",
+      "category": "Kings & Antagonists",
+      "role": "Duty & Destiny",
+      "nature": "Romantic monarch, driven by heart, progenitor of epic destiny, noble hunter",
+      "aspect_ratio": "1:1",
+      "prompt": "Romantic and grand portrait of King Shantanu on the misty banks of the holy Ganges. Handsome royal archer holding a golden longbow, gazing in awe and longing toward the misty river waves, dressed in Vedic hunting leathers and royal blue silks. Ethereal river mist, twilight reflections, evocative mythological storytelling."
+    },
+    {
+      "id": 31,
+      "name": "Vali",
+      "epic": "Ramayana",
+      "category": "Kings & Antagonists",
+      "role": "Undefeated Might",
+      "nature": "Unmatched physical power, golden necklace of boons, tragic pride, redemption",
+      "aspect_ratio": "1:1",
+      "prompt": "Colossal and fierce portrait of King Vali of Kishkindha. Immense golden-muscled Vanara warrior wearing the divine golden necklace bestowed by Indra that absorbs half the power of his opponent, fierce warrior roar in his eyes. Craggy mountain canyon backdrop with flying boulders and storm winds, raw prehistoric power, dynamic concept art."
+    },
+    {
+      "id": 32,
+      "name": "Yayati",
+      "epic": "Mahabharata",
+      "category": "Kings & Antagonists",
+      "role": "Desire & Renunciation",
+      "nature": "Lessons of endless desire, ultimate awakening, philosophical renunciation",
+      "aspect_ratio": "1:1",
+      "prompt": "Thought-provoking portrait of King Yayati standing at the threshold between youth and old age. Duality of youthful vigor and weathered ascetic realization on his face, wearing half-regal silk and half-ascetic deer-skin, looking down at a fading mirror of water. Ethereal hourglass and swirling sands of time in the background, philosophical depth."
+    },
+    {
+      "id": 33,
+      "name": "Drona",
+      "epic": "Mahabharata",
+      "category": "Sages & Gurus",
+      "role": "Master Preceptor",
+      "nature": "Military genius, strict master, martial pride, bound to the throne",
+      "aspect_ratio": "1:1",
+      "prompt": "Masterful portrait of Acharya Drona in the martial gurukula arena. Stern focused countenance, grey beard, wearing white and brown sage-warrior attire, demonstrating the perfect draw of a sacred celestial bow. Young princes watching in reverence in the background, ancient oak trees, sunlight piercing the canopy, martial mastery and teacher discipline."
+    },
+    {
+      "id": 34,
+      "name": "Vyasa",
+      "epic": "Both",
+      "category": "Sages & Gurus",
+      "role": "Cosmic Chronicler",
+      "nature": "Author of epics, cosmic vision, timeless narrator, profound spiritual depth",
+      "aspect_ratio": "1:1",
+      "prompt": "Cosmic portrait of Krishna Dwaipayana Veda Vyasa dictating the Mahabharata in a Himalayan cave. Radiant dark ascetic sage with flowing matted locks and beard, eyes gazing into the past and future of the universe, holding a peacock feather stylus with palm leaf manuscripts glowing in divine golden script. Lord Ganesha writing by his side, Himalayan peaks under starry night sky, transcendent wisdom."
+    },
+    {
+      "id": 35,
+      "name": "Vishvamitra",
+      "epic": "Ramayana",
+      "category": "Sages & Gurus",
+      "role": "Willpower & Penance",
+      "nature": "Indomitable will, fiery tapasya, king turned Brahmarishi, mentor to Rama",
+      "aspect_ratio": "1:1",
+      "prompt": "Intense and fiery portrait of Brahmarishi Vishvamitra performing tapasya in the wilderness. Blazing aura of spiritual energy (Tejas) radiating from his fierce determined eyes, wearing ascetic tiger pelt and rudraksha beads, sacred holy water pot (Kamandalu) glowing. Raging sacrificial fire (Homa) in the background with celestial constellations swirling, sheer willpower."
+    },
+    {
+      "id": 36,
+      "name": "Valmiki",
+      "epic": "Ramayana",
+      "category": "Sages & Gurus",
+      "role": "Transformation & Poetry",
+      "nature": "Adi Kavi, compassionate heart, poetic genius, father figure to Lava and Kusha",
+      "aspect_ratio": "1:1",
+      "prompt": "Soulful portrait of Adi Kavi Sage Valmiki composing the Ramayana by the Tamasa river. Gentle compassionate eyes moved by the sorrow of the wounded Krauncha bird, flowing white hair, wearing simple bark garments, ink-pot and stylus in hand writing verses in Sanskrit. Serene sunrise reflecting on calm river waters, poetic birth of sloka, deep peaceful elegance."
+    },
+    {
+      "id": 37,
+      "name": "Vashistha",
+      "epic": "Ramayana",
+      "category": "Sages & Gurus",
+      "role": "Spiritual Equanimity",
+      "nature": "Pinnacle of calm, royal kulaguru, master of Vedanta and equanimity",
+      "aspect_ratio": "1:1",
+      "prompt": "Sublime and peaceful portrait of Brahmarishi Vashistha in his ashram. Pure luminous white aura, supreme stillness and equanimity in his gentle eyes, wearing white ascetic cloth and sacred yajnopavita thread, surrounded by the wish-fulfilling divine cow Kamadhenu. Pristine lotus pond and Himalayan foothills in gentle dawn light, spiritual perfection."
+    },
+    {
+      "id": 38,
+      "name": "Agastya",
+      "epic": "Both",
+      "category": "Sages & Gurus",
+      "role": "Master of Nature",
+      "nature": "Ocean-drinker, teacher of Aditya Hridaya, master of mountains and herbs",
+      "aspect_ratio": "1:1",
+      "prompt": "Mystic portrait of Sage Agastya in the southern Vindhya forests. Short, compact, radiant sage with cosmic vitality in his gaze, holding the sacred Aditya Hridaya scripture and medicinal herbs, wearing rudraksha and deer-skin. Brilliant golden sun radiating behind his head, rich tropical flora and ancient caves, mastery over elemental nature."
+    },
+    {
+      "id": 39,
+      "name": "Parashurama",
+      "epic": "Both",
+      "category": "Sages & Gurus",
+      "role": "Righteous Wrath",
+      "nature": "Warrior-sage, avatar of the battleaxe, destroyer of tyranny, guru to Karna and Bhishma",
+      "aspect_ratio": "1:1",
+      "prompt": "Formidable portrait of Bhagavan Parashurama standing atop Mount Mahendra. Piercing ferocious warrior-sage eyes, long wild matted hair, wearing saffron ascetic robes over muscular chest, holding the razor-sharp gleaming celestial battleaxe (Parashu) that crackles with divine lightning. Stormy seas crashing against coastal cliffs below, awe-inspiring fury and discipline."
+    },
+    {
+      "id": 40,
+      "name": "Kripacharya",
+      "epic": "Mahabharata",
+      "category": "Sages & Gurus",
+      "role": "Royal Preceptor",
+      "nature": "Immortal teacher, strict adherence to duty, longevity of wisdom",
+      "aspect_ratio": "1:1",
+      "prompt": "Scholarly and venerable portrait of Kripacharya, the Chiranjivi (immortal) guru of the Kuru princes. Solemn wise eyes carrying witness to generations of war and peace, holding a royal bow and sacred scriptures simultaneously, dressed in traditional ochre-grey robes. Courtyard of Hastinapura academy in soft sunset tones, enduring guardianship."
+    },
+    {
+      "id": 41,
+      "name": "Narada",
+      "epic": "Both",
+      "category": "Sages & Gurus",
+      "role": "Cosmic Catalyst",
+      "nature": "Divine messenger, playful catalyst of cosmic dharma, singing devotion to Narayana",
+      "aspect_ratio": "1:1",
+      "prompt": "Joyful and luminous portrait of Devarishi Narada traveling across cosmic dimensions. Radiant blissful smile, sparkling witty eyes, holding his celestial Tanpura (Mahathi) and Kartal cymbals, wearing glowing saffron silk and fragrant flower garlands. Floating amidst glowing nebulae, stardust, and celestial clouds, divine music and cosmic joy."
+    },
+    {
+      "id": 42,
+      "name": "Durvasa",
+      "epic": "Both",
+      "category": "Sages & Gurus",
+      "role": "Fiery Discipline",
+      "nature": "Unforgiving tester of virtue, fiery temperament, avatar of Shiva’s anger",
+      "aspect_ratio": "1:1",
+      "prompt": "Fierce and electric portrait of Sage Durvasa. Blazing coal-like eyes capable of cursing or blessing in an instant, furrowed brow of strict discipline, wild copper-tinted matted beard, holding a staff that glows with raw ascetic fire. Swirling ember-filled winds and storm clouds around him, untamed power and spiritual test."
+    },
+    {
+      "id": 43,
+      "name": "Shukracharya",
+      "epic": "Both",
+      "category": "Sages & Gurus",
+      "role": "Master of Sanjivani",
+      "nature": "Master of life and resurrection, patron of the underdogs, unmatched strategist",
+      "aspect_ratio": "1:1",
+      "prompt": "Mysterious and powerful portrait of Sage Shukracharya (Kavya), guru of the Asuras. One piercing luminous eye holding the secret esoteric knowledge of Sanjivani Vidya (resurrection), holding a glowing emerald potion vial and ancient manuscript, draped in dark silver and violet robes. Mystical underworld cavern illuminated by bioluminescent crystals and alchemical flames."
+    },
+    {
+      "id": 44,
+      "name": "Brihaspati",
+      "epic": "Both",
+      "category": "Sages & Gurus",
+      "role": "Counselor of Devas",
+      "nature": "Supreme intellect, master of sacred speech, guru of the gods, luminous counselor",
+      "aspect_ratio": "1:1",
+      "prompt": "Luminous and regal portrait of Guru Brihaspati, preceptor of the Devas. Radiant golden complexion, calm authoritative gaze of supreme intellect and diplomacy, wearing celestial yellow silk robes with diamond-studded ornaments, holding the sacred golden Vedas. Indraloka celestial court with golden pillars and starry light in the background, divine counselor."
+    },
+    {
+      "id": 45,
+      "name": "Jatayu",
+      "epic": "Ramayana",
+      "category": "Warriors & Allies",
+      "role": "Supreme Sacrifice",
+      "nature": "Elderly warrior king of birds, fearless defiance, noble self-sacrifice for Sita",
+      "aspect_ratio": "1:1",
+      "prompt": "Epic and heroic portrait of Jatayu, the noble vulture king in aerial combat. Massive majestic feathered wings spanning the sky, fierce sharp golden beak and courageous battle-hardened eyes attacking Ravana’s aerial chariot, glowing sunlight glinting off his feathers. Stormy golden sunset clouds, unforgettable bravery and self-sacrifice, high fantasy creature art."
+    },
+    {
+      "id": 46,
+      "name": "Ashvatthama",
+      "epic": "Mahabharata",
+      "category": "Warriors & Allies",
+      "role": "Uncontrolled Vengeance",
+      "nature": "Blazing jewel on forehead, cursed immortality, tragic rage, unvanquished warrior",
+      "aspect_ratio": "1:1",
+      "prompt": "Haunting and intense portrait of Ashvatthama wandering through the nocturnal battlefield of Kurukshetra. Piercing brooding eyes filled with sorrow and rage, a blood-red wound where the magical gem on his forehead was extracted, wearing battered iron armor and carrying a glowing celestial sword. Dark smoky mist, burning battlefield embers, tragic immortal wanderer."
+    },
+    {
+      "id": 47,
+      "name": "Ghatotkacha",
+      "epic": "Mahabharata",
+      "category": "Warriors & Allies",
+      "role": "Ultimate Sacrifice",
+      "nature": "Colossal nocturnal warrior, master of illusion (Maya), devoted son, savior of Arjuna",
+      "aspect_ratio": "1:1",
+      "prompt": "Colossal and awe-inspiring portrait of Ghatotkacha soaring in the night sky over Kurukshetra. Giant muscular Rakshasa physique, fangs, glowing fiery eyes, wielding magical war illusions and conjuring lightning-infused storms, wearing heavy bronze war pauldrons. Midnight battlefield lit by magical blue and red sparks, titanic warrior power."
+    },
+    {
+      "id": 48,
+      "name": "Garuda",
+      "epic": "Both",
+      "category": "Warriors & Allies",
+      "role": "Duty & Liberation",
+      "nature": "King of birds, mount of Vishnu, supreme speed and power, liberator of snakes",
+      "aspect_ratio": "1:1",
+      "prompt": "Magnificent celestial portrait of Garuda, the golden king of birds and vahana of Lord Vishnu. Golden humanoid torso with colossal iridescent eagle wings, sharp noble eagle features, wearing royal golden armor and serpent armlets, radiating blinding solar brilliance. Azure celestial skies and white heavenly clouds, divine majesty and boundless velocity."
+    },
+    {
+      "id": 49,
+      "name": "Nakula",
+      "epic": "Mahabharata",
+      "category": "Warriors & Allies",
+      "role": "Equine & Healing Lore",
+      "nature": "Unmatched beauty, graceful swordsman, master of horse-whispering and medicine",
+      "aspect_ratio": "1:1",
+      "prompt": "Graceful and handsome portrait of Prince Nakula, the fourth Pandava. Exceptionally handsome aristocratic features, warm gentle gaze, wearing elegant emerald green silk armor with silver filigree, standing beside a magnificent royal black stallion, holding a slender curved sword. Royal stables and lush meadows in golden afternoon light, refined elegance."
+    },
+    {
+      "id": 50,
+      "name": "Sahadeva",
+      "epic": "Mahabharata",
+      "category": "Warriors & Allies",
+      "role": "Silent Foreknowledge",
+      "nature": "Astrological seer, silent wisdom, knows the future yet bound by duty",
+      "aspect_ratio": "1:1",
+      "prompt": "Enigmatic and deeply contemplative portrait of Prince Sahadeva, the youngest Pandava. Intense visionary eyes reflecting cosmic constellations and destiny, wearing midnight-blue robes with silver star patterns, holding a brass astrolabe and astrological chart. Mystical starry night sky swirling with zodiac wheels behind him, quiet profundity and foresight."
+    },
+    {
+      "id": 51,
+      "name": "Satyaki",
+      "epic": "Mahabharata",
+      "category": "Warriors & Allies",
+      "role": "Fierce Devotion",
+      "nature": "Vrishni general, disciple of Arjuna, unyielding loyalty, invincible swordsman",
+      "aspect_ratio": "1:1",
+      "prompt": "Fierce and spirited portrait of Satyaki (Yuyudhana), the champion commander of the Vrishni clan. Fiery courageous eyes, dynamic battle-ready posture holding twin gleaming swords, wearing ornate gold and blue armor bearing the crest of Dwarka. Dynamic battle banners billowing in the sea wind, unwavering loyalty to Krishna and Arjuna, energetic action art."
+    },
+    {
+      "id": 52,
+      "name": "Angada",
+      "epic": "Ramayana",
+      "category": "Warriors & Allies",
+      "role": "Courageous Envoy",
+      "nature": "Fearless prince, unmovable resolve, supreme confidence in Ravana’s court",
+      "aspect_ratio": "1:1",
+      "prompt": "Defiant and powerful portrait of Prince Angada in the golden court of Ravana. Youthful mighty Vanara prince with his foot planted immovably on the marble floor with lightning-like shockwaves, mocking smile and fearless gaze challenging the demon generals, wearing royal Kishkindha gold jewelry. Shocked Lankan courtiers in the background, heroic bravado."
+    },
+    {
+      "id": 53,
+      "name": "Shikhandi",
+      "epic": "Mahabharata",
+      "category": "Warriors & Allies",
+      "role": "Destiny & Purpose",
+      "nature": "Rebirth of Amba, instrument of cosmic fate, fearless determination against Bhishma",
+      "aspect_ratio": "1:1",
+      "prompt": "Resolute and enigmatic portrait of warrior Shikhandi standing upon a war chariot facing the patriarch Bhishma. Intense gaze carrying the destiny of lifetimes, holding a raised bow with unwavering purpose, wearing refined bronze and turquoise breastplate armor with a flowing crimson sash. Epic battlefield mist, swirling arrows, instrument of cosmic balance."
+    },
+    {
+      "id": 54,
+      "name": "Ekalavya",
+      "epic": "Mahabharata",
+      "category": "Warriors & Allies",
+      "role": "Unmatched Guru-Bhakti",
+      "nature": "Supreme self-taught archer, pure guru-bhakti, noble sacrifice of his right thumb",
+      "aspect_ratio": "1:1",
+      "prompt": "Profound portrait of young archer Ekalavya standing in a deep forest glade before a clay statue of Dronacharya. Humble, dedicated eyes of an unmatched prodigy, wearing tribal forest hunter attire and animal pelt, holding his bow with serene reverence and devotion. Sunlight streaming through ancient banyan trees illuminating the clay idol with golden dust, unmatched dedication."
+    }
+  ]
+}

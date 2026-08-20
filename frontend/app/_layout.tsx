@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider } from "../src/context/ThemeContext";
 import { useFonts, EBGaramond_700Bold, EBGaramond_600SemiBold } from '@expo-google-fonts/eb-garamond';
 import { HankenGrotesk_400Regular, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold } from '@expo-google-fonts/hanken-grotesk';
@@ -43,12 +44,14 @@ export default function RootLayout() {
   });
 
   return (
-    <ThemeProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="register" />
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
+        </Stack>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

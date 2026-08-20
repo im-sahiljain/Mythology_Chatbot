@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
@@ -17,6 +18,8 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
@@ -74,7 +77,6 @@ export default function RegisterScreen() {
       console.error('❌ [Register Exception]:', err);
       alert(`Unexpected Network Error: ${err?.message || err}\nPlease check network/CORS settings or open F12 Console.`);
     }
-
   };
 
   if (emailSent) {
@@ -124,6 +126,8 @@ export default function RegisterScreen() {
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
               value={fullName}
               onChangeText={setFullName}
+              placeholder="Arjuna"
+              placeholderTextColor={theme.isDark ? '#666' : '#999'}
             />
 
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>EMAIL</Text>
@@ -131,26 +135,59 @@ export default function RegisterScreen() {
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
               value={email}
               onChangeText={setEmail}
+              placeholder="seeker@vedic.ai"
+              placeholderTextColor={theme.isDark ? '#666' : '#999'}
               autoCapitalize="none"
               keyboardType="email-address"
             />
 
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>PASSWORD</Text>
-            <TextInput
-              style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="At least 6 characters"
+                placeholderTextColor={theme.isDark ? '#666' : '#999'}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword((prev) => !prev)}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={18}
+                  color={theme.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
 
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>CONFIRM PASSWORD</Text>
-            <TextInput
-              style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Confirm password"
+                placeholderTextColor={theme.isDark ? '#666' : '#999'}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowConfirmPassword((prev) => !prev)}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather
+                  name={showConfirmPassword ? 'eye-off' : 'eye'}
+                  size={18}
+                  color={theme.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
 
             <Pressable onPress={register} disabled={loading}>
               <View style={[styles.button, { backgroundColor: theme.accent, opacity: loading ? 0.6 : 1 }]}>
@@ -224,6 +261,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
     marginBottom: 8,
+  },
+  passwordWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 44,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 14,
+    top: 14,
+    padding: 2,
   },
   button: {
     borderRadius: 12,

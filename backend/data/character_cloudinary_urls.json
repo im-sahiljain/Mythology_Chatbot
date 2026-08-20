@@ -1,0 +1,24 @@
+{
+  "Krishna": {
+    "id": 1,
+    "name": "Krishna",
+    "epic": "Mahabharata",
+    "category": "Major Heroes & Guides",
+    "cloudinary_url": "https://res.cloudinary.com/dagkrnoap/image/upload/v1787224483/vedic_mythology/characters/persona_01_krishna.webp",
+    "public_id": "vedic_mythology/characters/persona_01_krishna",
+    "format": "webp",
+    "width": 665,
+    "height": 886
+  },
+  "Rama": {
+    "id": 2,
+    "name": "Rama",
+    "epic": "Ramayana",
+    "category": "Major Heroes & Guides",
+    "cloudinary_url": "https://res.cloudinary.com/dagkrnoap/image/upload/v1787224527/vedic_mythology/characters/persona_02_rama.webp",
+    "public_id": "vedic_mythology/characters/persona_02_rama",
+    "format": "webp",
+    "width": 665,
+    "height": 886
+  }
+}

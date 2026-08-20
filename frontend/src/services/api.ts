@@ -101,34 +101,6 @@ export interface ChatResponse {
   sources: SourceCitation[];
 }
 
-export interface CompletenessResponse {
-  status: 'needs_clarification' | 'resolved';
-  completeness_score: number;
-  reply: string;
-  options: string[];
-  provider_used?: string;
-  sources: SourceCitation[];
-}
-
-export interface TwoTurnResponse {
-  turn: number;
-  reply: string;
-  options: string[];
-  sources: SourceCitation[];
-}
-
-export interface ProgressiveResponse {
-  reply: string;
-  sources: SourceCitation[];
-}
-
-export interface SocraticResponse {
-  status: 'interviewing' | 'resolved';
-  reply: string;
-  character: string;
-  provider_used?: string;
-  sources: SourceCitation[];
-}
 
 export interface FullChatResponse {
   stage: 'interviewing' | 'resolved' | 'follow_up';
@@ -179,6 +151,44 @@ export interface TabUsageStat {
   avg_latency_ms: number;
 }
 
+export interface ProviderUsageStat {
+  provider: string;
+  request_count: number;
+  tokens: number;
+  cost_usd: number;
+}
+
+export interface CharacterUsageStat {
+  character: string;
+  count: number;
+}
+
+export interface LatencyBucket {
+  range: string;
+  count: number;
+}
+
+export interface DailyActivityStat {
+  date: string;
+  requests: number;
+  tokens: number;
+  cost_usd: number;
+}
+
+export interface TelemetryLogEntry {
+  id: string;
+  endpoint: string;
+  tab_mode: string;
+  status_code: number;
+  latency_ms: number;
+  provider_used: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  estimated_cost_usd: number;
+  characters_tagged: string[];
+  timestamp: string;
+}
+
 export interface CostProviderStat {
   provider: string;
   total_calls: number;
@@ -203,6 +213,16 @@ export interface CharacterStat {
   character: string;
   dialogue_count: number;
   percentage: number;
+}
+
+export interface TelemetryDashboardResponse {
+  overview: AdminOverview;
+  tabs: TabUsageStat[];
+  providers: ProviderUsageStat[];
+  top_characters: CharacterUsageStat[];
+  latency_distribution: LatencyBucket[];
+  recent_activity: DailyActivityStat[];
+  recent_logs: TelemetryLogEntry[];
 }
 
 export interface AdminUserItem {
@@ -236,7 +256,7 @@ export interface UserChatSessionDetail {
 }
 
 export const apiService = {
-  // 1. Universal Epic Scholar (POST /chat)
+  // 1. General Guidance RAG Mode (POST /chat)
   async universalChat(message: string, provider?: string): Promise<ChatResponse> {
     const res = await customFetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
@@ -305,43 +325,7 @@ export const apiService = {
     return handleApiResponse(res, 'Failed to fetch roundtable response');
   },
 
-  // 4. Strategy 1: Completeness Evaluator (POST /strategy/completeness)
-  async completenessStrategy(message: string, provider?: string): Promise<CompletenessResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/completeness`, {
-      method: 'POST',
-      body: JSON.stringify({ message, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch completeness response');
-  },
-
-  // 5. Strategy 2: Two-Turn Decision Tree (POST /strategy/two-turn)
-  async twoTurnStrategy(message: string, turn: number = 1, selected_option?: string, provider?: string): Promise<TwoTurnResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/two-turn`, {
-      method: 'POST',
-      body: JSON.stringify({ message, turn, selected_option, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch two-turn response');
-  },
-
-  // 6. Strategy 3: Progressive Hybrid Search (POST /strategy/progressive)
-  async progressiveStrategy(message: string, chat_history: { role: string; content: string }[], provider?: string): Promise<ProgressiveResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/progressive`, {
-      method: 'POST',
-      body: JSON.stringify({ message, chat_history, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch progressive response');
-  },
-
-  // 7. Strategy 4: Autonomous Socratic Interviewer (POST /strategy/socratic)
-  async socraticStrategy(message: string, chat_history: { role: string; content: string }[], force_resolve?: boolean, provider?: string): Promise<SocraticResponse> {
-    const res = await customFetch(`${API_BASE_URL}/strategy/socratic`, {
-      method: 'POST',
-      body: JSON.stringify({ message, chat_history, force_resolve, provider }),
-    });
-    return handleApiResponse(res, 'Failed to fetch socratic response');
-  },
-
-  // 8. Strategy 5: Full Chat with Continuous Follow-Up Memory (POST /strategy/full-chat)
+  // 4. Full Chat with Continuous Follow-Up Memory (POST /strategy/full-chat)
   async fullChatStrategy(
     message: string,
     chat_history: { role: string; content: string; sources?: SourceCitation[] }[],
@@ -355,7 +339,6 @@ export const apiService = {
     });
     return handleApiResponse(res, 'Failed to fetch full chat response');
   },
-
 
   // -------------------------------------------------------------
   // DATABASE SESSION SYNC ENDPOINTS
@@ -438,6 +421,14 @@ export const apiService = {
     const res = await customFetch(`${API_BASE_URL}/api/admin/guest-usage`);
     if (!res.ok) throw new Error('Failed to fetch guest usage');
     return res.json();
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await customFetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST' });
+    } catch (e) {
+      console.warn('Logout API error:', e);
+    }
   }
 };
 

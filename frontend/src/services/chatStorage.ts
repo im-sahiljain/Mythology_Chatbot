@@ -4,14 +4,10 @@ export const SESSIONS_STORAGE_KEY = 'vedic_chat_all_sessions_v3';
 export const ACTIVE_SESSION_KEY = 'vedic_chat_active_session_id_v3';
 
 export type ChatMode =
+  | 'roundtable'
   | 'full-chat'
   | 'persona'
-  | 'roundtable'
-  | 'scholar'
-  | 'adaptive'
-  | 'two-turn'
-  | 'progressive'
-  | 'counselor';
+  | 'scholar';
 
 export interface ChatMessage {
   id: string;
@@ -73,7 +69,7 @@ export function getModeBadgeInfo(mode?: ChatMode, character?: string) {
     };
   }
 
-  if (mode === 'persona' || character) {
+  if (mode === 'persona') {
     const charName = character || 'Persona';
     const icon = CHARACTER_ICONS[charName.toLowerCase()] || '👑';
     return {
@@ -84,21 +80,21 @@ export function getModeBadgeInfo(mode?: ChatMode, character?: string) {
     };
   }
 
-  switch (mode) {
-    case 'scholar':
-      return { icon: '📜', label: 'Scholar', route: '/(tabs)', colorKey: 'accent' };
-    case 'adaptive':
-      return { icon: '⚖️', label: 'Adaptive', route: '/(tabs)/adaptive', colorKey: 'accent' };
-    case 'two-turn':
-      return { icon: '🔄', label: '2-Turn', route: '/(tabs)/two-turn', colorKey: 'accent' };
-    case 'progressive':
-      return { icon: '💬', label: 'Dialogue', route: '/(tabs)/progressive', colorKey: 'accent' };
-    case 'counselor':
-      return { icon: '🧘', label: 'Counselor', route: '/(tabs)/counselor', colorKey: 'accent' };
-    case 'full-chat':
-    default:
-      return { icon: '🏛️', label: 'Scholar Hub', route: '/(tabs)/full-chat', colorKey: 'primary' };
+  if (mode === 'scholar') {
+    return {
+      icon: '📜',
+      label: 'Scholar',
+      route: '/(tabs)',
+      colorKey: 'accent',
+    };
   }
+
+  return {
+    icon: '🏛️',
+    label: 'Full Chat',
+    route: '/(tabs)/full-chat',
+    colorKey: 'primary',
+  };
 }
 
 // Purge all legacy chat transcript data from localStorage on load
@@ -165,3 +161,73 @@ export function deleteSession(id: string) {
   }
   notifyListeners(inMemorySessions, inMemoryActiveId);
 }
+
+export function clearAllLocalSessions() {
+  inMemorySessions = [];
+  inMemoryActiveId = null;
+  notifyListeners([], null);
+}
+
+export async function syncUserSessionsFromDb(): Promise<ChatSession[]> {
+  try {
+    const { apiService } = await import('./api');
+    const dbSessions = await apiService.listSessionsFromDb();
+    if (Array.isArray(dbSessions)) {
+      const mapped: ChatSession[] = dbSessions.map((s: any) => ({
+        id: s.id,
+        title: s.title || 'Vedic Consultation',
+        mode: s.mode || 'full-chat',
+        character: s.character,
+        council: s.council,
+        updatedAt: s.updatedAt || Date.now(),
+        stage: s.stage || null,
+        history: [],
+      }));
+
+      // Preserve active message history only for sessions that belong to the current authenticated user/guest
+      const localMap = new Map(inMemorySessions.map((l) => [l.id, l]));
+      for (const item of mapped) {
+        if (localMap.has(item.id)) {
+          const local = localMap.get(item.id)!;
+          item.history = local.history;
+          item.stage = local.stage;
+        }
+      }
+
+      inMemorySessions = mapped;
+      notifyListeners(inMemorySessions, inMemoryActiveId);
+    }
+  } catch (err) {
+    console.warn('Could not sync sessions from DB:', err);
+  }
+  return inMemorySessions;
+}
+
+export async function fetchSessionDetailFromDb(sessionId: string): Promise<ChatMessage[]> {
+  try {
+    const { apiService } = await import('./api');
+    const detail = await apiService.loadSessionFromDb(sessionId);
+    if (detail && Array.isArray(detail.history)) {
+      const msgs: ChatMessage[] = detail.history.map((m: any) => ({
+        id: m.id || Date.now().toString(),
+        role: m.role || 'assistant',
+        content: m.content || '',
+        character: m.character,
+        stage: m.stage,
+        sources: m.sources || [],
+      }));
+
+      // Update in memory session history
+      const existing = inMemorySessions.find((s) => s.id === sessionId);
+      if (existing) {
+        existing.history = msgs;
+        existing.stage = detail.stage || existing.stage;
+      }
+      return msgs;
+    }
+  } catch (err) {
+    console.warn('Could not fetch session detail from DB:', err);
+  }
+  return [];
+}
+

@@ -21,6 +21,7 @@ import {
   createNewSession,
   setActiveSessionId,
   subscribeToSessions,
+  fetchSessionDetailFromDb,
   ChatMessage,
   ChatSession,
 } from '../../src/services/chatStorage';
@@ -248,16 +249,35 @@ export default function RoundtableScreen() {
       if (active) {
         setSessionId(active.id);
         setActiveSessionId(active.id);
-        setHistory(active.history || []);
-        if (active.council && active.council.length > 0) {
-          setActiveCouncil(active.council);
+        if (active.history && active.history.length > 0) {
+          setHistory(active.history);
+          if (active.council && active.council.length > 0) {
+            setActiveCouncil(active.council);
+          }
+        } else {
+          fetchSessionDetailFromDb(active.id).then((msgs) => {
+            if (msgs && msgs.length > 0) {
+              setHistory(msgs);
+              if (active.council && active.council.length > 0) {
+                setActiveCouncil(active.council);
+              }
+            }
+          });
         }
       } else {
-        setSessionId('');
-        setHistory([]);
-        setInput('');
-        setActiveCouncil(['Sita', 'Krishna']);
-        setMutedCouncil([]);
+        fetchSessionDetailFromDb(params.id as string).then((msgs) => {
+          if (msgs && msgs.length > 0) {
+            setSessionId(params.id as string);
+            setActiveSessionId(params.id as string);
+            setHistory(msgs);
+          } else {
+            setSessionId('');
+            setHistory([]);
+            setInput('');
+            setActiveCouncil(['Sita', 'Krishna']);
+            setMutedCouncil([]);
+          }
+        });
       }
     };
 
