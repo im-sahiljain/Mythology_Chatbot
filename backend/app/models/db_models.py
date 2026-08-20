@@ -84,3 +84,18 @@ class ApiTelemetryLog(Base):
 
     # Relationships
     user = relationship("Profile", back_populates="telemetry_logs")
+
+
+class EpicScenarioEmbeddingModel(Base):
+    __tablename__ = "epic_scenario_embeddings"
+
+    id = Column(String, primary_key=True, index=True)
+    scenario_title = Column(String, nullable=False)
+    epic = Column(String, nullable=False)
+    protagonist = Column(String, nullable=True, index=True)
+    primary_category = Column(String, nullable=True)
+    summary_snippet = Column(Text, nullable=True)
+    verse_refs = Column(JSON, default=list)
+    search_text = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+

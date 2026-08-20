@@ -77,6 +77,103 @@ class RAGService:
         """Character-Strict RAG Query (POST /chat-character) - Filters scenarios strictly from character's own story."""
         return self._handle_guidance_query(message, character, provider, mode=mode, strict_character=True, chat_history=chat_history)
 
+    def _get_query_embedding(self, text_to_embed: str) -> Optional[List[float]]:
+        """Generates 768-dim query embedding using Gemini."""
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            res = genai.embed_content(
+                model="models/gemini-embedding-001",
+                content=text_to_embed,
+                task_type="retrieval_query",
+                output_dimensionality=768
+            )
+            return res.get("embedding")
+        except Exception as e:
+            print(f"⚠️ [Embedding Error]: {e}")
+            return None
+
+    def _query_supabase_vector(
+        self,
+        search_query: str,
+        character: Optional[str] = None,
+        strict_character: bool = False
+    ) -> List[SourceCitation]:
+        """Performs cosine similarity vector search over Supabase pgvector."""
+        sources: List[SourceCitation] = []
+        try:
+            from app.db.session import SessionLocal
+            from sqlalchemy import text
+            import json
+
+            query_embedding = self._get_query_embedding(search_query)
+            if not query_embedding:
+                return []
+
+            db = SessionLocal()
+            try:
+                rows = []
+                # 1. Try character-filtered vector search if strict
+                if strict_character and character:
+                    sql = text("""
+                        SELECT scenario_title, epic, protagonist, summary_snippet, verse_refs
+                        FROM epic_scenario_embeddings
+                        WHERE LOWER(protagonist) = LOWER(:character)
+                        ORDER BY embedding <=> CAST(:query_vec AS vector)
+                        LIMIT 5;
+                    """)
+                    rows = db.execute(sql, {
+                        "character": character,
+                        "query_vec": str(query_embedding)
+                    }).fetchall()
+
+                # 2. Fallback to cross-epic if no matches or not strict
+                if not rows:
+                    sql = text("""
+                        SELECT scenario_title, epic, protagonist, summary_snippet, verse_refs
+                        FROM epic_scenario_embeddings
+                        ORDER BY embedding <=> CAST(:query_vec AS vector)
+                        LIMIT 5;
+                    """)
+                    rows = db.execute(sql, {
+                        "query_vec": str(query_embedding)
+                    }).fetchall()
+
+                seen_titles = set()
+                for row in rows:
+                    title = row.scenario_title
+                    if title in seen_titles:
+                        continue
+                    seen_titles.add(title)
+
+                    raw_refs = row.verse_refs
+                    if isinstance(raw_refs, str):
+                        try:
+                            raw_refs = json.loads(raw_refs)
+                        except Exception:
+                            raw_refs = []
+
+                    sources.append(SourceCitation(
+                        scenario_title=title,
+                        epic=row.epic,
+                        character=row.protagonist or character,
+                        verse_citations=_parse_verses(raw_refs),
+                        summary_snippet=row.summary_snippet or ""
+                    ))
+
+                    if len(sources) >= 3:
+                        break
+            finally:
+                db.close()
+
+            if sources:
+                print(f"\n📦 [Supabase pgvector] Retrieved {len(sources)} unique matching scenario card(s):")
+                for s in sources:
+                    print(f"   ➔ [{s.epic}] {s.scenario_title} (Protagonist: {s.character})")
+        except Exception as e:
+            print(f"⚠️ [Supabase pgvector Query Warning]: {e}")
+        return sources
+
     def _handle_guidance_query(
         self,
         message: str,
@@ -96,18 +193,20 @@ class RAGService:
             if user_texts:
                 search_query = f"{' '.join(user_texts[-2:])} {message}".strip()
 
-        if self.scenarios_collection and self.scenarios_collection.count() > 0:
+        # 1. Primary Vector Search: Supabase pgvector (Cloud + Local, 0 MB server RAM)
+        sources = self._query_supabase_vector(search_query, character, strict_character)
+
+        # 2. Fallback to Local ChromaDB if Supabase yielded 0 results
+        if not sources and self.scenarios_collection and self.scenarios_collection.count() > 0:
             try:
-                print(f"\n🔍 [Vector DB] Querying ChromaDB (Embedder: all-MiniLM-L6-v2) | strict: {strict_character} | character: '{character or 'None (Cross-Epic)'}'")
+                print(f"\n🔍 [Fallback Vector DB] Querying ChromaDB (Embedder: all-MiniLM-L6-v2) | strict: {strict_character} | character: '{character or 'None (Cross-Epic)'}'")
                 query_kwargs = {"query_texts": [search_query], "n_results": 5}
                 if strict_character and character:
                     query_kwargs["where"] = {"protagonist": character}
 
                 results = self.scenarios_collection.query(**query_kwargs)
 
-                # Fallback if strict filter yields 0 matches
                 if strict_character and (not results or not results.get("documents") or not results["documents"][0]):
-                    print(f"⚠️ [Vector DB] No cards found where protagonist='{character}', falling back to cross-epic search...")
                     query_kwargs.pop("where", None)
                     results = self.scenarios_collection.query(**query_kwargs)
 
@@ -116,8 +215,6 @@ class RAGService:
                     for i, doc in enumerate(results["documents"][0]):
                         meta = results["metadatas"][0][i] if results.get("metadatas") else {}
                         title = meta.get("title", "Epic Scenario")
-                        
-                        # Deduplicate by scenario title
                         if title in seen_titles:
                             continue
                         seen_titles.add(title)
@@ -138,16 +235,15 @@ class RAGService:
                             verse_citations=_parse_verses(meta.get("verse_refs")),
                             summary_snippet=clean_story
                         ))
-                        context_str += f"\n--- SCENARIO {len(sources)} ---\nTitle: {title}\nEpic: {meta.get('epic')}\nSummary: {doc}\n"
-                        
                         if len(sources) >= 3:
                             break
-
-                    print(f"📦 [Vector DB] Retrieved {len(sources)} unique matching scenario card(s):")
-                    for s in sources:
-                        print(f"   ➔ [{s.epic}] {s.scenario_title} (Protagonist: {s.character})")
             except Exception as e:
                 print(f"ChromaDB Query Warning: {e}")
+
+        # Assemble context string from sources
+        if sources:
+            for idx, s in enumerate(sources):
+                context_str += f"\n--- SCENARIO {idx+1} ---\nTitle: {s.scenario_title}\nEpic: {s.epic}\nSummary: {s.summary_snippet}\n"
 
         # Build System Prompt
         if strict_character:
