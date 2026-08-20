@@ -18,6 +18,7 @@ export interface ChatMessage {
   stage?: 'interviewing' | 'resolved' | 'follow_up';
   sources?: SourceCitation[];
   searched_vector_db?: boolean;
+  timestamp?: string | number;
 }
 
 export interface ChatSession {

@@ -60,729 +60,26 @@ import {
   ChatSession,
 } from "../../src/services/chatStorage";
 
-// ─── Character Data ────────────────────────────────────────────
+import {
+  ALL_CHARACTERS,
+  GUIDE_CHARACTERS,
+  GuideCard,
+  CATEGORIES,
+  CategoryDef,
+  getCharacterByName,
+} from "../../src/data/characters";
 
-export interface GuideCard {
-  name: string;
-  epic: "Ramayana" | "Mahabharata" | "Both";
-  category: string;
-  role: string;
-  subtitle: string;
-  imageUrl: string;
-  quote: string;
-  icon: string;
-}
-
-const ALL_CHARACTERS: GuideCard[] = [
-  // ── 1. Major Heroes & Guides (12) ──
-  {
-    name: "Krishna",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Divine Strategist",
-    subtitle: "Karma & Svadharma",
-    icon: "🪶",
-    // imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCvy6FRDn2yeF0ZDAQ68lRMvO-idwqZ8BX_rPH9sULF1u4k8rHqyhhCbIQ4g1W-0dqCJg_p6OC5YIq2SBGlvh2yugr56Bm05mx-2b6wWnu5SeO-Hj_ksa9mz36vxX5K_TMEn4DAMT-o0ToGqDPI7rA4hG6ugmN8JMBmhyx-k3SSZpnwHN6Cmj2xXQFpeJ2zljs5B0oWLSBabHJASbFmXZJAJMRNPeOiwKPc0WClp1YoQWStEmp60skyLQ',
-    imageUrl:
-      "https://res.cloudinary.com/dagkrnoap/image/upload/q_auto/f_auto/w_500/h_667/v1787224937/Gemini_Generated_Image_68wuqy68wuqy68wu_yzl158.png",
-    quote:
-      '"You have a right to perform your prescribed duty, but you are not entitled to the fruits of action."',
-  },
-  {
-    name: "Rama",
-    epic: "Ramayana",
-    category: "Major Heroes & Guides",
-    role: "Maryada Purushottam",
-    subtitle: "Absolute Dharma & Duty",
-    icon: "🏹",
-    imageUrl:
-      "https://res.cloudinary.com/dagkrnoap/image/upload/q_auto/f_auto/w_500/h_667/v1787225852/Gemini_Generated_Image_ppmhznppmhznppmh_fzb4li.png",
-    quote:
-      '"Dharma is subtle. The wise know its course by following the path of righteousness."',
-  },
-  {
-    name: "Arjuna",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Moral Hesitation & Duty",
-    subtitle: "Reluctant Warrior",
-    icon: "🎯",
-    imageUrl:
-      "https://res.cloudinary.com/dagkrnoap/image/upload/q_auto/f_auto/w_500/h_667/v1787225681/Gemini_Generated_Image_epem8qepem8qepem_ydc4nz.png",
-    quote:
-      '"My limbs fail and my mouth becomes dry. How can any good come from killing my own kinsmen?"',
-  },
-  {
-    name: "Hanuman",
-    epic: "Ramayana",
-    category: "Major Heroes & Guides",
-    role: "Supreme Devotion",
-    subtitle: "Strength through Surrender",
-    icon: "🙏",
-    imageUrl:
-      "https://res.cloudinary.com/dagkrnoap/image/upload/q_auto/f_auto/w_500/h_667/v1787225286/Gemini_Generated_Image_rzo6farzo6farzo6_qmhfkn.png",
-    quote:
-      '"When you do the work of God, all the forces of nature work alongside you."',
-  },
-  {
-    name: "Yudhishthira",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Dharma King",
-    subtitle: "Justice & Truth Above All",
-    icon: "⚖️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"The greatest sorrow is the sorrow of seeing duty and desire pull in opposite directions."',
-  },
-  {
-    name: "Bhima",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Protector & Valor",
-    subtitle: "Strength with Heart",
-    icon: "💪",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Let might serve the meek. Strength without compassion is tyranny."',
-  },
-  {
-    name: "Lakshmana",
-    epic: "Ramayana",
-    category: "Major Heroes & Guides",
-    role: "Brotherly Loyalty",
-    subtitle: "Selfless Devotion",
-    icon: "🤝",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Where Rama walks, there walk I. No forest is exile when dharma walks beside you."',
-  },
-  {
-    name: "Karna",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Unwavering Loyalty",
-    subtitle: "Tragic Hero",
-    icon: "🌅",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Duryodhana gave me honor when the world gave me shame. I shall not abandon my friend in war."',
-  },
-  {
-    name: "Vibhishana",
-    epic: "Ramayana",
-    category: "Major Heroes & Guides",
-    role: "Righteous Whistleblowing",
-    subtitle: "Truth over Kinship",
-    icon: "🛡️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"When a king abandons dharma, true loyalty demands speaking the truth, even if cast out as a traitor."',
-  },
-  {
-    name: "Bhishma",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Solemn Duty & Vows",
-    subtitle: "Grand Patriarch",
-    icon: "🔱",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"I chose my vow over a kingdom. Sometimes the greatest power lies in renunciation."',
-  },
-  {
-    name: "Abhimanyu",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Fearless Youth",
-    subtitle: "Courage in the Chakravyuha",
-    icon: "⚔️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"I enter the labyrinth knowing I may not return. The warrior\'s call accepts no half-measures."',
-  },
-  {
-    name: "Vidura",
-    epic: "Mahabharata",
-    category: "Major Heroes & Guides",
-    role: "Moral Conscience",
-    subtitle: "Voice of Reason",
-    icon: "📜",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Knowledge is the ornament of kings; righteousness is their armor."',
-  },
-
-  // ── 2. Queens & Heroines (10) ──
-  {
-    name: "Sita",
-    epic: "Ramayana",
-    category: "Queens & Heroines",
-    role: "Moral Dignity & Dharma",
-    subtitle: "Princess of Mithila",
-    icon: "🌸",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDFb6Kk0BzbFNK6vaa61WLC1GhK3P5GfbepMaVR_URnbMpLSeS-BKvJj40LOPlR26D8vIJ79Xdi_MLRNWvjhKMsGh9D_lHrELz_ASLV8PWcF_pEpeb-wbeyi0R_x1Ym6iXCmXdRfXUKCXbk7dssz2IgdKEddNkhTz16p5z8C63i8XRTqSAHsTiZmGRSY9-pAf-uV4w5ip3ggTmSOMYUYIK_tcUK-aOeG-QS1TJQSvgsjRBtj2cqo-pPCQ",
-    quote:
-      '"In the Ashoka Grove, I faced not just the demon king, but the shadows of despair. Yet, my dharma remained unyielding."',
-  },
-  {
-    name: "Draupadi",
-    epic: "Mahabharata",
-    category: "Queens & Heroines",
-    role: "Justice & Fortitude",
-    subtitle: "Fire-Born Queen",
-    icon: "🔥",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"A court that watches injustice in silence has already fallen. I will not be silent."',
-  },
-  {
-    name: "Kunti",
-    epic: "Mahabharata",
-    category: "Queens & Heroines",
-    role: "Sacrifice & Motherhood",
-    subtitle: "Bearer of Secrets",
-    icon: "🕊️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"A mother\'s duty sometimes demands carrying the heaviest truth in absolute silence."',
-  },
-  {
-    name: "Gandhari",
-    epic: "Mahabharata",
-    category: "Queens & Heroines",
-    role: "Impartiality & Grief",
-    subtitle: "Blindfolded Queen",
-    icon: "🖤",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"I bound my eyes in solidarity. But blindness to a son\'s sins is a different darkness."',
-  },
-  {
-    name: "Savitri",
-    epic: "Mahabharata",
-    category: "Queens & Heroines",
-    role: "Devotion Conquers Death",
-    subtitle: "Defied Yama",
-    icon: "🌺",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Neither fear nor fate shall turn me back. I walk after my husband even into the realm of death."',
-  },
-  {
-    name: "Damayanti",
-    epic: "Mahabharata",
-    category: "Queens & Heroines",
-    role: "Love & Resilience",
-    subtitle: "Chose Nala Over Gods",
-    icon: "💎",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Even when the gods themselves stood before me, my heart chose the mortal who walked in truth."',
-  },
-  {
-    name: "Tara",
-    epic: "Ramayana",
-    category: "Queens & Heroines",
-    role: "Strategic Counsel",
-    subtitle: "Queen of Kishkindha",
-    icon: "👑",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Do not let unbridled fury blind your wisdom. Even the mightiest warrior falls when counsel is ignored."',
-  },
-  {
-    name: "Mandodari",
-    epic: "Ramayana",
-    category: "Queens & Heroines",
-    role: "Moral Conscience",
-    subtitle: "Queen of Lanka",
-    icon: "🌙",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Righteousness alone preserves a kingdom. No fortress of gold can withstand the tide of adharma."',
-  },
-  {
-    name: "Shakuntala",
-    epic: "Mahabharata",
-    category: "Queens & Heroines",
-    role: "Purity & Dignity",
-    subtitle: "Mother of Emperor Bharata",
-    icon: "🌿",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"A wife is half the man, his best of friends, the root of all three goals of life."',
-  },
-  {
-    name: "Subhadra",
-    epic: "Mahabharata",
-    category: "Queens & Heroines",
-    role: "Grace & Valor",
-    subtitle: "Mother of Abhimanyu",
-    icon: "✨",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"The courage of a mother shines in raising heroes who know neither fear nor deceit."',
-  },
-
-  // ── 3. Kings, Rulers & Antagonists (10) ──
-  {
-    name: "Ravana",
-    epic: "Ramayana",
-    category: "Kings & Antagonists",
-    role: "Hubris & Brilliance",
-    subtitle: "Scholar-Demon King",
-    icon: "👿",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"My ten heads held the knowledge of all Vedas. Yet unchecked desire consumed them all."',
-  },
-  {
-    name: "Duryodhana",
-    epic: "Mahabharata",
-    category: "Kings & Antagonists",
-    role: "Ambition & Stubbornness",
-    subtitle: "Crown Prince of Kuru",
-    icon: "👑",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"I know what dharma is, yet I cannot follow it. I know what adharma is, yet I cannot avoid it."',
-  },
-  {
-    name: "Sugriva",
-    epic: "Ramayana",
-    category: "Kings & Antagonists",
-    role: "Alliance King",
-    subtitle: "Vanara Sovereign",
-    icon: "🐵",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"In Rama I found a friend who honored his pledge; in return, the entire Vanara realm marches for Sita."',
-  },
-  {
-    name: "Dasharatha",
-    epic: "Ramayana",
-    category: "Kings & Antagonists",
-    role: "Fatherly Affection",
-    subtitle: "Bound by Promises",
-    icon: "🏛️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      "\"A king's word once given cannot be withdrawn—even when it shatters a father's heart.\"",
-  },
-  {
-    name: "Janaka",
-    epic: "Ramayana",
-    category: "Kings & Antagonists",
-    role: "Philosopher King",
-    subtitle: "Karma Yogi Ruler",
-    icon: "🌾",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Even while ruling a kingdom, one can remain completely detached from worldly illusion."',
-  },
-  {
-    name: "Bharata",
-    epic: "Ramayana",
-    category: "Kings & Antagonists",
-    role: "Selfless Stewardship",
-    subtitle: "Regent of the Sandals",
-    icon: "👡",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"The throne belongs to Rama alone. I serve merely as the keeper of his sacred padukas."',
-  },
-  {
-    name: "Dhritarashtra",
-    epic: "Mahabharata",
-    category: "Kings & Antagonists",
-    role: "Blind Attachment",
-    subtitle: "Tragic Monarch",
-    icon: "👁️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"My paternal love was my greatest blindfold. When desire overtakes justice, ruin follows."',
-  },
-  {
-    name: "Shantanu",
-    epic: "Mahabharata",
-    category: "Kings & Antagonists",
-    role: "Duty & Destiny",
-    subtitle: "King of Hastinapura",
-    icon: "🌊",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote: '"Human longing often binds the destiny of generations to come."',
-  },
-  {
-    name: "Vali",
-    epic: "Ramayana",
-    category: "Kings & Antagonists",
-    role: "Undefeated Might",
-    subtitle: "Fallen King of Kishkindha",
-    icon: "🥊",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Unchecked strength without discernment leads even the victorious to their downfall."',
-  },
-  {
-    name: "Yayati",
-    epic: "Mahabharata",
-    category: "Kings & Antagonists",
-    role: "Desire & Renunciation",
-    subtitle: "Lunar Dynasty Monarch",
-    icon: "⏳",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Desire never ends by fulfillment; it only flares up like fire fed by clarified butter."',
-  },
-
-  // ── 4. Sages, Gurus & Ascetics (12) ──
-  {
-    name: "Drona",
-    epic: "Mahabharata",
-    category: "Sages & Gurus",
-    role: "Master Preceptor",
-    subtitle: "Archery Guru",
-    icon: "🏹",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"A teacher judges not by birth, but by unyielding focus and reverence for the sacred bow."',
-  },
-  {
-    name: "Vyasa",
-    epic: "Both",
-    category: "Sages & Gurus",
-    role: "Cosmic Chronicler",
-    subtitle: "Author of the Epics",
-    icon: "✍️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"What is found here may be found elsewhere. What is not found here will be found nowhere."',
-  },
-  {
-    name: "Vishvamitra",
-    epic: "Ramayana",
-    category: "Sages & Gurus",
-    role: "Willpower & Penance",
-    subtitle: "King Turned Brahmarishi",
-    icon: "🔥",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"From king to sage—the fire of tapas transforms the impossible into the inevitable."',
-  },
-  {
-    name: "Valmiki",
-    epic: "Ramayana",
-    category: "Sages & Gurus",
-    role: "Transformation & Poetry",
-    subtitle: "Adi Kavi",
-    icon: "📖",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"From a life of shadows emerged the first verse—born from compassion for a wounded crane."',
-  },
-  {
-    name: "Vashistha",
-    epic: "Ramayana",
-    category: "Sages & Gurus",
-    role: "Spiritual Equanimity",
-    subtitle: "Royal Kulaguru",
-    icon: "🧘",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Purity of intellect and steadfast peace of mind overcome all celestial curses."',
-  },
-  {
-    name: "Agastya",
-    epic: "Both",
-    category: "Sages & Gurus",
-    role: "Master of Nature",
-    subtitle: "Giver of the Aditya Hridaya",
-    icon: "🌊",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"When doubts surround you in battle, fix your mind on the eternal radiance of the Sun."',
-  },
-  {
-    name: "Parashurama",
-    epic: "Both",
-    category: "Sages & Gurus",
-    role: "Righteous Wrath",
-    subtitle: "Avatar of the Battleaxe",
-    icon: "🪓",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Power without righteousness is corruption; austerity without discipline is vanity."',
-  },
-  {
-    name: "Kripacharya",
-    epic: "Mahabharata",
-    category: "Sages & Gurus",
-    role: "Royal Preceptor",
-    subtitle: "Immortal Teacher",
-    icon: "📜",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"True knowledge guides the student toward righteousness, not towards senseless destruction."',
-  },
-  {
-    name: "Narada",
-    epic: "Both",
-    category: "Sages & Gurus",
-    role: "Cosmic Catalyst",
-    subtitle: "Divine Messenger",
-    icon: "🪕",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"In every cosmic turning, devotional joy and truth dissolve the deepest illusions of Maya."',
-  },
-  {
-    name: "Durvasa",
-    epic: "Both",
-    category: "Sages & Gurus",
-    role: "Fiery Discipline",
-    subtitle: "Tester of Virtues",
-    icon: "⚡",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Hospitality and devotion must be genuine. False humility invites the wrath of truth."',
-  },
-  {
-    name: "Shukracharya",
-    epic: "Both",
-    category: "Sages & Gurus",
-    role: "Master of Sanjivani",
-    subtitle: "Preceptor of Asuras",
-    icon: "👁️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Wisdom serves whoever earns it through relentless penance, regardless of their realm."',
-  },
-  {
-    name: "Brihaspati",
-    epic: "Both",
-    category: "Sages & Gurus",
-    role: "Counselor of Devas",
-    subtitle: "Master of Sacred Wisdom",
-    icon: "🌟",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Diplomacy, patience, and righteous intellect are far sharper than the thunderbolt of Indra."',
-  },
-
-  // ── 5. Warriors, Allies & Devas (10) ──
-  {
-    name: "Jatayu",
-    epic: "Ramayana",
-    category: "Warriors & Allies",
-    role: "Supreme Sacrifice",
-    subtitle: "Noble Vulture King",
-    icon: "🦅",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Even with shattered wings, I fought—for when dharma calls, age and body do not matter."',
-  },
-  {
-    name: "Ashvatthama",
-    epic: "Mahabharata",
-    category: "Warriors & Allies",
-    role: "Uncontrolled Vengeance",
-    subtitle: "Cursed Immortal",
-    icon: "💀",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Rage consumed what honor had built. The price of vengeance is immortality in suffering."',
-  },
-  {
-    name: "Ghatotkacha",
-    epic: "Mahabharata",
-    category: "Warriors & Allies",
-    role: "Ultimate Sacrifice",
-    subtitle: "Rakshasa Son of Bhima",
-    icon: "⚡",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      "\"I gave my life to shield Arjuna. A son's love for his father's cause knows no limits.\"",
-  },
-  {
-    name: "Garuda",
-    epic: "Both",
-    category: "Warriors & Allies",
-    role: "Duty & Liberation",
-    subtitle: "King of Birds",
-    icon: "🦅",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"I carried the nectar of the gods—not for myself, but to free my mother from bondage."',
-  },
-  {
-    name: "Nakula",
-    epic: "Mahabharata",
-    category: "Warriors & Allies",
-    role: "Equine & Healing Lore",
-    subtitle: "Fourth Pandava",
-    icon: "🐴",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"True humility lies in mastering your craft quietly without demanding applause."',
-  },
-  {
-    name: "Sahadeva",
-    epic: "Mahabharata",
-    category: "Warriors & Allies",
-    role: "Silent Foreknowledge",
-    subtitle: "Wisest of the Pandavas",
-    icon: "🔮",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Knowing the future is a heavy burden when dharma commands silence until asked."',
-  },
-  {
-    name: "Satyaki",
-    epic: "Mahabharata",
-    category: "Warriors & Allies",
-    role: "Fierce Devotion",
-    subtitle: "Vrishni Chieftain",
-    icon: "🗡️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"My devotion to Krishna and Arjuna never wavered, even when the cosmos was in turmoil."',
-  },
-  {
-    name: "Angada",
-    epic: "Ramayana",
-    category: "Warriors & Allies",
-    role: "Courageous Envoy",
-    subtitle: "Prince of Kishkindha",
-    icon: "🛡️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Let Ravana\'s entire court try to move my foot—such is the unyielding power of righteous faith."',
-  },
-  {
-    name: "Shikhandi",
-    epic: "Mahabharata",
-    category: "Warriors & Allies",
-    role: "Destiny & Purpose",
-    subtitle: "Instrument of Cosmic Fate",
-    icon: "🏹",
-    imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"Through lifetimes of patience, destiny finds its moment to balance the cosmic scales."',
-  },
-  {
-    name: "Ekalavya",
-    epic: "Mahabharata",
-    category: "Warriors & Allies",
-    role: "Unmatched Guru-Bhakti",
-    subtitle: "Nishada Archer",
-    icon: "🎯",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80",
-    quote:
-      '"I surrendered my right thumb without hesitation, proving that true reverence transcends all tests."',
-  },
-];
-
-// Backward compatibility
-export const GUIDE_CHARACTERS = ALL_CHARACTERS;
-
-// ─── Category Definitions ──────────────────────────────────────
-
-interface CategoryDef {
-  label: string;
-  icon: string;
-  filter: (c: GuideCard) => boolean;
-}
-
-const CATEGORIES: CategoryDef[] = [
-  { label: "All", icon: "🪷", filter: () => true },
-  {
-    label: "Ramayana",
-    icon: "🏹",
-    filter: (c) => c.epic === "Ramayana" || c.epic === "Both",
-  },
-  {
-    label: "Mahabharata",
-    icon: "🎯",
-    filter: (c) => c.epic === "Mahabharata" || c.epic === "Both",
-  },
-  {
-    label: "Heroes",
-    icon: "⚔️",
-    filter: (c) => c.category === "Major Heroes & Guides",
-  },
-  {
-    label: "Queens",
-    icon: "👑",
-    filter: (c) => c.category === "Queens & Heroines",
-  },
-  { label: "Sages", icon: "📜", filter: (c) => c.category === "Sages & Gurus" },
-  {
-    label: "Warriors",
-    icon: "🛡️",
-    filter: (c) =>
-      c.category === "Warriors & Allies" ||
-      c.category === "Kings & Antagonists",
-  },
-];
+export { GuideCard, GUIDE_CHARACTERS };
 
 // ─── Chat Types ────────────────────────────────────────────────
 
 interface ChatMsg {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   stage?: "interviewing" | "resolved" | "follow_up";
   sources?: SourceCitation[];
+  timestamp?: string | number;
 }
 
 // ─── Main Screen ───────────────────────────────────────────────
@@ -808,12 +105,90 @@ export default function PersonaScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showMentionDropup, setShowMentionDropup] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
-
   const [history, setHistory] = useState<ChatMsg[]>([]);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
+  const [inputHeight, setInputHeight] = useState(36);
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+
+  const filteredMentionCharacters = ALL_CHARACTERS.filter(
+    (c) =>
+      c.name.toLowerCase().includes(mentionQuery) ||
+      c.role.toLowerCase().includes(mentionQuery),
+  );
+
+  const handleKeyDown = (e: any) => {
+    if (Platform.OS === 'web') {
+      if (showMentionDropup && filteredMentionCharacters.length > 0) {
+        if (e.nativeEvent.key === 'ArrowDown') {
+          e.preventDefault();
+          setMentionSelectedIndex((prev) => (prev + 1) % filteredMentionCharacters.length);
+          return;
+        }
+        if (e.nativeEvent.key === 'ArrowUp') {
+          e.preventDefault();
+          setMentionSelectedIndex((prev) => (prev - 1 + filteredMentionCharacters.length) % filteredMentionCharacters.length);
+          return;
+        }
+        if (e.nativeEvent.key === 'Enter' || e.nativeEvent.key === 'Tab') {
+          e.preventDefault();
+          const targetChar = filteredMentionCharacters[mentionSelectedIndex] || filteredMentionCharacters[0];
+          if (targetChar) {
+            handleSelectMentionCharacter(targetChar);
+          }
+          return;
+        }
+        if (e.nativeEvent.key === 'Escape') {
+          e.preventDefault();
+          setShowMentionDropup(false);
+          return;
+        }
+      }
+
+      if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+        e.preventDefault();
+        if (!loading) {
+          sendQuery();
+        }
+      }
+    }
+  };
+
+  const handleCopyText = async (text: string, id: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+      setCopiedMsgId(id);
+      setTimeout(() => {
+        setCopiedMsgId(null);
+      }, 2000);
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+    }
+  };
+
+  const formatLocalTime = (timestamp?: string | number) => {
+    if (!timestamp) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const d = new Date(timestamp);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
 
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
   const consultationInputRef = useRef<TextInput>(null);
+  const heroMentionScrollRef = useRef<ScrollView>(null);
+  const consultationMentionScrollRef = useRef<ScrollView>(null);
+
+  // Auto-scroll mention list when navigating with arrow keys
+  useEffect(() => {
+    if (showMentionDropup) {
+      const ITEM_HEIGHT = 56;
+      const targetY = Math.max(0, (mentionSelectedIndex - 2) * ITEM_HEIGHT);
+      heroMentionScrollRef.current?.scrollTo({ y: targetY, animated: true });
+      consultationMentionScrollRef.current?.scrollTo({ y: targetY, animated: true });
+    }
+  }, [mentionSelectedIndex, showMentionDropup]);
 
   // Responsive dimensions
   const isMobile = screenWidth < 768;
@@ -865,6 +240,10 @@ export default function PersonaScreen() {
   // Handle typing inside input box and detect '@'
   const handleInputChange = (text: string) => {
     setInput(text);
+    if (!text.trim()) {
+      setInputHeight(36);
+      setIsInputExpanded(false);
+    }
 
     const lastAtIndex = text.lastIndexOf("@");
     if (lastAtIndex !== -1) {
@@ -902,6 +281,7 @@ export default function PersonaScreen() {
     setInput("");
     setShowMentionDropup(false);
     setMentionQuery("");
+    setMentionSelectedIndex(0);
 
     // Start consultation immediately with selected character
     handleSelectGuideAndStart(character, queryText);
@@ -1129,7 +509,11 @@ export default function PersonaScreen() {
     const textToSend = (queryText || input).trim();
     if ((!textToSend && !isForceResolve) || loading) return;
 
-    if (!queryText) setInput("");
+    if (!queryText) {
+      setInput("");
+      setInputHeight(36);
+      setIsInputExpanded(false);
+    }
     setHasStartedConsultation(true);
 
     const baseHistory = customHistory || history;
@@ -1138,7 +522,12 @@ export default function PersonaScreen() {
 
     let nextHistory = [...baseHistory];
     if (textToSend) {
-      nextHistory.push({ role: "user", content: textToSend });
+      nextHistory.push({
+        id: Date.now().toString(),
+        role: "user",
+        content: textToSend,
+        timestamp: Date.now(),
+      });
     }
     setHistory(nextHistory);
     setLoading(true);
@@ -1169,10 +558,12 @@ export default function PersonaScreen() {
       const finalHistory: ChatMsg[] = [
         ...nextHistory,
         {
+          id: (Date.now() + 1).toString(),
           role: "assistant",
           content: res.reply,
           stage: respStage,
           sources: res.sources || [],
+          timestamp: Date.now(),
         },
       ];
       setHistory(finalHistory);
@@ -1495,39 +886,38 @@ export default function PersonaScreen() {
                 </View>
 
                 <ScrollView
-                  style={{ maxHeight: 210 }}
-                  showsVerticalScrollIndicator={false}
+                  ref={heroMentionScrollRef}
+                  style={{ maxHeight: 260 }}
+                  showsVerticalScrollIndicator={true}
                   keyboardShouldPersistTaps="always"
                 >
-                  {filteredCharacters
-                    .filter(
-                      (c) =>
-                        c.name.toLowerCase().includes(mentionQuery) ||
-                        c.role.toLowerCase().includes(mentionQuery) ||
-                        c.subtitle.toLowerCase().includes(mentionQuery),
-                    )
-                    .map((char) => {
-                      const isSelected =
-                        selectedGuide.name.toLowerCase() ===
-                        char.name.toLowerCase();
+                  {filteredMentionCharacters.map((char, index) => {
+                    const isCandidateSelected = index === mentionSelectedIndex;
+                    const isCurrentGuide =
+                      selectedGuide.name.toLowerCase() ===
+                      char.name.toLowerCase();
 
-                      return (
-                        <TouchableOpacity
-                          key={char.name}
-                          style={[
-                            styles.dropupRow,
-                            {
-                              backgroundColor: isSelected
+                    return (
+                      <TouchableOpacity
+                        key={char.name}
+                        style={[
+                          styles.dropupRow,
+                          {
+                            backgroundColor: isCandidateSelected
+                              ? theme.surfaceContainerLow
+                              : isCurrentGuide
                                 ? theme.isDark
                                   ? "rgba(234,194,92,0.12)"
                                   : "rgba(146,113,13,0.08)"
                                 : "transparent",
-                              borderBottomColor: theme.outlineVariant,
-                            },
-                          ]}
-                          onPress={() => handleSelectMentionCharacter(char)}
-                          activeOpacity={0.7}
-                        >
+                            borderBottomColor: theme.outlineVariant,
+                            borderColor: isCandidateSelected ? theme.primary : "transparent",
+                            borderWidth: isCandidateSelected ? 1.5 : 0,
+                          },
+                        ]}
+                        onPress={() => handleSelectMentionCharacter(char)}
+                        activeOpacity={0.7}
+                      >
                           <View
                             style={{
                               flexDirection: "row",
@@ -1587,7 +977,7 @@ export default function PersonaScreen() {
                               </Text>
                             </View>
                           </View>
-                          {isSelected ? (
+                          {isCurrentGuide ? (
                             <Text
                               style={{
                                 color: theme.primaryContainer,
@@ -1616,77 +1006,122 @@ export default function PersonaScreen() {
               </View>
             )}
 
-            {/* Bottom Input Pill */}
+            {/* Bottom ChatGPT Input Card in Hero */}
             <View
               style={[
-                styles.floatingInputPill,
+                styles.chatgptInputCard,
                 {
                   backgroundColor: theme.surfaceContainerLowest,
                   borderColor: theme.outlineVariant,
-                  shadowColor: theme.primaryContainer,
+                  shadowColor: theme.shadow,
                 },
+                isInputExpanded && { minHeight: 180 },
               ]}
             >
+              {/* Top-Right Absolute Expand Button */}
               <TouchableOpacity
-                style={[
-                  styles.atMentionTriggerBtn,
-                  {
-                    backgroundColor: showMentionDropup
-                      ? theme.primaryContainer
-                      : theme.isDark
-                        ? "rgba(234,194,92,0.12)"
-                        : "rgba(146,113,13,0.08)",
-                    borderColor: showMentionDropup
-                      ? theme.primaryContainer
-                      : theme.outlineVariant,
-                  },
-                ]}
-                onPress={toggleMentionDropup}
+                style={styles.expandToggleBtn}
+                onPress={() => setIsInputExpanded(!isInputExpanded)}
                 activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text
-                  style={[
-                    styles.atMentionTriggerText,
-                    {
-                      color: showMentionDropup
-                        ? theme.onPrimaryContainer
-                        : theme.primaryContainer,
-                      fontFamily: label,
-                    },
-                  ]}
-                >
-                  @
+                <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
+                  {isInputExpanded ? '🗗' : '⛶'}
                 </Text>
               </TouchableOpacity>
 
+              {/* Multiline TextInput */}
               <TextInput
                 ref={inputRef}
                 style={[
-                  styles.textInput,
-                  { color: theme.text, fontFamily: body },
+                  styles.chatgptTextInput,
+                  {
+                    color: theme.text,
+                    fontFamily: body,
+                    height: isInputExpanded ? 160 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 140),
+                  },
+                  Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
                 ]}
-                placeholder={`Seek guidance from ${selectedGuide.name}... (type @ to switch)`}
+                placeholder={`Seek guidance from ${selectedGuide.name}... (Enter sends, Shift+Enter for new line)`}
                 placeholderTextColor={theme.textTertiary}
                 value={input}
                 onChangeText={handleInputChange}
-                onSubmitEditing={() => sendQuery()}
-                returnKeyType="send"
+                multiline
+                onContentSizeChange={(e) => {
+                  if (input.trim()) {
+                    setInputHeight(e.nativeEvent.contentSize.height);
+                  } else {
+                    setInputHeight(36);
+                  }
+                }}
+                onKeyPress={handleKeyDown}
               />
-              <TouchableOpacity
-                style={[
-                  styles.sendCircleBtn,
-                  { backgroundColor: theme.primaryContainer },
-                ]}
-                onPress={() => sendQuery()}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[styles.sendIcon, { color: theme.onPrimaryContainer }]}
+
+              {/* Bottom Bar: @ Mention & Guide Name + Send Button */}
+              <View style={styles.chatgptBottomBar}>
+                <View style={styles.bottomBarLeft}>
+                  <TouchableOpacity
+                    style={[
+                      styles.atMentionTriggerBtn,
+                      {
+                        backgroundColor: showMentionDropup
+                          ? theme.primaryContainer
+                          : theme.isDark
+                            ? "rgba(234,194,92,0.12)"
+                            : "rgba(146,113,13,0.08)",
+                        borderColor: showMentionDropup
+                          ? theme.primaryContainer
+                          : theme.outlineVariant,
+                      },
+                    ]}
+                    onPress={toggleMentionDropup}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.atMentionTriggerText,
+                        {
+                          color: showMentionDropup
+                            ? theme.onPrimaryContainer
+                            : theme.primaryContainer,
+                          fontFamily: label,
+                        },
+                      ]}
+                    >
+                      @
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
+                    <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+                      {selectedGuide.icon} {selectedGuide.name}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.chatgptSendBtn,
+                    input.trim().length > 0 && !loading
+                      ? { backgroundColor: theme.primaryContainer }
+                      : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                  ]}
+                  onPress={() => {
+                    if (!loading) sendQuery();
+                  }}
+                  disabled={loading || !input.trim()}
+                  activeOpacity={loading ? 1 : 0.8}
                 >
-                  ➤
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.chatgptSendIcon,
+                      { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                    ]}
+                  >
+                    ↑
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -1731,20 +1166,39 @@ export default function PersonaScreen() {
                       />
                       <View style={styles.aiContentInner}>
                         <View style={styles.aiHeaderRow}>
-                          <Text style={styles.aiAvatarIcon}>
-                            {selectedGuide.icon}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.aiSenderName,
-                              {
-                                color: theme.primaryContainer,
-                                fontFamily: label,
-                              },
-                            ]}
-                          >
-                            {selectedGuide.name.toUpperCase()}
-                          </Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                            <Text style={styles.aiAvatarIcon}>
+                              {selectedGuide.icon}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.aiSenderName,
+                                {
+                                  color: theme.primaryContainer,
+                                  fontFamily: label,
+                                },
+                              ]}
+                            >
+                              {selectedGuide.name.toUpperCase()}
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                              {formatLocalTime(msg.timestamp)}
+                            </Text>
+                            <TouchableOpacity
+                              style={[
+                                styles.copyBtn,
+                                copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                              ]}
+                              onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
+                                {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
                         <StreamingText
                           text={msg.content}
@@ -1776,6 +1230,23 @@ export default function PersonaScreen() {
                       >
                         {msg.content}
                       </Text>
+                      <View style={styles.bubbleFooter}>
+                        <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                          {formatLocalTime(msg.timestamp)}
+                        </Text>
+                        <TouchableOpacity
+                          style={[
+                            styles.copyBtn,
+                            copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                          ]}
+                          onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
+                            {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
                 </FadeSlide>
@@ -1864,29 +1335,33 @@ export default function PersonaScreen() {
                 </View>
 
                 <ScrollView
-                  style={{ maxHeight: 210 }}
-                  showsVerticalScrollIndicator={false}
+                  ref={consultationMentionScrollRef}
+                  style={{ maxHeight: 260 }}
+                  showsVerticalScrollIndicator={true}
                   keyboardShouldPersistTaps="always"
                 >
-                  {filteredCharacters
-                    .filter(
-                      (c) =>
-                        c.name.toLowerCase().includes(mentionQuery) ||
-                        c.role.toLowerCase().includes(mentionQuery),
-                    )
-                    .map((char) => (
+                  {filteredMentionCharacters.map((char, index) => {
+                    const isCandidateSelected = index === mentionSelectedIndex;
+                    const isCurrentGuide =
+                      selectedGuide.name.toLowerCase() ===
+                      char.name.toLowerCase();
+
+                    return (
                       <TouchableOpacity
                         key={char.name}
                         style={[
                           styles.dropupRow,
                           {
-                            backgroundColor:
-                              selectedGuide.name === char.name
+                            backgroundColor: isCandidateSelected
+                              ? theme.surfaceContainerLow
+                              : isCurrentGuide
                                 ? theme.isDark
                                   ? "rgba(234,194,92,0.12)"
                                   : "rgba(146,113,13,0.08)"
                                 : "transparent",
                             borderBottomColor: theme.outlineVariant,
+                            borderColor: isCandidateSelected ? theme.primary : "transparent",
+                            borderWidth: isCandidateSelected ? 1.5 : 0,
                           },
                         ]}
                         onPress={() => handleSelectMentionCharacter(char)}
@@ -1914,81 +1389,127 @@ export default function PersonaScreen() {
                           </Text>
                         </View>
                       </TouchableOpacity>
-                    ))}
+                    );
+                  })}
                 </ScrollView>
               </View>
             )}
 
             <View
               style={[
-                styles.floatingInputPill,
+                styles.chatgptInputCard,
                 {
                   backgroundColor: theme.surfaceContainerLowest,
                   borderColor: theme.outlineVariant,
-                  shadowColor: theme.primaryContainer,
+                  shadowColor: theme.shadow,
                 },
+                isInputExpanded && { minHeight: 200 },
               ]}
             >
+              {/* Top-Right Absolute Expand Button */}
               <TouchableOpacity
-                style={[
-                  styles.atMentionTriggerBtn,
-                  {
-                    backgroundColor: showMentionDropup
-                      ? theme.primaryContainer
-                      : theme.isDark
-                        ? "rgba(234,194,92,0.12)"
-                        : "rgba(146,113,13,0.08)",
-                    borderColor: showMentionDropup
-                      ? theme.primaryContainer
-                      : theme.outlineVariant,
-                  },
-                ]}
-                onPress={toggleMentionDropup}
+                style={styles.expandToggleBtn}
+                onPress={() => setIsInputExpanded(!isInputExpanded)}
                 activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text
-                  style={[
-                    styles.atMentionTriggerText,
-                    {
-                      color: showMentionDropup
-                        ? theme.onPrimaryContainer
-                        : theme.primaryContainer,
-                      fontFamily: label,
-                    },
-                  ]}
-                >
-                  @
+                <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
+                  {isInputExpanded ? '🗗' : '⛶'}
                 </Text>
               </TouchableOpacity>
 
+              {/* Multiline TextInput */}
               <TextInput
                 ref={consultationInputRef}
                 style={[
-                  styles.textInput,
-                  { color: theme.text, fontFamily: body },
+                  styles.chatgptTextInput,
+                  {
+                    color: theme.text,
+                    fontFamily: body,
+                    height: isInputExpanded ? 180 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 160),
+                  },
+                  Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
                 ]}
-                placeholder={`Seek guidance from ${selectedGuide.name}... (type @ to switch)`}
+                placeholder={`Seek guidance from ${selectedGuide.name}... (Enter sends, Shift+Enter for new line)`}
                 placeholderTextColor={theme.textTertiary}
                 value={input}
                 onChangeText={handleInputChange}
-                onSubmitEditing={() => sendQuery()}
-                returnKeyType="send"
+                multiline
+                onContentSizeChange={(e) => {
+                  if (input.trim()) {
+                    setInputHeight(e.nativeEvent.contentSize.height);
+                  } else {
+                    setInputHeight(36);
+                  }
+                }}
+                onKeyPress={handleKeyDown}
               />
-              <TouchableOpacity
-                style={[
-                  styles.sendCircleBtn,
-                  { backgroundColor: theme.primaryContainer },
-                ]}
-                onPress={() => sendQuery()}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[styles.sendIcon, { color: theme.onPrimaryContainer }]}
+
+              {/* Bottom Bar: @ mention trigger, Guide Name Pill + Send Button */}
+              <View style={styles.chatgptBottomBar}>
+                <View style={styles.bottomBarLeft}>
+                  <TouchableOpacity
+                    style={[
+                      styles.atMentionTriggerBtn,
+                      {
+                        backgroundColor: showMentionDropup
+                          ? theme.primaryContainer
+                          : theme.isDark
+                            ? "rgba(234,194,92,0.12)"
+                            : "rgba(146,113,13,0.08)",
+                        borderColor: showMentionDropup
+                          ? theme.primaryContainer
+                          : theme.outlineVariant,
+                      },
+                    ]}
+                    onPress={toggleMentionDropup}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.atMentionTriggerText,
+                        {
+                          color: showMentionDropup
+                            ? theme.onPrimaryContainer
+                            : theme.primaryContainer,
+                          fontFamily: label,
+                        },
+                      ]}
+                    >
+                      @
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
+                    <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+                      {selectedGuide.icon} {selectedGuide.name}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.chatgptSendBtn,
+                    input.trim().length > 0 && !loading
+                      ? { backgroundColor: theme.primaryContainer }
+                      : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                  ]}
+                  onPress={() => {
+                    if (!loading) sendQuery();
+                  }}
+                  disabled={loading || !input.trim()}
+                  activeOpacity={loading ? 1 : 0.8}
                 >
-                  ➤
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.chatgptSendIcon,
+                      { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                    ]}
+                  >
+                    ↑
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </>
@@ -2490,6 +2011,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
+  bubbleFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 6,
+  },
+  bubbleTime: {
+    fontSize: 10,
+    opacity: 0.8,
+  },
+  copyBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  copyIconText: {
+    fontSize: 11,
+  },
   loadingIndicator: {
     flexDirection: "row",
     alignItems: "center",
@@ -2517,38 +2060,73 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 50,
   },
-  floatingInputPill: {
+  chatgptInputCard: {
     width: "100%",
-    maxWidth: 700,
-    borderRadius: 24,
-    borderWidth: 1,
+    maxWidth: 760,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
+    position: "relative",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  expandToggleBtn: {
+    position: "absolute",
+    top: 10,
+    right: 12,
+    zIndex: 10,
+    padding: 4,
+  },
+  chatgptTextInput: {
+    width: "100%",
+    fontSize: 15,
+    lineHeight: 22,
+    paddingTop: 2,
+    paddingLeft: 2,
+    paddingRight: 32,
+    paddingBottom: 4,
+    textAlignVertical: "top",
+    ...(Platform.OS === "web" && {
+      outlineStyle: "none" as any,
+      userSelect: "text" as any,
+      WebkitUserSelect: "text" as any,
+    }),
+  },
+  chatgptBottomBar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 6,
+    paddingTop: 4,
+  },
+  bottomBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modelBadgePill: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 18,
-    elevation: 8,
+    borderRadius: 12,
   },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    paddingHorizontal: 8,
-    paddingVertical: Platform.OS === "ios" ? 8 : 6,
-    ...(Platform.OS === "web" && { outlineStyle: "none" as any }),
+  modelBadgeText: {
+    fontSize: 11,
   },
-  sendCircleBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  chatgptSendBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 4,
   },
-  sendIcon: {
-    fontSize: 15,
-    fontWeight: "700",
+  chatgptSendIcon: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginTop: -2,
   },
 
   // ── Mention Dropup ──

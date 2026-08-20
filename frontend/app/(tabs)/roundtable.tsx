@@ -34,99 +34,11 @@ const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaram
 const label = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
 const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
 
-interface LegendProfile {
-  name: string;
-  epic: string;
-  archetype: string;
-  icon: string;
-  color: string;
-  accent: string;
-  quote: string;
-}
-
-const AVAILABLE_LEGENDS: LegendProfile[] = [
-  {
-    name: 'Sita',
-    epic: 'Ramayana',
-    archetype: 'Unyielding Dignity & Truth',
-    icon: '🌸',
-    color: '#E0A96D',
-    accent: 'rgba(224, 169, 109, 0.15)',
-    quote: 'Righteousness is not weakness; it is the inner fire that endures all trials.',
-  },
-  {
-    name: 'Krishna',
-    epic: 'Mahabharata',
-    archetype: 'Contextual Strategy & Higher Duty',
-    icon: '🪶',
-    color: '#5C9CE6',
-    accent: 'rgba(92, 156, 230, 0.15)',
-    quote: 'You have a right to perform your prescribed duty, but you are not entitled to the fruits of action.',
-  },
-  {
-    name: 'Rama',
-    epic: 'Ramayana',
-    archetype: 'Absolute Idealism & Sacred Vows',
-    icon: '🏹',
-    color: '#D4AF37',
-    accent: 'rgba(212, 175, 55, 0.15)',
-    quote: 'Truth is the foundation of all righteous strength; a vow spoken must be a vow upheld.',
-  },
-  {
-    name: 'Arjuna',
-    epic: 'Mahabharata',
-    archetype: 'Ethical Vulnerability & Focus',
-    icon: '🎯',
-    color: '#7EBC89',
-    accent: 'rgba(126, 188, 137, 0.15)',
-    quote: 'When the heart trembles with sorrow, focus on your true purpose to dispel doubt.',
-  },
-  {
-    name: 'Bhishma',
-    epic: 'Mahabharata',
-    archetype: 'Solemn Duty & Tragic Loyalty',
-    icon: '🛡️',
-    color: '#B0C4DE',
-    accent: 'rgba(176, 196, 222, 0.15)',
-    quote: 'Duty without wisdom binds the soul, yet an oath once pledged is one’s immortal measure.',
-  },
-  {
-    name: 'Karna',
-    epic: 'Mahabharata',
-    archetype: 'Fierce Loyalty & Defiance',
-    icon: '🌅',
-    color: '#E27D60',
-    accent: 'rgba(226, 125, 96, 0.15)',
-    quote: 'Destiny may deny me honor by birth, but my bravery and generous spirit belong to me alone.',
-  },
-  {
-    name: 'Vibhishana',
-    epic: 'Ramayana',
-    archetype: 'Moral Conscience Over Kinship',
-    icon: '🕊️',
-    color: '#85E3B3',
-    accent: 'rgba(133, 227, 179, 0.15)',
-    quote: 'When loyalty demands complicity in adharma, true allegiance is to righteousness alone.',
-  },
-  {
-    name: 'Drona',
-    epic: 'Mahabharata',
-    archetype: 'Mastery & Institutional Constraint',
-    icon: '📜',
-    color: '#C38D9E',
-    accent: 'rgba(195, 141, 158, 0.15)',
-    quote: 'Knowledge is the sharpest arrow, but wisdom dictates the target upon which it is aimed.',
-  },
-  {
-    name: 'Sugriva',
-    epic: 'Ramayana',
-    archetype: 'Alliance & Restored Honor',
-    icon: '👑',
-    color: '#F4A261',
-    accent: 'rgba(244, 162, 97, 0.15)',
-    quote: 'In mutual trust between allies, mountains are crossed and lost kingdoms are reclaimed.',
-  },
-];
+import {
+  AVAILABLE_LEGENDS,
+  LegendProfile,
+  getLegendProfile,
+} from '../../src/data/characters';
 
 const PRESET_COUNCILS = [
   {
@@ -174,13 +86,95 @@ export default function RoundtableScreen() {
   const [showMentionDropup, setShowMentionDropup] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
+  const [inputHeight, setInputHeight] = useState(36);
+
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+
+  const filteredMentionCandidates = AVAILABLE_LEGENDS.filter((l) =>
+    l.name.toLowerCase().includes(mentionQuery) ||
+    l.archetype.toLowerCase().includes(mentionQuery) ||
+    l.epic.toLowerCase().includes(mentionQuery)
+  );
+
+  const handleKeyDown = (e: any) => {
+    if (Platform.OS === 'web') {
+      if (showMentionDropup && filteredMentionCandidates.length > 0) {
+        if (e.nativeEvent.key === 'ArrowDown') {
+          e.preventDefault();
+          setMentionSelectedIndex((prev) => (prev + 1) % filteredMentionCandidates.length);
+          return;
+        }
+        if (e.nativeEvent.key === 'ArrowUp') {
+          e.preventDefault();
+          setMentionSelectedIndex((prev) => (prev - 1 + filteredMentionCandidates.length) % filteredMentionCandidates.length);
+          return;
+        }
+        if (e.nativeEvent.key === 'Enter' || e.nativeEvent.key === 'Tab') {
+          e.preventDefault();
+          const targetCandidate = filteredMentionCandidates[mentionSelectedIndex] || filteredMentionCandidates[0];
+          if (targetCandidate) {
+            handleSelectMentionCandidate(targetCandidate);
+          }
+          return;
+        }
+        if (e.nativeEvent.key === 'Escape') {
+          e.preventDefault();
+          setShowMentionDropup(false);
+          return;
+        }
+      }
+
+      if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+        e.preventDefault();
+        if (!loading) {
+          handleSend();
+        }
+      }
+    }
+  };
+
+  const handleCopyText = async (text: string, id: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+      setCopiedMsgId(id);
+      setTimeout(() => {
+        setCopiedMsgId(null);
+      }, 2000);
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+    }
+  };
+
+  const formatLocalTime = (timestamp?: string | number) => {
+    if (!timestamp) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const d = new Date(timestamp);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
 
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+  const mentionScrollRef = useRef<ScrollView>(null);
   const screenWidth = Dimensions.get('window').width;
+
+  // Auto-scroll mention list when navigating with arrow keys
+  useEffect(() => {
+    if (showMentionDropup && mentionScrollRef.current) {
+      const ITEM_HEIGHT = 56;
+      const targetY = Math.max(0, (mentionSelectedIndex - 2) * ITEM_HEIGHT);
+      mentionScrollRef.current.scrollTo({ y: targetY, animated: true });
+    }
+  }, [mentionSelectedIndex, showMentionDropup]);
 
   const handleInputChange = (text: string) => {
     setInput(text);
+    if (!text.trim()) {
+      setInputHeight(36);
+      setIsInputExpanded(false);
+    }
 
     // Check if user is typing an '@' mention
     const lastAtIndex = text.lastIndexOf('@');
@@ -225,6 +219,7 @@ export default function RoundtableScreen() {
 
     setShowMentionDropup(false);
     setMentionQuery('');
+    setMentionSelectedIndex(0);
     setTimeout(() => {
       inputRef.current?.focus();
     }, 50);
@@ -377,7 +372,11 @@ export default function RoundtableScreen() {
     const textToSend = (forcedQuery || input).trim();
     if (!textToSend || loading) return;
 
-    if (!forcedQuery) setInput('');
+    if (!forcedQuery) {
+      setInput('');
+      setInputHeight(36);
+      setIsInputExpanded(false);
+    }
 
     let currentId = sessionId;
     if (!currentId) {
@@ -392,6 +391,7 @@ export default function RoundtableScreen() {
       id: Date.now().toString(),
       role: 'user',
       content: textToSend,
+      timestamp: Date.now(),
     };
 
     const nextHistory = [...history, userMsg];
@@ -428,6 +428,7 @@ export default function RoundtableScreen() {
         content: r.content,
         sources: r.sources || [],
         stage: r.stage || res.stage,
+        timestamp: Date.now(),
       }));
 
       const finalHistory = [...nextHistory, ...newReplies];
@@ -617,6 +618,23 @@ export default function RoundtableScreen() {
                         >
                           {msg.content}
                         </Text>
+                        <View style={styles.bubbleFooter}>
+                          <Text style={[styles.bubbleTime, { color: theme.onPrimaryContainer, opacity: 0.8, fontFamily: label }]}>
+                            {formatLocalTime(msg.timestamp)}
+                          </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.copyBtn,
+                              copiedMsgId === (msg.id || String(index)) && { backgroundColor: 'rgba(255,255,255,0.2)' },
+                            ]}
+                            onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? '#10B981' : theme.onPrimaryContainer }]}>
+                              {copiedMsgId === (msg.id || String(index)) ? '✓ Copied' : '📋'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
                   ) : (
@@ -666,18 +684,35 @@ export default function RoundtableScreen() {
                           </View>
                         </View>
 
-                        {msg.action === 'depart' && (
-                          <View
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          {msg.action === 'depart' && (
+                            <View
+                              style={[
+                                styles.actionTag,
+                                { backgroundColor: 'rgba(239, 68, 68, 0.12)' },
+                              ]}
+                            >
+                              <Text style={{ fontSize: 10.5, color: '#EF4444', fontFamily: label }}>
+                                🚪 Departed
+                              </Text>
+                            </View>
+                          )}
+                          <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                            {formatLocalTime(msg.timestamp)}
+                          </Text>
+                          <TouchableOpacity
                             style={[
-                              styles.actionTag,
-                              { backgroundColor: 'rgba(239, 68, 68, 0.12)' },
+                              styles.copyBtn,
+                              copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
                             ]}
+                            onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                            activeOpacity={0.7}
                           >
-                            <Text style={{ fontSize: 10.5, color: '#EF4444', fontFamily: label }}>
-                              🚪 Departed
+                            <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? '#10B981' : theme.secondary }]}>
+                              {copiedMsgId === (msg.id || String(index)) ? '✓ Copied' : '📋'}
                             </Text>
-                          </View>
-                        )}
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       {/* Content */}
@@ -832,13 +867,15 @@ export default function RoundtableScreen() {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false}>
-                {AVAILABLE_LEGENDS.filter((l) =>
-                  l.name.toLowerCase().includes(mentionQuery) ||
-                  l.archetype.toLowerCase().includes(mentionQuery) ||
-                  l.epic.toLowerCase().includes(mentionQuery)
-                ).map((legend) => {
+              <ScrollView
+                ref={mentionScrollRef}
+                style={{ maxHeight: 260 }}
+                showsVerticalScrollIndicator={true}
+                keyboardShouldPersistTaps="always"
+              >
+                {filteredMentionCandidates.map((legend, index) => {
                   const isInCouncil = activeCouncil.includes(legend.name);
+                  const isSelected = index === mentionSelectedIndex;
 
                   return (
                     <TouchableOpacity
@@ -846,8 +883,9 @@ export default function RoundtableScreen() {
                       style={[
                         styles.dropupRow,
                         {
-                          backgroundColor: theme.surfaceContainerLowest,
-                          borderColor: isInCouncil ? theme.outlineVariant : legend.color,
+                          backgroundColor: isSelected ? theme.surfaceContainerLow : theme.surfaceContainerLowest,
+                          borderColor: isSelected ? theme.primary : isInCouncil ? theme.outlineVariant : legend.color,
+                          borderWidth: isSelected ? 2 : 1,
                         },
                       ]}
                       onPress={() => handleSelectMentionCandidate(legend)}
@@ -913,40 +951,122 @@ export default function RoundtableScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Input Row */}
-          <View style={styles.inputRow}>
+          {/* ChatGPT-style Multiline Input Card */}
+          <View
+            style={[
+              styles.chatgptInputCard,
+              {
+                backgroundColor: theme.surfaceContainerLowest,
+                borderColor: theme.outlineVariant,
+                shadowColor: theme.shadow,
+              },
+              isInputExpanded && { minHeight: 200 },
+            ]}
+          >
+            {/* Top-Right Absolute Expand Button */}
+            <TouchableOpacity
+              style={styles.expandToggleBtn}
+              onPress={() => setIsInputExpanded(!isInputExpanded)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
+                {isInputExpanded ? '🗗' : '⛶'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Multiline TextInput with Enter to send, Shift+Enter for new line */}
             <TextInput
               ref={inputRef}
               style={[
-                styles.textInput,
+                styles.chatgptTextInput,
                 {
                   color: theme.text,
-                  backgroundColor: theme.surfaceContainerLowest,
-                  borderColor: theme.outlineVariant,
                   fontFamily: body,
+                  height: isInputExpanded ? 180 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 160),
                 },
+                Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
               ]}
-              placeholder="Type @ to summon legends, e.g. '@Krishna what should I do?'"
+              placeholder="Type @ to summon legends, e.g. '@Krishna what should I do?' (Enter sends, Shift+Enter for newline)"
               placeholderTextColor={theme.textTertiary}
               value={input}
               onChangeText={handleInputChange}
               multiline
-              maxLength={1000}
-              onSubmitEditing={() => handleSend()}
+              onContentSizeChange={(e) => {
+                if (input.trim()) {
+                  setInputHeight(e.nativeEvent.contentSize.height);
+                } else {
+                  setInputHeight(36);
+                }
+              }}
+              onKeyPress={handleKeyDown}
             />
-            <TouchableOpacity
-              style={[
-                styles.sendBtn,
-                {
-                  backgroundColor: input.trim() && !loading ? theme.primaryContainer : theme.outlineVariant,
-                },
-              ]}
-              onPress={() => handleSend()}
-              disabled={!input.trim() || loading}
-              activeOpacity={0.8}
-            >
-              <Text style={{ fontSize: 18, color: theme.onPrimaryContainer }}>↑</Text>
-            </TouchableOpacity>
+
+            {/* Bottom Bar: Quick Mention + Council Pill + Send Button */}
+            <View style={styles.chatgptBottomBar}>
+              <View style={styles.bottomBarLeft}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionIconBtn,
+                    {
+                      backgroundColor: showMentionDropup ? theme.primaryContainer : theme.surfaceContainerLow,
+                      borderColor: showMentionDropup ? theme.primaryContainer : theme.outlineVariant,
+                    },
+                  ]}
+                  onPress={() => {
+                    if (showMentionDropup) {
+                      setShowMentionDropup(false);
+                    } else {
+                      setShowMentionDropup(true);
+                      if (!input.includes('@')) {
+                        setInput((prev) => (prev ? `${prev} @` : '@'));
+                      }
+                      setTimeout(() => inputRef.current?.focus(), 50);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: showMentionDropup ? theme.onPrimaryContainer : theme.primaryContainer,
+                      fontWeight: '700',
+                    }}
+                  >
+                    @
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
+                  <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+                    👥 {activeCouncil.length} Legends in Sabha
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.chatgptSendBtn,
+                  input.trim().length > 0 && !loading
+                    ? { backgroundColor: theme.primaryContainer }
+                    : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                ]}
+                onPress={() => {
+                  if (!loading) handleSend();
+                }}
+                disabled={!input.trim() || loading}
+                activeOpacity={loading ? 1 : 0.8}
+              >
+                <Text
+                  style={[
+                    styles.chatgptSendIcon,
+                    { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                  ]}
+                >
+                  ↑
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -1229,6 +1349,28 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     lineHeight: 21,
   },
+  bubbleFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 6,
+  },
+  bubbleTime: {
+    fontSize: 10,
+    opacity: 0.8,
+  },
+  copyBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  copyIconText: {
+    fontSize: 11,
+  },
   councilMsgCard: {
     width: '100%',
     padding: 16,
@@ -1441,32 +1583,80 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  mentionChipText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+  chatgptInputCard: {
+    width: '100%',
+    borderRadius: 22,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
+    position: 'relative',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  inputRow: {
+  expandToggleBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    zIndex: 10,
+    padding: 4,
+  },
+  chatgptTextInput: {
+    width: '100%',
+    fontSize: 14.5,
+    lineHeight: 21,
+    paddingTop: 2,
+    paddingLeft: 2,
+    paddingRight: 32,
+    paddingBottom: 4,
+    textAlignVertical: 'top',
+    ...(Platform.OS === 'web' && {
+      outlineStyle: 'none' as any,
+      userSelect: 'text' as any,
+      WebkitUserSelect: 'text' as any,
+    }),
+  },
+  chatgptBottomBar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingTop: 4,
+  },
+  bottomBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  textInput: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 110,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
+  actionIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 1,
-    fontSize: 14,
-    ...(Platform.OS === 'web' && { outlineStyle: 'none' as any }),
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modelBadgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  modelBadgeText: {
+    fontSize: 11,
+  },
+  chatgptSendBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatgptSendIcon: {
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: -2,
   },
   modalOverlay: {
     flex: 1,

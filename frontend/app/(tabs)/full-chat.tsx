@@ -105,6 +105,46 @@ export default function FullChatScreen() {
   const [loading, setLoading] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [showMatrix, setShowMatrix] = useState(true);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
+  const [inputHeight, setInputHeight] = useState(36);
+
+  const handleInputChange = (text: string) => {
+    setInput(text);
+    if (!text.trim()) {
+      setInputHeight(36);
+      setIsInputExpanded(false);
+    }
+  };
+
+  const handleKeyDown = (e: any) => {
+    if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+      e.preventDefault();
+      if (!loading) {
+        handleSend();
+      }
+    }
+  };
+
+  const handleCopyText = async (text: string, id: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+      setCopiedMsgId(id);
+      setTimeout(() => {
+        setCopiedMsgId(null);
+      }, 2000);
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+    }
+  };
+
+  const formatLocalTime = (timestamp?: string | number) => {
+    if (!timestamp) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const d = new Date(timestamp);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
 
   const scrollRef = useRef<ScrollView>(null);
   const { width: screenWidth } = useWindowDimensions();
@@ -239,7 +279,11 @@ export default function FullChatScreen() {
     const textToSend = (forcedQuery || input).trim();
     if ((!textToSend && !isForceResolve) || loading) return;
 
-    if (!forcedQuery) setInput("");
+    if (!forcedQuery) {
+      setInput("");
+      setInputHeight(36);
+      setIsInputExpanded(false);
+    }
     setShowMatrix(false);
 
     let activeId = currentSessionId;
@@ -260,6 +304,7 @@ export default function FullChatScreen() {
         id: Date.now().toString(),
         role: "user",
         content: textToSend,
+        timestamp: Date.now(),
       };
       updatedHistory.push(userMsg);
     }
@@ -294,6 +339,7 @@ export default function FullChatScreen() {
           stage: res.stage,
           sources: res.sources || [],
           searched_vector_db: res.searched_vector_db,
+          timestamp: Date.now(),
         },
       ];
 
@@ -606,38 +652,58 @@ export default function FullChatScreen() {
                     />
                     <View style={styles.scholarInner}>
                       <View style={styles.scholarBadgeRow}>
-                        <Text style={styles.scholarBadgeIcon}>🏛️</Text>
-                        <Text
-                          style={[
-                            styles.scholarBadgeLabel,
-                            {
-                              color: theme.primaryContainer,
-                              fontFamily: label,
-                            },
-                          ]}
-                        >
-                          UNIVERSAL EPIC SCHOLAR
-                        </Text>
-                        {msg.searched_vector_db && (
-                          <View
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                          <Text style={styles.scholarBadgeIcon}>🏛️</Text>
+                          <Text
                             style={[
-                              styles.vectorPill,
-                              { backgroundColor: theme.secondaryContainer },
+                              styles.scholarBadgeLabel,
+                              {
+                                color: theme.primaryContainer,
+                                fontFamily: label,
+                              },
                             ]}
                           >
-                            <Text
+                            UNIVERSAL EPIC SCHOLAR
+                          </Text>
+                          {msg.searched_vector_db && (
+                            <View
                               style={[
-                                styles.vectorPillText,
-                                {
-                                  color: theme.onSecondaryContainer,
-                                  fontFamily: label,
-                                },
+                                styles.vectorPill,
+                                { backgroundColor: theme.secondaryContainer },
                               ]}
                             >
-                              RAG Grounded
+                              <Text
+                                style={[
+                                  styles.vectorPillText,
+                                  {
+                                    color: theme.onSecondaryContainer,
+                                    fontFamily: label,
+                                  },
+                                ]}
+                              >
+                                RAG Grounded
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                            {formatLocalTime(msg.timestamp)}
+                          </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.copyBtn,
+                              copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                            ]}
+                            onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
+                              {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
                             </Text>
-                          </View>
-                        )}
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <StreamingText
@@ -698,6 +764,23 @@ export default function FullChatScreen() {
                     >
                       {msg.content}
                     </Text>
+                    <View style={styles.bubbleFooter}>
+                      <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                        {formatLocalTime(msg.timestamp)}
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.copyBtn,
+                          copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                        ]}
+                        onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
+                          {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </FadeSlide>
@@ -732,7 +815,7 @@ export default function FullChatScreen() {
         <View style={{ height: 110 }} />
       </ScrollView>
 
-      {/* Floating Bottom Input Pill with Fade */}
+      {/* Floating Bottom ChatGPT-style Input Box */}
       <View
         style={[
           styles.floatingInputWrapper,
@@ -745,39 +828,87 @@ export default function FullChatScreen() {
       >
         <View
           style={[
-            styles.floatingInputPill,
+            styles.chatgptInputCard,
             {
               backgroundColor: theme.surfaceContainerLowest,
               borderColor: theme.outlineVariant,
-              shadowColor: theme.primaryContainer,
+              shadowColor: theme.shadow,
             },
+            isInputExpanded && { minHeight: 200 },
           ]}
         >
-          <TextInput
-            style={[styles.textInput, { color: theme.text, fontFamily: body }]}
-            placeholder="Ask anything across Ramayana & Mahabharata..."
-            placeholderTextColor={theme.textTertiary}
-            value={input}
-            onChangeText={setInput}
-            onSubmitEditing={() => handleSend()}
-            returnKeyType="send"
-          />
-
+          {/* Top-Right Absolute Expand Button */}
           <TouchableOpacity
-            style={[
-              styles.sendCircleBtn,
-              { backgroundColor: theme.primaryContainer },
-            ]}
-            onPress={() => handleSend()}
-            disabled={loading}
-            activeOpacity={0.8}
+            style={styles.expandToggleBtn}
+            onPress={() => setIsInputExpanded(!isInputExpanded)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text
-              style={[styles.sendIcon, { color: theme.onPrimaryContainer }]}
-            >
-              ➤
+            <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
+              {isInputExpanded ? '🗗' : '⛶'}
             </Text>
           </TouchableOpacity>
+
+          {/* Multiline TextInput starting from top-left */}
+          <TextInput
+            style={[
+              styles.chatgptTextInput,
+              {
+                color: theme.text,
+                fontFamily: body,
+                height: isInputExpanded ? 180 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 160),
+              },
+              Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
+            ]}
+            placeholder="Ask anything across Ramayana & Mahabharata... (Enter sends, Shift+Enter for new line)"
+            placeholderTextColor={theme.textTertiary}
+            value={input}
+            onChangeText={handleInputChange}
+            multiline
+            onContentSizeChange={(e) => {
+              if (input.trim()) {
+                setInputHeight(e.nativeEvent.contentSize.height);
+              } else {
+                setInputHeight(36);
+              }
+            }}
+            onKeyPress={handleKeyDown}
+          />
+
+          {/* Bottom Bar: Aligned tools + Send Button */}
+          <View style={styles.chatgptBottomBar}>
+            <View style={{ flex: 1 }} />
+            <View style={styles.bottomBarRight}>
+              <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
+                <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+                  🏛️ Scholar
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.chatgptSendBtn,
+                  input.trim().length > 0 && !loading
+                    ? { backgroundColor: theme.primaryContainer }
+                    : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                ]}
+                onPress={() => {
+                  if (!loading) handleSend();
+                }}
+                disabled={loading || !input.trim()}
+                activeOpacity={loading ? 1 : 0.8}
+              >
+                <Text
+                  style={[
+                    styles.chatgptSendIcon,
+                    { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                  ]}
+                >
+                  ↑
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -1153,6 +1284,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
+  bubbleFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 6,
+  },
+  bubbleTime: {
+    fontSize: 10,
+    opacity: 0.8,
+  },
+  copyBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  copyIconText: {
+    fontSize: 11,
+  },
   loaderCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -1178,45 +1331,73 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 50,
   },
-  floatingInputPill: {
+  chatgptInputCard: {
     width: "100%",
     maxWidth: 760,
-    borderRadius: 24,
-    borderWidth: 1,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
+    position: "relative",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  expandToggleBtn: {
+    position: "absolute",
+    top: 10,
+    right: 12,
+    zIndex: 10,
+    padding: 4,
+  },
+  chatgptTextInput: {
+    width: "100%",
+    fontSize: 15,
+    lineHeight: 22,
+    paddingTop: 2,
+    paddingLeft: 2,
+    paddingRight: 32,
+    paddingBottom: 4,
+    textAlignVertical: "top",
+    ...(Platform.OS === "web" && {
+      outlineStyle: "none" as any,
+      userSelect: "text" as any,
+      WebkitUserSelect: "text" as any,
+    }),
+  },
+  chatgptBottomBar: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 6,
+    paddingTop: 4,
+  },
+  bottomBarRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modelBadgePill: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 18,
-    elevation: 8,
+    borderRadius: 12,
   },
-  micBtn: {
-    padding: 8,
-    borderRadius: 14,
+  modelBadgeText: {
+    fontSize: 11,
   },
-  micIcon: {
-    fontSize: 18,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    paddingHorizontal: 8,
-    paddingVertical: Platform.OS === "ios" ? 8 : 6,
-    ...(Platform.OS === "web" && { outlineStyle: "none" as any }),
-  },
-  sendCircleBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  chatgptSendBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 4,
   },
-  sendIcon: {
-    fontSize: 15,
-    fontWeight: "700",
+  chatgptSendIcon: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginTop: -2,
   },
   modalOverlay: {
     flex: 1,

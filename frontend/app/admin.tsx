@@ -144,6 +144,21 @@ export default function AdminDashboardScreen() {
 
   // Active Selected Session for Transcript Column
   const [activeSession, setActiveSession] = useState<UserChatSessionDetail | null>(null);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+  const handleCopyText = async (text: string, id: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+      }
+      setCopiedMsgId(id);
+      setTimeout(() => {
+        setCopiedMsgId(null);
+      }, 2000);
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+    }
+  };
 
   const fetchAllAdminData = async (days = timeframeDays) => {
     setLoading(true);
@@ -197,7 +212,22 @@ export default function AdminDashboardScreen() {
   };
 
   useEffect(() => {
-    fetchAllAdminData(timeframeDays);
+    const checkAuthAndFetch = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.access_token) {
+          fetchAllAdminData(timeframeDays);
+        } else {
+          setLoading(false);
+          setError('Admin authentication required.');
+        }
+      } catch (err) {
+        setLoading(false);
+        setError('Admin authentication required.');
+      }
+    };
+
+    checkAuthAndFetch();
   }, [timeframeDays]);
 
   const handleAdminLogin = async () => {
@@ -1076,7 +1106,7 @@ export default function AdminDashboardScreen() {
                                 { alignItems: isUser ? 'flex-end' : 'flex-start' },
                               ]}
                             >
-                              {/* Bubble Sender Label & Timestamp */}
+                              {/* Bubble Sender Label & Timestamp & Copy Button */}
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                                 <Text style={{ color: isUser ? theme.accent : theme.textSecondary, fontSize: 11, fontFamily: bold }}>
                                   {isUser ? `👤 ${userSubTab === 'registered' ? selectedUser?.full_name || 'Seeker' : 'Guest'}` : `🪷 ${msg.character || 'AI Guide'}`}
@@ -1091,6 +1121,18 @@ export default function AdminDashboardScreen() {
                                 <Text style={{ color: theme.textTertiary, fontSize: 10 }}>
                                   {formatISTDateTime(msg.created_at)}
                                 </Text>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.copyBtn,
+                                    copiedMsgId === (msg.id || String(idx)) && { backgroundColor: theme.inputBg },
+                                  ]}
+                                  onPress={() => handleCopyText(msg.content, msg.id || String(idx))}
+                                  activeOpacity={0.7}
+                                >
+                                  <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(idx)) ? '#10B981' : theme.textTertiary }]}>
+                                    {copiedMsgId === (msg.id || String(idx)) ? '✓ Copied' : '📋'}
+                                  </Text>
+                                </TouchableOpacity>
                               </View>
 
                               {/* Bubble Card */}
@@ -1642,6 +1684,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
+  },
+  copyBtn: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  copyIconText: {
+    fontSize: 10,
   },
   sourcesCard: {
     marginTop: 10,
