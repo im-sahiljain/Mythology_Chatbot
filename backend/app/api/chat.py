@@ -57,7 +57,9 @@ async def chat_endpoint(
             guest_id=auth.guest_id,
             provider_used=response_data.get("provider_used", "gemini"),
             prompt_text=request.message,
-            completion_text=response_data.get("reply", "")
+            completion_text=response_data.get("reply", ""),
+            prompt_tokens=response_data.get("prompt_tokens"),
+            completion_tokens=response_data.get("completion_tokens")
         )
 
         auto_save_chat_turn(
@@ -131,7 +133,9 @@ async def chat_character_endpoint(
             provider_used=response_data.get("provider_used", "gemini"),
             prompt_text=request.message,
             completion_text=response_data.get("reply", ""),
-            characters_tagged=[request.character] if request.character else []
+            characters_tagged=[request.character] if request.character else [],
+            prompt_tokens=response_data.get("prompt_tokens"),
+            completion_tokens=response_data.get("completion_tokens")
         )
 
         auto_save_chat_turn(
@@ -213,7 +217,9 @@ async def chat_roundtable_endpoint(
             provider_used=response_data.get("provider_used", "gemini"),
             prompt_text=request.message,
             completion_text=combined_replies,
-            characters_tagged=spoken_chars or request.council_characters
+            characters_tagged=spoken_chars or request.council_characters,
+            prompt_tokens=response_data.get("prompt_tokens"),
+            completion_tokens=response_data.get("completion_tokens")
         )
 
         auto_save_chat_turn(

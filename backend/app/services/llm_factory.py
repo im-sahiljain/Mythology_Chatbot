@@ -25,7 +25,7 @@ class LLMFactory:
             return LLMFactory._call_ollama(prompt, system_prompt)
 
     @staticmethod
-    def _call_ollama(prompt: str, system_prompt: str) -> Dict[str, str]:
+    def _call_ollama(prompt: str, system_prompt: str) -> Dict[str, Any]:
         try:
             import ollama
             print(f"🦙 [Ollama Local] Model: '{settings.OLLAMA_MODEL}' | Host: '{settings.OLLAMA_BASE_URL}'")
@@ -39,16 +39,20 @@ class LLMFactory:
             )
             return {
                 "reply": response['message']['content'],
-                "provider_used": f"ollama/{settings.OLLAMA_MODEL}"
+                "provider_used": f"ollama/{settings.OLLAMA_MODEL}",
+                "prompt_tokens": response.get('prompt_eval_count', 0) or 0,
+                "completion_tokens": response.get('eval_count', 0) or 0
             }
         except Exception as e:
             return {
                 "reply": f"Ollama local service error: {str(e)}",
-                "provider_used": "ollama/error"
+                "provider_used": "ollama/error",
+                "prompt_tokens": 0,
+                "completion_tokens": 0
             }
 
     @staticmethod
-    def _call_openai(prompt: str, system_prompt: str) -> Dict[str, str]:
+    def _call_openai(prompt: str, system_prompt: str) -> Dict[str, Any]:
         try:
             from openai import OpenAI
             print(f"🧠 [OpenAI API] Model: '{settings.OPENAI_MODEL}'")
@@ -60,18 +64,28 @@ class LLMFactory:
                     {"role": "user", "content": prompt}
                 ]
             )
+            prompt_tokens = 0
+            completion_tokens = 0
+            if hasattr(response, 'usage') and response.usage:
+                prompt_tokens = getattr(response.usage, 'prompt_tokens', 0) or 0
+                completion_tokens = getattr(response.usage, 'completion_tokens', 0) or 0
+
             return {
                 "reply": response.choices[0].message.content,
-                "provider_used": f"openai/{settings.OPENAI_MODEL}"
+                "provider_used": f"openai/{settings.OPENAI_MODEL}",
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens
             }
         except Exception as e:
             return {
                 "reply": f"OpenAI API error: {str(e)}",
-                "provider_used": "openai/error"
+                "provider_used": "openai/error",
+                "prompt_tokens": 0,
+                "completion_tokens": 0
             }
 
     @staticmethod
-    def _call_gemini(prompt: str, system_prompt: str) -> Dict[str, str]:
+    def _call_gemini(prompt: str, system_prompt: str) -> Dict[str, Any]:
         try:
             import google.generativeai as genai
             print(f"✨ [Google Gemini] Model: '{settings.GEMINI_MODEL}'")
@@ -81,12 +95,23 @@ class LLMFactory:
                 system_instruction=system_prompt
             )
             response = model.generate_content(prompt)
+            
+            prompt_tokens = 0
+            completion_tokens = 0
+            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
+                completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
+
             return {
                 "reply": response.text,
-                "provider_used": f"gemini/{settings.GEMINI_MODEL}"
+                "provider_used": f"gemini/{settings.GEMINI_MODEL}",
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens
             }
         except Exception as e:
             return {
                 "reply": f"Gemini API error: {str(e)}",
-                "provider_used": "gemini/error"
+                "provider_used": "gemini/error",
+                "prompt_tokens": 0,
+                "completion_tokens": 0
             }

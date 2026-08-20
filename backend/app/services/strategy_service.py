@@ -106,7 +106,9 @@ Provide a wise, simple, and direct follow-up response:
                 "character": "Universal Epic Scholar",
                 "sources": sources,
                 "searched_vector_db": needs_search,
-                "provider_used": llm_res["provider_used"]
+                "provider_used": llm_res["provider_used"],
+                "prompt_tokens": llm_res.get("prompt_tokens", 0),
+                "completion_tokens": llm_res.get("completion_tokens", 0)
             }
 
         # -------------------------------------------------------------
@@ -146,7 +148,9 @@ RULES:
                 "character": "Universal Epic Scholar",
                 "sources": [],
                 "searched_vector_db": False,
-                "provider_used": llm_res["provider_used"]
+                "provider_used": llm_res["provider_used"],
+                "prompt_tokens": llm_res.get("prompt_tokens", 0),
+                "completion_tokens": llm_res.get("completion_tokens", 0)
             }
         else:
             # Generate Final Epic Counsel with ChromaDB RAG
@@ -157,7 +161,9 @@ RULES:
                 "character": "Universal Epic Scholar",
                 "sources": rag_res.get("sources", []),
                 "searched_vector_db": True,
-                "provider_used": rag_res["provider_used"]
+                "provider_used": rag_res["provider_used"],
+                "prompt_tokens": rag_res.get("prompt_tokens", 0),
+                "completion_tokens": rag_res.get("completion_tokens", 0)
             }
 
 
@@ -326,7 +332,9 @@ Provide your 1st-person response as {active_char}:
                 "character": active_char,
                 "sources": sources,
                 "searched_vector_db": needs_search,
-                "provider_used": llm_res["provider_used"]
+                "provider_used": llm_res["provider_used"],
+                "prompt_tokens": llm_res.get("prompt_tokens", 0),
+                "completion_tokens": llm_res.get("completion_tokens", 0)
             }
 
         # -------------------------------------------------------------
@@ -368,7 +376,9 @@ RULES:
                 "character": active_char,
                 "sources": [],
                 "searched_vector_db": False,
-                "provider_used": llm_res["provider_used"]
+                "provider_used": llm_res["provider_used"],
+                "prompt_tokens": llm_res.get("prompt_tokens", 0),
+                "completion_tokens": llm_res.get("completion_tokens", 0)
             }
         else:
             # Generate Final 1st-Person Epic Counsel using ChromaDB with strict character filter
@@ -385,7 +395,9 @@ RULES:
                 "character": active_char,
                 "sources": rag_res.get("sources", []),
                 "searched_vector_db": True,
-                "provider_used": rag_res["provider_used"]
+                "provider_used": rag_res["provider_used"],
+                "prompt_tokens": rag_res.get("prompt_tokens", 0),
+                "completion_tokens": rag_res.get("completion_tokens", 0)
             }
 
     # -------------------------------------------------------------
@@ -573,12 +585,17 @@ Ask your 1st-person probing question as {lead_speaker}:
                 "stage": "interviewing"
             })
 
+            total_prompt_tokens = llm_res.get("prompt_tokens", 0)
+            total_completion_tokens = llm_res.get("completion_tokens", 0)
+
             return {
                 "replies": replies,
                 "active_council": active_council,
                 "muted_council": muted,
                 "stage": "interviewing",
-                "provider_used": llm_res["provider_used"]
+                "provider_used": llm_res["provider_used"],
+                "prompt_tokens": total_prompt_tokens,
+                "completion_tokens": total_completion_tokens
             }
 
         # -------------------------------------------------------------
@@ -594,6 +611,8 @@ Ask your 1st-person probing question as {lead_speaker}:
         # STAGE 2 & STAGE 3 GENERATION FOR TARGETED SPEAKERS
         # -------------------------------------------------------------
         combined_user_text = " ".join([h.get("content", "") for h in history if h.get("role") == "user"] + [message])
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
 
         for speaker in targeted_speakers:
             print(f"   🤖 Generating response for: {speaker} (Stage: {current_stage})")
@@ -656,6 +675,8 @@ Provide your 1st-person response as {speaker}:
             llm_res = LLMFactory.generate_response(prompt, system_prompt, provider)
             speaker_reply_text = llm_res["reply"].strip()
             last_provider = llm_res["provider_used"]
+            total_prompt_tokens += llm_res.get("prompt_tokens", 0)
+            total_completion_tokens += llm_res.get("completion_tokens", 0)
 
             replies.append({
                 "character": speaker,
@@ -672,6 +693,8 @@ Provide your 1st-person response as {speaker}:
             "active_council": active_council,
             "muted_council": muted,
             "stage": current_stage,
-            "provider_used": last_provider
+            "provider_used": last_provider,
+            "prompt_tokens": total_prompt_tokens,
+            "completion_tokens": total_completion_tokens
         }
 

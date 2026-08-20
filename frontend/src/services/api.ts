@@ -236,8 +236,47 @@ export interface AdminUserItem {
   total_messages: number;
 }
 
+export interface TimeSeriesPoint {
+  date: string;
+  iso_date: string;
+  requests: number;
+  tokens: number;
+  cost_usd: number;
+  avg_latency_ms: number;
+  active_users: number;
+}
+
+export interface TimeSeriesData {
+  timeframe_days: number;
+  series: TimeSeriesPoint[];
+}
+
+export interface ScriptureInsights {
+  total_indexed_scenarios: number;
+  epics_distribution: { epic: string; count: number; percentage: number }[];
+  top_categories: { category: string; count: number }[];
+}
+
+export interface RawTelemetryLog {
+  id: string;
+  timestamp: string;
+  endpoint: string;
+  tab_mode: string;
+  status_code: number;
+  latency_ms: number;
+  provider_used: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+  user_id?: string;
+  guest_id?: string;
+  characters?: string[];
+}
+
 export interface UserChatSessionDetail {
   session_id: string;
+  guest_id?: string;
   mode: string;
   title: string;
   metadata: any;
@@ -420,6 +459,30 @@ export const apiService = {
   async fetchAdminGuestUsage(): Promise<any> {
     const res = await customFetch(`${API_BASE_URL}/api/admin/guest-usage`);
     if (!res.ok) throw new Error('Failed to fetch guest usage');
+    return res.json();
+  },
+
+  async fetchAdminGuestSessions(limit: number = 20): Promise<UserChatSessionDetail[]> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/guest-sessions?limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to fetch guest sessions');
+    return res.json();
+  },
+
+  async fetchAdminTimeSeries(days: number = 7): Promise<TimeSeriesData> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/time-series?days=${days}`);
+    if (!res.ok) throw new Error('Failed to fetch time series analytics');
+    return res.json();
+  },
+
+  async fetchAdminScriptureInsights(): Promise<ScriptureInsights> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/scripture-insights`);
+    if (!res.ok) throw new Error('Failed to fetch scripture insights');
+    return res.json();
+  },
+
+  async fetchAdminRawLogs(skip: number = 0, limit: number = 50): Promise<RawTelemetryLog[]> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/raw-logs?skip=${skip}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to fetch raw telemetry logs');
     return res.json();
   },
 

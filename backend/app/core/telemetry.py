@@ -34,16 +34,19 @@ def record_api_telemetry(
     provider_used: str = "gemini/gemini-3.5-flash-lite",
     prompt_text: str = "",
     completion_text: str = "",
-    characters_tagged: Optional[List[str]] = None
+    characters_tagged: Optional[List[str]] = None,
+    prompt_tokens: Optional[int] = None,
+    completion_tokens: Optional[int] = None
 ):
     """
     Logs API request telemetry and increments guest counter if applicable.
     Runs purely against PostgreSQL (No Redis).
     """
     try:
-        prompt_tokens = estimate_tokens(prompt_text)
-        completion_tokens = estimate_tokens(completion_text)
-        cost_usd = calculate_llm_cost(prompt_tokens, completion_tokens, provider_used)
+        # Use exact tokens from provider usage_metadata if available, else fallback to character approximation
+        p_tokens = prompt_tokens if (prompt_tokens is not None and prompt_tokens > 0) else estimate_tokens(prompt_text)
+        c_tokens = completion_tokens if (completion_tokens is not None and completion_tokens > 0) else estimate_tokens(completion_text)
+        cost_usd = calculate_llm_cost(p_tokens, c_tokens, provider_used)
 
         log_entry = ApiTelemetryLog(
             user_id=user_id,
@@ -53,8 +56,8 @@ def record_api_telemetry(
             status_code=status_code,
             latency_ms=round(latency_ms, 2),
             provider_used=provider_used,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
+            prompt_tokens=p_tokens,
+            completion_tokens=c_tokens,
             estimated_cost_usd=round(cost_usd, 7),
             characters_tagged_json=characters_tagged or []
         )
@@ -63,7 +66,10 @@ def record_api_telemetry(
         # If guest, increment their lifetime message count
         if not user_id and guest_id:
             tracker = db.query(GuestUsageTracker).filter(GuestUsageTracker.guest_id == guest_id).first()
-            if tracker:
+            if not tracker:
+                tracker = GuestUsageTracker(guest_id=guest_id, message_count=1)
+                db.add(tracker)
+            else:
                 tracker.message_count += 1
 
         db.commit()

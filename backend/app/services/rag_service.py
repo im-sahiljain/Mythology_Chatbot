@@ -354,7 +354,9 @@ Provide wise, actionable guidance to help the user resolve their dilemma.
             "mode": mode,
             "character": active_character if not strict_character else character,
             "provider_used": llm_res["provider_used"],
-            "sources": sources
+            "sources": sources,
+            "prompt_tokens": llm_res.get("prompt_tokens", 0),
+            "completion_tokens": llm_res.get("completion_tokens", 0)
         }
 
     def _handle_knowledge_query(
@@ -376,5 +378,7 @@ Keep your answer extremely crisp, concise, and under a strict maximum limit of 1
             "mode": "knowledge",
             "character": character,
             "provider_used": llm_res["provider_used"],
-            "sources": []
+            "sources": [],
+            "prompt_tokens": llm_res.get("prompt_tokens", 0),
+            "completion_tokens": llm_res.get("completion_tokens", 0)
         }
