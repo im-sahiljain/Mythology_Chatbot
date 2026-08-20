@@ -173,7 +173,10 @@ def delete_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    # Verify ownership for both authenticated users and guests
     if auth.is_authenticated and session.user_id != auth.user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    elif not auth.is_authenticated and session.guest_id != auth.guest_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
     db.delete(session)

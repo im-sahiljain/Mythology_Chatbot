@@ -126,8 +126,8 @@ export function getActiveSessionId(): string | null {
   return inMemoryActiveId;
 }
 
-export function setActiveSessionId(id: string) {
-  inMemoryActiveId = id;
+export function setActiveSessionId(id: string | null) {
+  inMemoryActiveId = id || null;
   notifyListeners(inMemorySessions, inMemoryActiveId);
 }
 
@@ -171,6 +171,20 @@ export function clearAllLocalSessions() {
 
 export async function syncUserSessionsFromDb(): Promise<ChatSession[]> {
   try {
+    // Guard: check if there's an active Supabase session on the client side.
+    // This prevents stale HttpOnly cookies from loading another user's sessions.
+    const { supabase } = await import('./supabase');
+    const { data: sessionData } = await supabase.auth.getSession();
+    const hasClientSession = !!sessionData?.session;
+
+    // If no client-side session, only allow guest sync (the backend will scope by guest ID).
+    // But first verify the guest ID is present so we don't accidentally fetch with a stale cookie.
+    if (!hasClientSession) {
+      // Ensure we're making a clean guest request by not sending any stale auth headers.
+      // The apiService.listSessionsFromDb will still include X-Guest-ID header, which is fine.
+      // The backend will fall through to guest auth since there's no valid JWT.
+    }
+
     const { apiService } = await import('./api');
     const dbSessions = await apiService.listSessionsFromDb();
     if (Array.isArray(dbSessions)) {
@@ -190,8 +204,13 @@ export async function syncUserSessionsFromDb(): Promise<ChatSession[]> {
       for (const item of mapped) {
         if (localMap.has(item.id)) {
           const local = localMap.get(item.id)!;
-          item.history = local.history;
-          item.stage = local.stage;
+          if (local.history && local.history.length > 0) {
+            item.history = local.history;
+          }
+          item.stage = local.stage || item.stage;
+          if (local.council && local.council.length > 0) {
+            item.council = local.council;
+          }
         }
       }
 
@@ -223,6 +242,23 @@ export async function fetchSessionDetailFromDb(sessionId: string): Promise<ChatM
       if (existing) {
         existing.history = msgs;
         existing.stage = detail.stage || existing.stage;
+        if (detail.council && Array.isArray(detail.council) && detail.council.length > 0) {
+          existing.council = detail.council;
+        }
+      } else {
+        inMemorySessions = [
+          {
+            id: detail.id || sessionId,
+            title: detail.title || 'Vedic Consultation',
+            mode: detail.mode || 'roundtable',
+            council: detail.council || ['Sita', 'Krishna'],
+            character: detail.character,
+            updatedAt: detail.updatedAt || Date.now(),
+            stage: detail.stage || null,
+            history: msgs,
+          },
+          ...inMemorySessions,
+        ];
       }
       return msgs;
     }

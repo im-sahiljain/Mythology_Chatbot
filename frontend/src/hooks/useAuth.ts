@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { clearAllLocalSessions, syncUserSessionsFromDb } from '../services/chatStorage';
+import { apiService } from '../services/api';
 
 export const useAuth = () => {
   const [user, setUser] = useState<any>(null);
@@ -19,8 +20,11 @@ export const useAuth = () => {
         const newUser = session?.user ?? null;
         setUser(newUser);
         if (event === 'SIGNED_OUT') {
-          clearAllLocalSessions();
-          syncUserSessionsFromDb();
+          // Clear the HttpOnly cookie on the backend first
+          apiService.logout().finally(() => {
+            clearAllLocalSessions();
+            syncUserSessionsFromDb();
+          });
         } else if (event === 'SIGNED_IN') {
           clearAllLocalSessions();
           syncUserSessionsFromDb();

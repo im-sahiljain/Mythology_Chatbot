@@ -94,6 +94,7 @@ def clear_auth_cookie(response: Response):
 
 def get_current_user_optional(
     request: Request,
+    response: Response,
     authorization: Optional[str] = Header(None),
     x_guest_id: Optional[str] = Header(None),
     db: Session = Depends(get_db)
@@ -107,10 +108,12 @@ def get_current_user_optional(
 
     # Extract Token: 1) HttpOnly Cookie -> 2) Bearer Header
     token = request.cookies.get("sb_access_token") or request.cookies.get("access_token")
+    token_from_cookie = bool(token)
     if not token and authorization and authorization.startswith("Bearer "):
         extracted = authorization.split(" ")[1].strip()
         if extracted and extracted != "null" and extracted != "undefined":
             token = extracted
+            token_from_cookie = False
 
     # Case A: Authenticated User
     if token:
@@ -147,6 +150,10 @@ def get_current_user_optional(
                 )
         except Exception as e:
             print(f"⚠️ [Auth Cookie/Token Error]: {e}")
+            # If the token came from a cookie and failed validation,
+            # clear the stale cookie so it doesn't retry on every request
+            if token_from_cookie:
+                clear_auth_cookie(response)
 
     # Case B: Guest / Non-Authenticated User
 

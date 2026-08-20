@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,10 +11,10 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTheme } from '../../src/context/ThemeContext';
-import { apiService, SourceCitation } from '../../src/services/api';
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTheme } from "../../src/context/ThemeContext";
+import { apiService, SourceCitation } from "../../src/services/api";
 import {
   loadAllSessions,
   saveAllSessions,
@@ -24,50 +24,59 @@ import {
   fetchSessionDetailFromDb,
   ChatMessage,
   ChatSession,
-} from '../../src/services/chatStorage';
-import { SourceCard } from '../../src/components/SourceCard';
-import { VedicTopBar } from '../../src/components/VedicTopBar';
-import { VedicDrawer } from '../../src/components/VedicDrawer';
-import { FadeSlide } from '../../src/components/AnimatedComponents';
+} from "../../src/services/chatStorage";
+import { SourceCard } from "../../src/components/SourceCard";
+import { VedicTopBar } from "../../src/components/VedicTopBar";
+import { VedicDrawer } from "../../src/components/VedicDrawer";
+import { FadeSlide } from "../../src/components/AnimatedComponents";
 
-const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
-const label = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
-const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
+const serif =
+  Platform.OS === "web"
+    ? "'EB Garamond', Georgia, serif"
+    : "EBGaramond_700Bold";
+const label =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_700Bold";
+const body =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_400Regular";
 
 import {
   AVAILABLE_LEGENDS,
   LegendProfile,
   getLegendProfile,
-} from '../../src/data/characters';
+} from "../../src/data/characters";
 
 const PRESET_COUNCILS = [
   {
-    id: 'virtue_strategy',
-    title: 'Virtue vs. Strategy',
-    members: ['Sita', 'Krishna'],
-    desc: 'Balance deep moral dignity with pragmatic, decisive strategy.',
-    icon: '⚖️',
+    id: "virtue_strategy",
+    title: "Virtue vs. Strategy",
+    members: ["Sita", "Krishna"],
+    desc: "Balance deep moral dignity with pragmatic, decisive strategy.",
+    icon: "⚖️",
   },
   {
-    id: 'dharma_pillars',
-    title: 'The Pillars of Righteousness',
-    members: ['Rama', 'Sita'],
-    desc: 'Uncompromising duty, truth, and endurance from the Ramayana.',
-    icon: '🏹',
+    id: "dharma_pillars",
+    title: "The Pillars of Righteousness",
+    members: ["Rama", "Sita"],
+    desc: "Uncompromising duty, truth, and endurance from the Ramayana.",
+    icon: "🏹",
   },
   {
-    id: 'warriors_destiny',
-    title: 'Warriors of Destiny',
-    members: ['Arjuna', 'Karna'],
-    desc: 'Two greatest archers debate honor, personal fate, and moral struggle.',
-    icon: '🎯',
+    id: "warriors_destiny",
+    title: "Warriors of Destiny",
+    members: ["Arjuna", "Karna"],
+    desc: "Two greatest archers debate honor, personal fate, and moral struggle.",
+    icon: "🎯",
   },
   {
-    id: 'conscience_council',
-    title: 'Council of Conscience',
-    members: ['Krishna', 'Bhishma', 'Vibhishana'],
-    desc: 'Resolve complex institutional loyalty vs. higher ethical truth.',
-    icon: '🕊️',
+    id: "conscience_council",
+    title: "Council of Conscience",
+    members: ["Krishna", "Bhishma", "Vibhishana"],
+    desc: "Resolve complex institutional loyalty vs. higher ethical truth.",
+    icon: "🕊️",
   },
 ];
 
@@ -78,13 +87,17 @@ export default function RoundtableScreen() {
 
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
-  const [activeCouncil, setActiveCouncil] = useState<string[]>(['Sita', 'Krishna']);
+  const [activeCouncil, setActiveCouncil] = useState<string[]>([
+    "Sita",
+    "Krishna",
+  ]);
   const [mutedCouncil, setMutedCouncil] = useState<string[]>([]);
-  const [sessionId, setSessionId] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string>("");
+  const [isSessionLoading, setIsSessionLoading] = useState(!!params.id);
   const [history, setHistory] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [showMentionDropup, setShowMentionDropup] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionQuery, setMentionQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
   const [isInputExpanded, setIsInputExpanded] = useState(false);
@@ -92,41 +105,50 @@ export default function RoundtableScreen() {
 
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
 
-  const filteredMentionCandidates = AVAILABLE_LEGENDS.filter((l) =>
-    l.name.toLowerCase().includes(mentionQuery) ||
-    l.archetype.toLowerCase().includes(mentionQuery) ||
-    l.epic.toLowerCase().includes(mentionQuery)
+  const filteredMentionCandidates = AVAILABLE_LEGENDS.filter(
+    (l) =>
+      l.name.toLowerCase().includes(mentionQuery) ||
+      l.archetype.toLowerCase().includes(mentionQuery) ||
+      l.epic.toLowerCase().includes(mentionQuery),
   );
 
   const handleKeyDown = (e: any) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       if (showMentionDropup && filteredMentionCandidates.length > 0) {
-        if (e.nativeEvent.key === 'ArrowDown') {
+        if (e.nativeEvent.key === "ArrowDown") {
           e.preventDefault();
-          setMentionSelectedIndex((prev) => (prev + 1) % filteredMentionCandidates.length);
+          setMentionSelectedIndex(
+            (prev) => (prev + 1) % filteredMentionCandidates.length,
+          );
           return;
         }
-        if (e.nativeEvent.key === 'ArrowUp') {
+        if (e.nativeEvent.key === "ArrowUp") {
           e.preventDefault();
-          setMentionSelectedIndex((prev) => (prev - 1 + filteredMentionCandidates.length) % filteredMentionCandidates.length);
+          setMentionSelectedIndex(
+            (prev) =>
+              (prev - 1 + filteredMentionCandidates.length) %
+              filteredMentionCandidates.length,
+          );
           return;
         }
-        if (e.nativeEvent.key === 'Enter' || e.nativeEvent.key === 'Tab') {
+        if (e.nativeEvent.key === "Enter" || e.nativeEvent.key === "Tab") {
           e.preventDefault();
-          const targetCandidate = filteredMentionCandidates[mentionSelectedIndex] || filteredMentionCandidates[0];
+          const targetCandidate =
+            filteredMentionCandidates[mentionSelectedIndex] ||
+            filteredMentionCandidates[0];
           if (targetCandidate) {
             handleSelectMentionCandidate(targetCandidate);
           }
           return;
         }
-        if (e.nativeEvent.key === 'Escape') {
+        if (e.nativeEvent.key === "Escape") {
           e.preventDefault();
           setShowMentionDropup(false);
           return;
         }
       }
 
-      if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+      if (e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) {
         e.preventDefault();
         if (!loading) {
           handleSend();
@@ -137,7 +159,7 @@ export default function RoundtableScreen() {
 
   const handleCopyText = async (text: string, id: string) => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
       }
       setCopiedMsgId(id);
@@ -145,20 +167,31 @@ export default function RoundtableScreen() {
         setCopiedMsgId(null);
       }, 2000);
     } catch (e) {
-      console.warn('Clipboard copy error:', e);
+      console.warn("Clipboard copy error:", e);
     }
   };
 
   const formatLocalTime = (timestamp?: string | number) => {
-    if (!timestamp) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (!timestamp)
+      return new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
     const d = new Date(timestamp);
-    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return isNaN(d.getTime())
+      ? ""
+      : d.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
   };
 
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
   const mentionScrollRef = useRef<ScrollView>(null);
-  const screenWidth = Dimensions.get('window').width;
+  const screenWidth = Dimensions.get("window").width;
 
   // Auto-scroll mention list when navigating with arrow keys
   useEffect(() => {
@@ -177,25 +210,29 @@ export default function RoundtableScreen() {
     }
 
     // Check if user is typing an '@' mention
-    const lastAtIndex = text.lastIndexOf('@');
+    const lastAtIndex = text.lastIndexOf("@");
     if (lastAtIndex !== -1) {
       // If preceding character is also '@' (e.g. '@@') or textAfterAt contains '@', hide dropup!
-      if (lastAtIndex > 0 && text[lastAtIndex - 1] === '@') {
+      if (lastAtIndex > 0 && text[lastAtIndex - 1] === "@") {
         setShowMentionDropup(false);
-        setMentionQuery('');
+        setMentionQuery("");
         return;
       }
 
       const textAfterAt = text.slice(lastAtIndex + 1);
       // If there is no whitespace or extra '@' after '@', active mention dropup is open
-      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n') && !textAfterAt.includes('@')) {
+      if (
+        !textAfterAt.includes(" ") &&
+        !textAfterAt.includes("\n") &&
+        !textAfterAt.includes("@")
+      ) {
         setShowMentionDropup(true);
         setMentionQuery(textAfterAt.toLowerCase());
         return;
       }
     }
     setShowMentionDropup(false);
-    setMentionQuery('');
+    setMentionQuery("");
   };
 
   const handleSelectMentionCandidate = (legend: LegendProfile) => {
@@ -209,7 +246,7 @@ export default function RoundtableScreen() {
     }
 
     // 2. Replace '@...' with '@Name ' in input
-    const lastAtIndex = input.lastIndexOf('@');
+    const lastAtIndex = input.lastIndexOf("@");
     if (lastAtIndex !== -1) {
       const beforeAt = input.slice(0, lastAtIndex);
       setInput(`${beforeAt}@${legend.name} `);
@@ -218,7 +255,7 @@ export default function RoundtableScreen() {
     }
 
     setShowMentionDropup(false);
-    setMentionQuery('');
+    setMentionQuery("");
     setMentionSelectedIndex(0);
     setTimeout(() => {
       inputRef.current?.focus();
@@ -227,52 +264,47 @@ export default function RoundtableScreen() {
 
   // Session Synchronization
   useEffect(() => {
-    const syncState = () => {
+    const syncState = async () => {
       const loaded = loadAllSessions();
 
       if (!params.id) {
         // Fresh /roundtable page
-        setSessionId('');
+        setIsSessionLoading(false);
+        setSessionId("");
+        setActiveSessionId(null);
         setHistory([]);
-        setInput('');
-        setActiveCouncil(['Sita', 'Krishna']);
+        setInput("");
+        setActiveCouncil(["Sita", "Krishna"]);
         setMutedCouncil([]);
         return;
       }
 
-      const active = loaded.find((s) => s.id === params.id && s.mode === 'roundtable');
-      if (active) {
-        setSessionId(active.id);
-        setActiveSessionId(active.id);
-        if (active.history && active.history.length > 0) {
-          setHistory(active.history);
-          if (active.council && active.council.length > 0) {
-            setActiveCouncil(active.council);
-          }
-        } else {
-          fetchSessionDetailFromDb(active.id).then((msgs) => {
-            if (msgs && msgs.length > 0) {
-              setHistory(msgs);
-              if (active.council && active.council.length > 0) {
-                setActiveCouncil(active.council);
-              }
-            }
-          });
+      setSessionId(params.id as string);
+      setActiveSessionId(params.id as string);
+
+      const active = loaded.find((s) => s.id === params.id);
+      if (active && active.history && active.history.length > 0) {
+        setHistory(active.history);
+        if (active.council && active.council.length > 0) {
+          setActiveCouncil(active.council);
         }
+        setIsSessionLoading(false);
       } else {
-        fetchSessionDetailFromDb(params.id as string).then((msgs) => {
+        setHistory([]);
+        setIsSessionLoading(true);
+        try {
+          const msgs = await fetchSessionDetailFromDb(params.id as string);
           if (msgs && msgs.length > 0) {
-            setSessionId(params.id as string);
-            setActiveSessionId(params.id as string);
             setHistory(msgs);
-          } else {
-            setSessionId('');
-            setHistory([]);
-            setInput('');
-            setActiveCouncil(['Sita', 'Krishna']);
-            setMutedCouncil([]);
+            const all = loadAllSessions();
+            const current = all.find((s) => s.id === params.id);
+            if (current?.council && current.council.length > 0) {
+              setActiveCouncil(current.council);
+            }
           }
-        });
+        } finally {
+          setIsSessionLoading(false);
+        }
       }
     };
 
@@ -283,7 +315,10 @@ export default function RoundtableScreen() {
       const target = allSessions.find((s) => s.id === params.id);
       if (target) {
         setSessionId(target.id);
-        setHistory(target.history || []);
+        if (target.history && target.history.length > 0) {
+          setHistory(target.history);
+          setIsSessionLoading(false);
+        }
         if (target.council && target.council.length > 0) {
           setActiveCouncil(target.council);
         }
@@ -296,26 +331,26 @@ export default function RoundtableScreen() {
   const saveRoundtableSession = (
     newHistory: ChatMessage[],
     currentId: string,
-    councilMembers: string[]
+    councilMembers: string[],
   ) => {
     if (!currentId) return;
     const all = loadAllSessions();
     const existingIdx = all.findIndex((s) => s.id === currentId);
 
-    let sessionTitle = 'Vedic Roundtable';
-    const firstUserMsg = newHistory.find((m) => m.role === 'user');
+    let sessionTitle = "Vedic Roundtable";
+    const firstUserMsg = newHistory.find((m) => m.role === "user");
     if (firstUserMsg) {
       sessionTitle = firstUserMsg.content.slice(0, 32);
-      if (firstUserMsg.content.length > 32) sessionTitle += '...';
+      if (firstUserMsg.content.length > 32) sessionTitle += "...";
     }
 
     const session: ChatSession = {
       id: currentId,
       title: sessionTitle,
-      mode: 'roundtable',
+      mode: "roundtable",
       council: councilMembers,
       updatedAt: Date.now(),
-      stage: 'follow_up',
+      stage: "follow_up",
       history: newHistory,
     };
 
@@ -339,7 +374,7 @@ export default function RoundtableScreen() {
     setMutedCouncil((prev) =>
       prev.includes(characterName)
         ? prev.filter((c) => c !== characterName)
-        : [...prev, characterName]
+        : [...prev, characterName],
     );
   };
 
@@ -368,19 +403,27 @@ export default function RoundtableScreen() {
     setInput((prev) => (prev ? `${prev} @${charName} ` : `@${charName} `));
   };
 
-  const handleSend = async (forcedQuery?: string, isForceResolve: boolean = false) => {
+  const handleSend = async (
+    forcedQuery?: string,
+    isForceResolve: boolean = false,
+  ) => {
     const textToSend = (forcedQuery || input).trim();
     if (!textToSend || loading) return;
 
     if (!forcedQuery) {
-      setInput('');
+      setInput("");
       setInputHeight(36);
       setIsInputExpanded(false);
     }
 
     let currentId = sessionId;
     if (!currentId) {
-      const newSession = createNewSession(textToSend.slice(0, 32), 'roundtable', undefined, activeCouncil);
+      const newSession = createNewSession(
+        textToSend.slice(0, 32),
+        "roundtable",
+        undefined,
+        activeCouncil,
+      );
       currentId = newSession.id;
       setSessionId(currentId);
       setActiveSessionId(currentId);
@@ -389,7 +432,7 @@ export default function RoundtableScreen() {
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      role: 'user',
+      role: "user",
       content: textToSend,
       timestamp: Date.now(),
     };
@@ -417,12 +460,12 @@ export default function RoundtableScreen() {
         mutedCouncil,
         apiHistory,
         isForceResolve,
-        currentId
+        currentId,
       );
 
       const newReplies: ChatMessage[] = res.replies.map((r, idx) => ({
         id: (Date.now() + idx + 1).toString(),
-        role: 'assistant',
+        role: "assistant",
         character: r.character,
         action: r.action,
         content: r.content,
@@ -438,13 +481,18 @@ export default function RoundtableScreen() {
         setActiveCouncil(res.active_council);
       }
 
-      saveRoundtableSession(finalHistory, currentId, res.active_council || activeCouncil);
+      saveRoundtableSession(
+        finalHistory,
+        currentId,
+        res.active_council || activeCouncil,
+      );
     } catch {
       const fallback: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        character: activeCouncil[0] || 'Guide',
-        content: 'The council listens with deep reverence. When duty is unclear, steady your heart upon righteous action.',
+        role: "assistant",
+        character: activeCouncil[0] || "Guide",
+        content:
+          "The council listens with deep reverence. When duty is unclear, steady your heart upon righteous action.",
       };
       const finalHistory = [...nextHistory, fallback];
       setHistory(finalHistory);
@@ -459,14 +507,16 @@ export default function RoundtableScreen() {
 
   const getLegendInfo = (name: string): LegendProfile => {
     return (
-      AVAILABLE_LEGENDS.find((l) => l.name.toLowerCase() === name.toLowerCase()) || {
+      AVAILABLE_LEGENDS.find(
+        (l) => l.name.toLowerCase() === name.toLowerCase(),
+      ) || {
         name,
-        epic: 'Epics',
-        archetype: 'Vedic Guide',
-        icon: '👑',
-        color: '#D4AF37',
-        accent: 'rgba(212, 175, 55, 0.15)',
-        quote: '',
+        epic: "Epics",
+        archetype: "Vedic Guide",
+        icon: "👑",
+        color: "#D4AF37",
+        accent: "rgba(212, 175, 55, 0.15)",
+        quote: "",
       }
     );
   };
@@ -474,20 +524,23 @@ export default function RoundtableScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <VedicTopBar onOpenDrawer={() => setDrawerVisible(true)} />
-      <VedicDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
+      <VedicDrawer
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+      />
 
       {/* Top Header Fade Overlay */}
       <View
         style={[
           styles.topFadeOverlay,
-          Platform.OS === 'web'
+          Platform.OS === "web"
             ? ({
                 background: `linear-gradient(to bottom, ${theme.bg} 40%, ${theme.bg}CC 70%, ${theme.bg}00 100%)`,
               } as any)
-            : { backgroundColor: 'transparent' },
+            : { backgroundColor: "transparent" },
         ]}
         pointerEvents="none"
       />
@@ -498,27 +551,54 @@ export default function RoundtableScreen() {
         <ScrollView
           ref={scrollRef}
           style={styles.chatScroll}
-          contentContainerStyle={[styles.chatContent, { paddingTop: 80, paddingBottom: 220 }]}
+          contentContainerStyle={[
+            styles.chatContent,
+            { paddingTop: 80, paddingBottom: 220 },
+          ]}
           showsVerticalScrollIndicator={false}
         >
-          {history.length === 0 ? (
+          {isSessionLoading ? (
+            <View style={styles.sessionLoaderWrapper}>
+              <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+          ) : history.length === 0 ? (
             <FadeSlide delay={50} distance={15}>
               <View style={styles.welcomeContainer}>
                 <View style={styles.heroBadge}>
-                  <Text style={[styles.heroBadgeText, { color: theme.primary, fontFamily: label }]}>
+                  <Text
+                    style={[
+                      styles.heroBadgeText,
+                      { color: theme.primary, fontFamily: label },
+                    ]}
+                  >
                     MULTI-LEGEND SABHA
                   </Text>
                 </View>
-                <Text style={[styles.welcomeTitle, { color: theme.primary, fontFamily: serif }]}>
+                <Text
+                  style={[
+                    styles.welcomeTitle,
+                    { color: theme.primary, fontFamily: serif },
+                  ]}
+                >
                   Council of Ancient Wisdom
                 </Text>
-                <Text style={[styles.welcomeSubtitle, { color: theme.secondary, fontFamily: body }]}>
-                  Convene a sacred roundtable of ancient figures. Debate your dilemmas across multiple
-                  epic viewpoints simultaneously.
+                <Text
+                  style={[
+                    styles.welcomeSubtitle,
+                    { color: theme.secondary, fontFamily: body },
+                  ]}
+                >
+                  Convene a sacred roundtable of ancient figures. Debate your
+                  dilemmas across multiple epic viewpoints simultaneously.
                 </Text>
 
                 {/* Preset Council Quick Picks */}
-                <Text style={[styles.sectionTitle, { color: theme.text, fontFamily: serif }]}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: theme.text, fontFamily: serif },
+                  ]}
+                >
                   Recommended Sabha Presets
                 </Text>
                 <View style={styles.presetsGrid}>
@@ -533,21 +613,33 @@ export default function RoundtableScreen() {
                         style={[
                           styles.presetCard,
                           {
-                            backgroundColor: isSelected ? theme.primaryContainer : theme.surface,
-                            borderColor: isSelected ? theme.primary : theme.outlineVariant,
+                            backgroundColor: isSelected
+                              ? theme.primaryContainer
+                              : theme.surface,
+                            borderColor: isSelected
+                              ? theme.primary
+                              : theme.outlineVariant,
                             shadowColor: theme.shadow,
                           },
                         ]}
                         onPress={() => handleSelectPreset(preset)}
                         activeOpacity={0.8}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
                           <Text style={{ fontSize: 20 }}>{preset.icon}</Text>
                           <Text
                             style={[
                               styles.presetTitle,
                               {
-                                color: isSelected ? theme.onPrimaryContainer : theme.text,
+                                color: isSelected
+                                  ? theme.onPrimaryContainer
+                                  : theme.text,
                                 fontFamily: label,
                               },
                             ]}
@@ -559,7 +651,9 @@ export default function RoundtableScreen() {
                           style={[
                             styles.presetDesc,
                             {
-                              color: isSelected ? theme.onPrimaryContainer : theme.secondary,
+                              color: isSelected
+                                ? theme.onPrimaryContainer
+                                : theme.secondary,
                               fontFamily: body,
                             },
                           ]}
@@ -572,7 +666,9 @@ export default function RoundtableScreen() {
                               key={m}
                               style={[
                                 styles.memberMiniTag,
-                                { backgroundColor: theme.surfaceContainerLowest },
+                                {
+                                  backgroundColor: theme.surfaceContainerLowest,
+                                },
                               ]}
                             >
                               <Text
@@ -594,8 +690,8 @@ export default function RoundtableScreen() {
             </FadeSlide>
           ) : (
             history.map((msg, index) => {
-              const isUser = msg.role === 'user';
-              const profile = getLegendInfo(msg.character || 'Guide');
+              const isUser = msg.role === "user";
+              const profile = getLegendInfo(msg.character || "Guide");
 
               return (
                 <FadeSlide key={msg.id || index} delay={20} distance={10}>
@@ -613,25 +709,56 @@ export default function RoundtableScreen() {
                         <Text
                           style={[
                             styles.userMsgText,
-                            { color: theme.onPrimaryContainer, fontFamily: body },
+                            {
+                              color: theme.onPrimaryContainer,
+                              fontFamily: body,
+                            },
                           ]}
                         >
                           {msg.content}
                         </Text>
                         <View style={styles.bubbleFooter}>
-                          <Text style={[styles.bubbleTime, { color: theme.onPrimaryContainer, opacity: 0.8, fontFamily: label }]}>
+                          <Text
+                            style={[
+                              styles.bubbleTime,
+                              {
+                                color: theme.onPrimaryContainer,
+                                opacity: 0.8,
+                                fontFamily: label,
+                              },
+                            ]}
+                          >
                             {formatLocalTime(msg.timestamp)}
                           </Text>
                           <TouchableOpacity
                             style={[
                               styles.copyBtn,
-                              copiedMsgId === (msg.id || String(index)) && { backgroundColor: 'rgba(255,255,255,0.2)' },
+                              copiedMsgId === (msg.id || String(index)) && {
+                                backgroundColor: "rgba(255,255,255,0.2)",
+                              },
                             ]}
-                            onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                            onPress={() =>
+                              handleCopyText(
+                                msg.content,
+                                msg.id || String(index),
+                              )
+                            }
                             activeOpacity={0.7}
                           >
-                            <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? '#10B981' : theme.onPrimaryContainer }]}>
-                              {copiedMsgId === (msg.id || String(index)) ? '✓ Copied' : '📋'}
+                            <Text
+                              style={[
+                                styles.copyIconText,
+                                {
+                                  color:
+                                    copiedMsgId === (msg.id || String(index))
+                                      ? "#10B981"
+                                      : theme.onPrimaryContainer,
+                                },
+                              ]}
+                            >
+                              {copiedMsgId === (msg.id || String(index))
+                                ? "✓ Copied"
+                                : "📋"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -684,32 +811,68 @@ export default function RoundtableScreen() {
                           </View>
                         </View>
 
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          {msg.action === 'depart' && (
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          {msg.action === "depart" && (
                             <View
                               style={[
                                 styles.actionTag,
-                                { backgroundColor: 'rgba(239, 68, 68, 0.12)' },
+                                { backgroundColor: "rgba(239, 68, 68, 0.12)" },
                               ]}
                             >
-                              <Text style={{ fontSize: 10.5, color: '#EF4444', fontFamily: label }}>
+                              <Text
+                                style={{
+                                  fontSize: 10.5,
+                                  color: "#EF4444",
+                                  fontFamily: label,
+                                }}
+                              >
                                 🚪 Departed
                               </Text>
                             </View>
                           )}
-                          <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                          <Text
+                            style={[
+                              styles.bubbleTime,
+                              { color: theme.secondary, fontFamily: label },
+                            ]}
+                          >
                             {formatLocalTime(msg.timestamp)}
                           </Text>
                           <TouchableOpacity
                             style={[
                               styles.copyBtn,
-                              copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                              copiedMsgId === (msg.id || String(index)) && {
+                                backgroundColor: theme.surfaceContainerLow,
+                              },
                             ]}
-                            onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                            onPress={() =>
+                              handleCopyText(
+                                msg.content,
+                                msg.id || String(index),
+                              )
+                            }
                             activeOpacity={0.7}
                           >
-                            <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? '#10B981' : theme.secondary }]}>
-                              {copiedMsgId === (msg.id || String(index)) ? '✓ Copied' : '📋'}
+                            <Text
+                              style={[
+                                styles.copyIconText,
+                                {
+                                  color:
+                                    copiedMsgId === (msg.id || String(index))
+                                      ? "#10B981"
+                                      : theme.secondary,
+                                },
+                              ]}
+                            >
+                              {copiedMsgId === (msg.id || String(index))
+                                ? "✓ Copied"
+                                : "📋"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -739,9 +902,22 @@ export default function RoundtableScreen() {
           )}
 
           {loading && (
-            <View style={[styles.loadingBox, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+            <View
+              style={[
+                styles.loadingBox,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.outlineVariant,
+                },
+              ]}
+            >
               <ActivityIndicator size="small" color={theme.primary} />
-              <Text style={[styles.loadingText, { color: theme.secondary, fontFamily: body }]}>
+              <Text
+                style={[
+                  styles.loadingText,
+                  { color: theme.secondary, fontFamily: body },
+                ]}
+              >
                 The Council is deliberating your dilemma...
               </Text>
             </View>
@@ -752,11 +928,11 @@ export default function RoundtableScreen() {
         <View
           style={[
             styles.bottomFadeOverlay,
-            Platform.OS === 'web'
+            Platform.OS === "web"
               ? ({
                   background: `linear-gradient(to top, ${theme.bg} 50%, ${theme.bg}CC 80%, ${theme.bg}00 100%)`,
                 } as any)
-              : { backgroundColor: 'transparent' },
+              : { backgroundColor: "transparent" },
           ]}
           pointerEvents="none"
         />
@@ -774,18 +950,33 @@ export default function RoundtableScreen() {
         >
           {/* Integrated Council Header & Active Member Chips */}
           <View style={styles.councilBarTitleRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
               <Text style={{ fontSize: 16 }}>🪷</Text>
-              <Text style={[styles.councilBarTitle, { color: theme.primary, fontFamily: serif }]}>
+              <Text
+                style={[
+                  styles.councilBarTitle,
+                  { color: theme.primary, fontFamily: serif },
+                ]}
+              >
                 Vedic Council
               </Text>
             </View>
             <TouchableOpacity
-              style={[styles.inviteBtn, { backgroundColor: theme.primaryContainer }]}
+              style={[
+                styles.inviteBtn,
+                { backgroundColor: theme.primaryContainer },
+              ]}
               onPress={() => setInviteModalVisible(true)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.inviteBtnText, { color: theme.onPrimaryContainer, fontFamily: label }]}>
+              <Text
+                style={[
+                  styles.inviteBtnText,
+                  { color: theme.onPrimaryContainer, fontFamily: label },
+                ]}
+              >
                 ➕ Invite Legend
               </Text>
             </TouchableOpacity>
@@ -807,8 +998,12 @@ export default function RoundtableScreen() {
                   style={[
                     styles.councilChip,
                     {
-                      backgroundColor: isMuted ? theme.surfaceContainerLowest : profile.accent,
-                      borderColor: isMuted ? theme.outlineVariant : profile.color,
+                      backgroundColor: isMuted
+                        ? theme.surfaceContainerLowest
+                        : profile.accent,
+                      borderColor: isMuted
+                        ? theme.outlineVariant
+                        : profile.color,
                       opacity: isMuted ? 0.6 : 1,
                     },
                   ]}
@@ -817,28 +1012,43 @@ export default function RoundtableScreen() {
                     onPress={() => handleInsertMention(charName)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.councilChipName, { color: theme.text, fontFamily: label }]}>
+                    <Text
+                      style={[
+                        styles.councilChipName,
+                        { color: theme.text, fontFamily: label },
+                      ]}
+                    >
                       @{charName}
                     </Text>
                   </TouchableOpacity>
 
                   {/* Mute Toggle */}
                   <TouchableOpacity
-                    style={[styles.chipActionBtn, { backgroundColor: theme.surface }]}
+                    style={[
+                      styles.chipActionBtn,
+                      { backgroundColor: theme.surface },
+                    ]}
                     onPress={() => handleToggleMute(charName)}
                     activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 11 }}>{isMuted ? '🔇' : '🔊'}</Text>
+                    <Text style={{ fontSize: 11 }}>
+                      {isMuted ? "🔇" : "🔊"}
+                    </Text>
                   </TouchableOpacity>
 
                   {/* Dismiss Button */}
                   {activeCouncil.length > 1 && (
                     <TouchableOpacity
-                      style={[styles.chipActionBtn, { backgroundColor: theme.surface }]}
+                      style={[
+                        styles.chipActionBtn,
+                        { backgroundColor: theme.surface },
+                      ]}
                       onPress={() => handleDismissCharacter(charName)}
                       activeOpacity={0.7}
                     >
-                      <Text style={{ fontSize: 10, color: theme.secondary }}>✕</Text>
+                      <Text style={{ fontSize: 10, color: theme.secondary }}>
+                        ✕
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -858,12 +1068,24 @@ export default function RoundtableScreen() {
                 },
               ]}
             >
-              <View style={[styles.dropupHeader, { borderBottomColor: theme.outlineVariant }]}>
-                <Text style={[styles.dropupHeaderTitle, { color: theme.secondary, fontFamily: label }]}>
+              <View
+                style={[
+                  styles.dropupHeader,
+                  { borderBottomColor: theme.outlineVariant },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.dropupHeaderTitle,
+                    { color: theme.secondary, fontFamily: label },
+                  ]}
+                >
                   SELECT LEGEND TO ADDRESS & INVITE
                 </Text>
                 <TouchableOpacity onPress={() => setShowMentionDropup(false)}>
-                  <Text style={{ fontSize: 13, color: theme.secondary }}>✕</Text>
+                  <Text style={{ fontSize: 13, color: theme.secondary }}>
+                    ✕
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -883,26 +1105,61 @@ export default function RoundtableScreen() {
                       style={[
                         styles.dropupRow,
                         {
-                          backgroundColor: isSelected ? theme.surfaceContainerLow : theme.surfaceContainerLowest,
-                          borderColor: isSelected ? theme.primary : isInCouncil ? theme.outlineVariant : legend.color,
+                          backgroundColor: isSelected
+                            ? theme.surfaceContainerLow
+                            : theme.surfaceContainerLowest,
+                          borderColor: isSelected
+                            ? theme.primary
+                            : isInCouncil
+                              ? theme.outlineVariant
+                              : legend.color,
                           borderWidth: isSelected ? 2 : 1,
                         },
                       ]}
                       onPress={() => handleSelectMentionCandidate(legend)}
                       activeOpacity={0.7}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 10,
+                          flex: 1,
+                        }}
+                      >
                         <Text style={{ fontSize: 20 }}>{legend.icon}</Text>
                         <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={[styles.dropupName, { color: theme.text, fontFamily: serif }]}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.dropupName,
+                                { color: theme.text, fontFamily: serif },
+                              ]}
+                            >
                               {legend.name}
                             </Text>
-                            <Text style={[styles.dropupEpic, { color: theme.secondary, fontFamily: label }]}>
+                            <Text
+                              style={[
+                                styles.dropupEpic,
+                                { color: theme.secondary, fontFamily: label },
+                              ]}
+                            >
                               ({legend.epic})
                             </Text>
                           </View>
-                          <Text style={[styles.dropupArchetype, { color: theme.secondary, fontFamily: body }]} numberOfLines={1}>
+                          <Text
+                            style={[
+                              styles.dropupArchetype,
+                              { color: theme.secondary, fontFamily: body },
+                            ]}
+                            numberOfLines={1}
+                          >
                             {legend.archetype}
                           </Text>
                         </View>
@@ -912,7 +1169,9 @@ export default function RoundtableScreen() {
                         style={[
                           styles.dropupTag,
                           {
-                            backgroundColor: isInCouncil ? 'rgba(74, 222, 128, 0.12)' : theme.primaryContainer,
+                            backgroundColor: isInCouncil
+                              ? "rgba(74, 222, 128, 0.12)"
+                              : theme.primaryContainer,
                           },
                         ]}
                       >
@@ -920,12 +1179,14 @@ export default function RoundtableScreen() {
                           style={[
                             styles.dropupTagText,
                             {
-                              color: isInCouncil ? '#16A34A' : theme.onPrimaryContainer,
+                              color: isInCouncil
+                                ? "#16A34A"
+                                : theme.onPrimaryContainer,
                               fontFamily: label,
                             },
                           ]}
                         >
-                          {isInCouncil ? '● In Council' : '➕ Add & Tag'}
+                          {isInCouncil ? "● In Council" : "➕ Add & Tag"}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -936,20 +1197,31 @@ export default function RoundtableScreen() {
           )}
 
           {/* Seek Counsel Now Button (during Interviewing Stage) */}
-          {history.length > 0 && (history[history.length - 1] as any).stage === 'interviewing' && (
-            <TouchableOpacity
-              style={[
-                styles.forceResolveBtn,
-                { backgroundColor: theme.primaryContainer, borderColor: theme.primary },
-              ]}
-              onPress={() => handleSend("Please deliver your final council now.", true)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.forceResolveText, { color: theme.onPrimaryContainer, fontFamily: label }]}>
-                ⚡ Seek Counsel Now (Deliver Scripture Wisdom)
-              </Text>
-            </TouchableOpacity>
-          )}
+          {history.length > 0 &&
+            (history[history.length - 1] as any).stage === "interviewing" && (
+              <TouchableOpacity
+                style={[
+                  styles.forceResolveBtn,
+                  {
+                    backgroundColor: theme.primaryContainer,
+                    borderColor: theme.primary,
+                  },
+                ]}
+                onPress={() =>
+                  handleSend("Please deliver your final council now.", true)
+                }
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.forceResolveText,
+                    { color: theme.onPrimaryContainer, fontFamily: label },
+                  ]}
+                >
+                  ⚡ Seek Counsel Now (Deliver Scripture Wisdom)
+                </Text>
+              </TouchableOpacity>
+            )}
 
           {/* ChatGPT-style Multiline Input Card */}
           <View
@@ -970,8 +1242,10 @@ export default function RoundtableScreen() {
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
-                {isInputExpanded ? '🗗' : '⛶'}
+              <Text
+                style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}
+              >
+                {isInputExpanded ? "🗗" : "⛶"}
               </Text>
             </TouchableOpacity>
 
@@ -983,11 +1257,17 @@ export default function RoundtableScreen() {
                 {
                   color: theme.text,
                   fontFamily: body,
-                  height: isInputExpanded ? 180 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 160),
+                  height: isInputExpanded
+                    ? 180
+                    : Math.min(
+                        Math.max(34, input.trim() ? inputHeight : 34),
+                        160,
+                      ),
                 },
-                Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
+                Platform.OS === "web" &&
+                  ({ resize: "none", overflowY: "auto" } as any),
               ]}
-              placeholder="Type @ to summon legends, e.g. '@Krishna what should I do?' (Enter sends, Shift+Enter for newline)"
+              placeholder="Type @ to summon legends, e.g. '@Krishna what should I do?'"
               placeholderTextColor={theme.textTertiary}
               value={input}
               onChangeText={handleInputChange}
@@ -1009,8 +1289,12 @@ export default function RoundtableScreen() {
                   style={[
                     styles.actionIconBtn,
                     {
-                      backgroundColor: showMentionDropup ? theme.primaryContainer : theme.surfaceContainerLow,
-                      borderColor: showMentionDropup ? theme.primaryContainer : theme.outlineVariant,
+                      backgroundColor: showMentionDropup
+                        ? theme.primaryContainer
+                        : theme.surfaceContainerLow,
+                      borderColor: showMentionDropup
+                        ? theme.primaryContainer
+                        : theme.outlineVariant,
                     },
                   ]}
                   onPress={() => {
@@ -1018,8 +1302,8 @@ export default function RoundtableScreen() {
                       setShowMentionDropup(false);
                     } else {
                       setShowMentionDropup(true);
-                      if (!input.includes('@')) {
-                        setInput((prev) => (prev ? `${prev} @` : '@'));
+                      if (!input.includes("@")) {
+                        setInput((prev) => (prev ? `${prev} @` : "@"));
                       }
                       setTimeout(() => inputRef.current?.focus(), 50);
                     }
@@ -1029,16 +1313,28 @@ export default function RoundtableScreen() {
                   <Text
                     style={{
                       fontSize: 14,
-                      color: showMentionDropup ? theme.onPrimaryContainer : theme.primaryContainer,
-                      fontWeight: '700',
+                      color: showMentionDropup
+                        ? theme.onPrimaryContainer
+                        : theme.primaryContainer,
+                      fontWeight: "700",
                     }}
                   >
                     @
                   </Text>
                 </TouchableOpacity>
 
-                <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
-                  <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+                <View
+                  style={[
+                    styles.modelBadgePill,
+                    { backgroundColor: theme.bgSecondary },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.modelBadgeText,
+                      { color: theme.secondary, fontFamily: label },
+                    ]}
+                  >
                     👥 {activeCouncil.length} Legends in Sabha
                   </Text>
                 </View>
@@ -1049,7 +1345,10 @@ export default function RoundtableScreen() {
                   styles.chatgptSendBtn,
                   input.trim().length > 0 && !loading
                     ? { backgroundColor: theme.primaryContainer }
-                    : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                    : {
+                        backgroundColor: theme.surfaceContainerLow,
+                        opacity: 0.5,
+                      },
                 ]}
                 onPress={() => {
                   if (!loading) handleSend();
@@ -1060,7 +1359,12 @@ export default function RoundtableScreen() {
                 <Text
                   style={[
                     styles.chatgptSendIcon,
-                    { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                    {
+                      color:
+                        input.trim().length > 0 && !loading
+                          ? theme.onPrimaryContainer
+                          : theme.secondary,
+                    },
                   ]}
                 >
                   ↑
@@ -1094,12 +1398,27 @@ export default function RoundtableScreen() {
               },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: theme.outlineVariant }]}>
+            <View
+              style={[
+                styles.modalHeader,
+                { borderBottomColor: theme.outlineVariant },
+              ]}
+            >
               <View>
-                <Text style={[styles.modalTitle, { color: theme.primary, fontFamily: serif }]}>
+                <Text
+                  style={[
+                    styles.modalTitle,
+                    { color: theme.primary, fontFamily: serif },
+                  ]}
+                >
                   Invite to Council
                 </Text>
-                <Text style={[styles.modalSubtitle, { color: theme.secondary, fontFamily: body }]}>
+                <Text
+                  style={[
+                    styles.modalSubtitle,
+                    { color: theme.secondary, fontFamily: body },
+                  ]}
+                >
                   Add another epic legend to your active discussion
                 </Text>
               </View>
@@ -1111,7 +1430,10 @@ export default function RoundtableScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={{ maxHeight: 400 }}
+              showsVerticalScrollIndicator={false}
+            >
               {AVAILABLE_LEGENDS.map((legend) => {
                 const isAlreadyInCouncil = activeCouncil.includes(legend.name);
 
@@ -1135,11 +1457,19 @@ export default function RoundtableScreen() {
                     <View style={styles.legendInviteInfo}>
                       <Text style={{ fontSize: 24 }}>{legend.icon}</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.legendInviteName, { color: theme.text, fontFamily: serif }]}>
+                        <Text
+                          style={[
+                            styles.legendInviteName,
+                            { color: theme.text, fontFamily: serif },
+                          ]}
+                        >
                           {legend.name}
                         </Text>
                         <Text
-                          style={[styles.legendInviteArchetype, { color: theme.secondary, fontFamily: body }]}
+                          style={[
+                            styles.legendInviteArchetype,
+                            { color: theme.secondary, fontFamily: body },
+                          ]}
                         >
                           {legend.epic} • {legend.archetype}
                         </Text>
@@ -1159,12 +1489,14 @@ export default function RoundtableScreen() {
                         style={[
                           styles.inviteActionBadgeText,
                           {
-                            color: isAlreadyInCouncil ? theme.secondary : theme.onPrimaryContainer,
+                            color: isAlreadyInCouncil
+                              ? theme.secondary
+                              : theme.onPrimaryContainer,
                             fontFamily: label,
                           },
                         ]}
                       >
-                        {isAlreadyInCouncil ? 'Present' : '➕ Invite'}
+                        {isAlreadyInCouncil ? "Present" : "➕ Invite"}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -1184,10 +1516,10 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   councilBar: {
-    width: '100%',
+    width: "100%",
     maxWidth: 820,
     marginHorizontal: 16,
     paddingVertical: 10,
@@ -1201,14 +1533,14 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   councilBarTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   councilBarTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   inviteBtn: {
     paddingVertical: 5,
@@ -1217,17 +1549,17 @@ const styles = StyleSheet.create({
   },
   inviteBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   councilChipsScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 8,
   },
   councilChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingVertical: 5,
     paddingHorizontal: 10,
@@ -1236,65 +1568,72 @@ const styles = StyleSheet.create({
   },
   councilChipName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   chipActionBtn: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 2,
   },
   chatScroll: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   chatContent: {
-    width: '100%',
+    width: "100%",
     maxWidth: 820,
-    alignSelf: 'center',
+    alignSelf: "center",
     paddingHorizontal: 16,
   },
+  sessionLoaderWrapper: {
+    minHeight: 320,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
   welcomeContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 24,
   },
   heroBadge: {
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(212, 175, 55, 0.12)',
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
     marginBottom: 10,
   },
   heroBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1,
   },
   welcomeTitle: {
     fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 14.5,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 22,
     maxWidth: 580,
     marginBottom: 28,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    alignSelf: 'flex-start',
+    fontWeight: "700",
+    alignSelf: "flex-start",
     marginBottom: 14,
   },
   presetsGrid: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   presetCard: {
@@ -1310,7 +1649,7 @@ const styles = StyleSheet.create({
   },
   presetTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   presetDesc: {
     fontSize: 12,
@@ -1319,8 +1658,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   presetMembersRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 6,
   },
   memberMiniTag: {
@@ -1330,15 +1669,15 @@ const styles = StyleSheet.create({
   },
   memberMiniTagText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   userMsgRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     marginBottom: 16,
   },
   userBubble: {
-    maxWidth: '85%',
+    maxWidth: "85%",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 18,
@@ -1350,9 +1689,9 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   bubbleFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
     gap: 8,
     marginTop: 6,
   },
@@ -1364,15 +1703,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   copyIconText: {
     fontSize: 11,
   },
   councilMsgCard: {
-    width: '100%',
+    width: "100%",
     padding: 16,
     borderRadius: 18,
     borderWidth: 1.5,
@@ -1383,28 +1722,28 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   speakerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingBottom: 10,
     borderBottomWidth: 1,
     marginBottom: 12,
   },
   speakerIdentity: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   speakerAvatarCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   speakerName: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   speakerArchetype: {
     fontSize: 11.5,
@@ -1423,16 +1762,16 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(150, 150, 150, 0.15)',
+    borderTopColor: "rgba(150, 150, 150, 0.15)",
   },
   sourcesHeaderTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   sourcesList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   sourceSnippetChip: {
@@ -1444,29 +1783,29 @@ const styles = StyleSheet.create({
   },
   sourceChipTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   sourceChipMeta: {
     fontSize: 10.5,
     marginTop: 2,
   },
   loadingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginVertical: 12,
   },
   loadingText: {
     fontSize: 13,
   },
   mentionDropupCard: {
-    position: 'absolute',
-    bottom: '100%',
+    position: "absolute",
+    bottom: "100%",
     left: 0,
     right: 0,
     marginBottom: 8,
@@ -1479,22 +1818,22 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   dropupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingBottom: 8,
     borderBottomWidth: 1,
     marginBottom: 8,
   },
   dropupHeaderTitle: {
     fontSize: 10.5,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.8,
   },
   dropupRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 12,
@@ -1503,11 +1842,11 @@ const styles = StyleSheet.create({
   },
   dropupName: {
     fontSize: 14.5,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   dropupEpic: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dropupArchetype: {
     fontSize: 11,
@@ -1520,7 +1859,7 @@ const styles = StyleSheet.create({
   },
   dropupTagText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   forceResolveBtn: {
     paddingVertical: 7,
@@ -1528,15 +1867,15 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     marginBottom: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   forceResolveText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   topFadeOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -1544,7 +1883,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   bottomFadeOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -1552,9 +1891,9 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   dockContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 16,
-    width: '92%',
+    width: "92%",
     maxWidth: 820,
     borderRadius: 22,
     borderWidth: 1.5,
@@ -1566,15 +1905,15 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   mentionChipsScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 8,
     paddingHorizontal: 4,
   },
   mentionLabel: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: "700",
     marginRight: 2,
   },
   mentionChip: {
@@ -1584,50 +1923,50 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chatgptInputCard: {
-    width: '100%',
+    width: "100%",
     borderRadius: 22,
     borderWidth: 1.5,
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 10,
-    position: 'relative',
+    position: "relative",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 6,
   },
   expandToggleBtn: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 12,
     zIndex: 10,
     padding: 4,
   },
   chatgptTextInput: {
-    width: '100%',
+    width: "100%",
     fontSize: 14.5,
     lineHeight: 21,
     paddingTop: 2,
     paddingLeft: 2,
     paddingRight: 32,
     paddingBottom: 4,
-    textAlignVertical: 'top',
-    ...(Platform.OS === 'web' && {
-      outlineStyle: 'none' as any,
-      userSelect: 'text' as any,
-      WebkitUserSelect: 'text' as any,
+    textAlignVertical: "top",
+    ...(Platform.OS === "web" && {
+      outlineStyle: "none" as any,
+      userSelect: "text" as any,
+      WebkitUserSelect: "text" as any,
     }),
   },
   chatgptBottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 6,
     paddingTop: 4,
   },
   bottomBarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   actionIconBtn: {
@@ -1635,8 +1974,8 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   modelBadgePill: {
     paddingHorizontal: 8,
@@ -1650,26 +1989,26 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   chatgptSendIcon: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: "800",
     marginTop: -2,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   inviteModalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 520,
     borderRadius: 22,
     borderWidth: 1.5,
@@ -1680,16 +2019,16 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     paddingBottom: 14,
     borderBottomWidth: 1,
     marginBottom: 14,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   modalSubtitle: {
     fontSize: 12.5,
@@ -1700,27 +2039,27 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   legendInviteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 8,
   },
   legendInviteInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     flex: 1,
   },
   legendInviteName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   legendInviteArchetype: {
     fontSize: 12,
@@ -1733,6 +2072,6 @@ const styles = StyleSheet.create({
   },
   inviteActionBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../hooks/useAuth";
 import { createNewSession, setActiveSessionId } from "../services/chatStorage";
 
 const serif =
@@ -30,6 +31,7 @@ interface VedicTopBarProps {
 
 export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -86,7 +88,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Right Floating Pill Group [ ➕ New Chat | 🌙 Theme ] */}
+        {/* Right Floating Pill Group [ 🔑 Login | 📜 New Chat | 🌙 Theme ] */}
         <View
           style={[
             styles.floatingPillGroup,
@@ -97,6 +99,27 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
             },
           ]}
         >
+          {!user && (
+            <>
+              <TouchableOpacity
+                style={styles.pillIconTouch}
+                onPress={() => router.push("/login")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pillLoginText, { color: theme.primary }]}>
+                  🔑 Login
+                </Text>
+              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.pillDivider,
+                  { backgroundColor: theme.outlineVariant },
+                ]}
+              />
+            </>
+          )}
+
           <TouchableOpacity
             style={styles.pillIconTouch}
             onPress={() => setModalVisible(true)}
@@ -415,6 +438,11 @@ const styles = StyleSheet.create({
   },
   pillIconText: {
     fontSize: 18,
+  },
+  pillLoginText: {
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: label,
   },
   pillDivider: {
     width: 1,

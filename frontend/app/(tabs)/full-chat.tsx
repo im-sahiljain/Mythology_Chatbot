@@ -10,6 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -97,6 +98,7 @@ export default function FullChatScreen() {
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>("");
+  const [isSessionLoading, setIsSessionLoading] = useState(!!params.id);
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [currentStage, setCurrentStage] = useState<
     "interviewing" | "resolved" | "follow_up" | null
@@ -118,7 +120,11 @@ export default function FullChatScreen() {
   };
 
   const handleKeyDown = (e: any) => {
-    if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+    if (
+      Platform.OS === "web" &&
+      e.nativeEvent.key === "Enter" &&
+      !e.nativeEvent.shiftKey
+    ) {
       e.preventDefault();
       if (!loading) {
         handleSend();
@@ -128,7 +134,7 @@ export default function FullChatScreen() {
 
   const handleCopyText = async (text: string, id: string) => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
       }
       setCopiedMsgId(id);
@@ -136,14 +142,25 @@ export default function FullChatScreen() {
         setCopiedMsgId(null);
       }, 2000);
     } catch (e) {
-      console.warn('Clipboard copy error:', e);
+      console.warn("Clipboard copy error:", e);
     }
   };
 
   const formatLocalTime = (timestamp?: string | number) => {
-    if (!timestamp) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (!timestamp)
+      return new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
     const d = new Date(timestamp);
-    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return isNaN(d.getTime())
+      ? ""
+      : d.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
   };
 
   const scrollRef = useRef<ScrollView>(null);
@@ -151,13 +168,15 @@ export default function FullChatScreen() {
   const isNarrow = screenWidth < 600;
 
   useEffect(() => {
-    const syncState = () => {
+    const syncState = async () => {
       const loaded = loadAllSessions();
       setSessions(loaded);
 
       if (!params.id) {
         // Navigated directly to /full-chat -> Fresh consultation page without query param!
+        setIsSessionLoading(false);
         setCurrentSessionId("");
+        setActiveSessionId(null);
         setHistory([]);
         setCurrentStage(null);
         setInput("");
@@ -166,30 +185,27 @@ export default function FullChatScreen() {
       }
 
       const active = loaded.find((s) => s.id === params.id);
-      if (active) {
+      if (active && active.history && active.history.length > 0) {
         setCurrentSessionId(active.id);
         setActiveSessionId(active.id);
-        if (active.history && active.history.length > 0) {
-          setHistory(active.history);
-          setCurrentStage(active.stage || null);
-          setShowMatrix(false);
-        } else {
-          fetchSessionDetailFromDb(active.id).then((msgs) => {
-            if (msgs && msgs.length > 0) {
-              setHistory(msgs);
-              setShowMatrix(false);
-            }
-          });
-        }
+        setHistory(active.history);
+        setCurrentStage(active.stage || null);
+        setShowMatrix(false);
+        setIsSessionLoading(false);
       } else {
-        fetchSessionDetailFromDb(params.id as string).then((msgs) => {
+        setHistory([]);
+        setIsSessionLoading(true);
+        try {
+          const msgs = await fetchSessionDetailFromDb(params.id as string);
           if (msgs && msgs.length > 0) {
             setCurrentSessionId(params.id as string);
             setActiveSessionId(params.id as string);
             setHistory(msgs);
             setShowMatrix(false);
           }
-        });
+        } finally {
+          setIsSessionLoading(false);
+        }
       }
     };
 
@@ -204,6 +220,7 @@ export default function FullChatScreen() {
         setHistory(target.history);
         setCurrentStage(target.stage || null);
         setShowMatrix(false);
+        setIsSessionLoading(false);
       }
     });
 
@@ -401,8 +418,11 @@ export default function FullChatScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section & Core Contrast (Shown only before chat starts) */}
-        {history.length === 0 && (
+        {isSessionLoading ? (
+          <View style={styles.sessionLoaderWrapper}>
+            <ActivityIndicator size="large" color={theme.primary} />
+          </View>
+        ) : history.length === 0 ? (
           <>
             {/* Section 1: Hero Header */}
             <View style={styles.heroSection}>
@@ -627,10 +647,8 @@ export default function FullChatScreen() {
               </View>
             </View>
           </>
-        )}
-
-        {/* Section 6: Conversational Stream & Source Cards */}
-        {history.length > 0 && (
+        ) : (
+          /* Section 6: Conversational Stream & Source Cards */
           <View style={styles.conversationStream}>
             {history.map((msg, index) => (
               <FadeSlide key={msg.id || index} delay={30} distance={10}>
@@ -652,7 +670,14 @@ export default function FullChatScreen() {
                     />
                     <View style={styles.scholarInner}>
                       <View style={styles.scholarBadgeRow}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                            flex: 1,
+                          }}
+                        >
                           <Text style={styles.scholarBadgeIcon}>🏛️</Text>
                           <Text
                             style={[
@@ -687,20 +712,50 @@ export default function FullChatScreen() {
                           )}
                         </View>
 
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.bubbleTime,
+                              { color: theme.secondary, fontFamily: label },
+                            ]}
+                          >
                             {formatLocalTime(msg.timestamp)}
                           </Text>
                           <TouchableOpacity
                             style={[
                               styles.copyBtn,
-                              copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                              copiedMsgId === (msg.id || String(index)) && {
+                                backgroundColor: theme.surfaceContainerLow,
+                              },
                             ]}
-                            onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                            onPress={() =>
+                              handleCopyText(
+                                msg.content,
+                                msg.id || String(index),
+                              )
+                            }
                             activeOpacity={0.7}
                           >
-                            <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
-                              {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
+                            <Text
+                              style={[
+                                styles.copyIconText,
+                                {
+                                  color:
+                                    copiedMsgId === (msg.id || String(index))
+                                      ? "#10B981"
+                                      : theme.secondary,
+                                },
+                              ]}
+                            >
+                              {copiedMsgId === (msg.id || String(index))
+                                ? "✓ Copied"
+                                : "📋"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -720,30 +775,44 @@ export default function FullChatScreen() {
                       )}
 
                       {/* Socratic Force Resolve CTA if in Interviewing stage */}
-                      {msg.stage === "interviewing" && (
-                        <TouchableOpacity
-                          style={[
-                            styles.forceResolveBtn,
-                            {
-                              backgroundColor: theme.bgSecondary,
-                              borderColor: theme.primaryContainer,
-                            },
-                          ]}
-                          onPress={() => handleSend(undefined, true)}
-                        >
-                          <Text
+                      {msg.stage === "interviewing" && (() => {
+                        const isLatestMessage = index === history.length - 1;
+                        const isOlder = !isLatestMessage || loading;
+
+                        return (
+                          <TouchableOpacity
                             style={[
-                              styles.forceResolveText,
+                              styles.forceResolveBtn,
                               {
-                                color: theme.primaryContainer,
-                                fontFamily: label,
+                                backgroundColor: isOlder
+                                  ? theme.surfaceContainerLow
+                                  : theme.bgSecondary,
+                                borderColor: isOlder
+                                  ? theme.outlineVariant
+                                  : theme.primaryContainer,
+                                opacity: isOlder ? 0.45 : 1,
                               },
                             ]}
+                            disabled={isOlder}
+                            onPress={() => !isOlder && handleSend(undefined, true)}
+                            activeOpacity={isOlder ? 1 : 0.7}
                           >
-                            ⚡ Give Me Grounded Counsel Now (Skip Questions)
-                          </Text>
-                        </TouchableOpacity>
-                      )}
+                            <Text
+                              style={[
+                                styles.forceResolveText,
+                                {
+                                  color: isOlder
+                                    ? theme.textTertiary
+                                    : theme.primaryContainer,
+                                  fontFamily: label,
+                                },
+                              ]}
+                            >
+                              ⚡ Give Me Grounded Counsel Now (Skip Questions)
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })()}
                     </View>
                   </View>
                 ) : (
@@ -765,19 +834,40 @@ export default function FullChatScreen() {
                       {msg.content}
                     </Text>
                     <View style={styles.bubbleFooter}>
-                      <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                      <Text
+                        style={[
+                          styles.bubbleTime,
+                          { color: theme.secondary, fontFamily: label },
+                        ]}
+                      >
                         {formatLocalTime(msg.timestamp)}
                       </Text>
                       <TouchableOpacity
                         style={[
                           styles.copyBtn,
-                          copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                          copiedMsgId === (msg.id || String(index)) && {
+                            backgroundColor: theme.surfaceContainerLow,
+                          },
                         ]}
-                        onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                        onPress={() =>
+                          handleCopyText(msg.content, msg.id || String(index))
+                        }
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
-                          {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
+                        <Text
+                          style={[
+                            styles.copyIconText,
+                            {
+                              color:
+                                copiedMsgId === (msg.id || String(index))
+                                  ? "#10B981"
+                                  : theme.secondary,
+                            },
+                          ]}
+                        >
+                          {copiedMsgId === (msg.id || String(index))
+                            ? "✓ Copied"
+                            : "📋"}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -844,8 +934,10 @@ export default function FullChatScreen() {
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
-              {isInputExpanded ? '🗗' : '⛶'}
+            <Text
+              style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}
+            >
+              {isInputExpanded ? "🗗" : "⛶"}
             </Text>
           </TouchableOpacity>
 
@@ -856,11 +948,17 @@ export default function FullChatScreen() {
               {
                 color: theme.text,
                 fontFamily: body,
-                height: isInputExpanded ? 180 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 160),
+                height: isInputExpanded
+                  ? 180
+                  : Math.min(
+                      Math.max(34, input.trim() ? inputHeight : 34),
+                      160,
+                    ),
               },
-              Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
+              Platform.OS === "web" &&
+                ({ resize: "none", overflowY: "auto" } as any),
             ]}
-            placeholder="Ask anything across Ramayana & Mahabharata... (Enter sends, Shift+Enter for new line)"
+            placeholder="What's your dilemma today?"
             placeholderTextColor={theme.textTertiary}
             value={input}
             onChangeText={handleInputChange}
@@ -879,8 +977,18 @@ export default function FullChatScreen() {
           <View style={styles.chatgptBottomBar}>
             <View style={{ flex: 1 }} />
             <View style={styles.bottomBarRight}>
-              <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
-                <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+              <View
+                style={[
+                  styles.modelBadgePill,
+                  { backgroundColor: theme.bgSecondary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modelBadgeText,
+                    { color: theme.secondary, fontFamily: label },
+                  ]}
+                >
                   🏛️ Scholar
                 </Text>
               </View>
@@ -890,7 +998,10 @@ export default function FullChatScreen() {
                   styles.chatgptSendBtn,
                   input.trim().length > 0 && !loading
                     ? { backgroundColor: theme.primaryContainer }
-                    : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                    : {
+                        backgroundColor: theme.surfaceContainerLow,
+                        opacity: 0.5,
+                      },
                 ]}
                 onPress={() => {
                   if (!loading) handleSend();
@@ -901,7 +1012,12 @@ export default function FullChatScreen() {
                 <Text
                   style={[
                     styles.chatgptSendIcon,
-                    { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                    {
+                      color:
+                        input.trim().length > 0 && !loading
+                          ? theme.onPrimaryContainer
+                          : theme.secondary,
+                    },
                   ]}
                 >
                   ↑
@@ -979,6 +1095,13 @@ const styles = StyleSheet.create({
     maxWidth: 960,
     alignSelf: "center",
     width: "100%",
+  },
+  sessionLoaderWrapper: {
+    flex: 1,
+    width: "100%",
+    minHeight: 400,
+    justifyContent: "center",
+    alignItems: "center",
   },
   heroSection: {
     alignItems: "center",

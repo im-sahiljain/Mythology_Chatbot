@@ -11,7 +11,7 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { useRouter, usePathname } from "expo-router";
+import { useRouter, usePathname, useGlobalSearchParams } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import {
   loadAllSessions,
@@ -95,6 +95,8 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const globalParams = useGlobalSearchParams<{ id?: string }>();
+  const currentChatId = globalParams?.id || null;
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveId] = useState<string | null>(null);
@@ -159,6 +161,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
 
   const handleNavigate = (route: string) => {
     onClose();
+    setActiveSessionId(null);
     try {
       router.push(route as any);
     } catch (err) {
@@ -185,6 +188,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   ) => {
     setNewChatPickerVisible(false);
     onClose();
+    setActiveSessionId(null);
     if (mode === "persona") {
       router.push("/(tabs)/persona");
       return;
@@ -212,6 +216,9 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
 
   const checkIsActive = (route: string) => {
     if (!pathname) return false;
+    // When inside a specific chat session with an ID, top-level counsel mode tabs should not be highlighted
+    if (currentChatId) return false;
+
     if (route === "/(tabs)") {
       return (
         pathname === "/" ||
@@ -462,7 +469,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
 
               {displaySessions.length > 0 ? (
                 displaySessions.map((s) => {
-                  const isSelected = s.id === activeSessionId;
+                  const isSelected = !!currentChatId && s.id === currentChatId;
                   const modeInfo = getModeBadgeInfo(s.mode, s.character);
                   return (
                     <View

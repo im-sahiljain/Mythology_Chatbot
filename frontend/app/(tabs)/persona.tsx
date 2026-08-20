@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Pressable as RNPressable,
   useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Animated, {
@@ -94,6 +95,7 @@ export default function PersonaScreen() {
     ALL_CHARACTERS[0],
   );
   const [sessionId, setSessionId] = useState<string>("");
+  const [isSessionLoading, setIsSessionLoading] = useState(!!params.id);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -118,34 +120,42 @@ export default function PersonaScreen() {
   );
 
   const handleKeyDown = (e: any) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       if (showMentionDropup && filteredMentionCharacters.length > 0) {
-        if (e.nativeEvent.key === 'ArrowDown') {
+        if (e.nativeEvent.key === "ArrowDown") {
           e.preventDefault();
-          setMentionSelectedIndex((prev) => (prev + 1) % filteredMentionCharacters.length);
+          setMentionSelectedIndex(
+            (prev) => (prev + 1) % filteredMentionCharacters.length,
+          );
           return;
         }
-        if (e.nativeEvent.key === 'ArrowUp') {
+        if (e.nativeEvent.key === "ArrowUp") {
           e.preventDefault();
-          setMentionSelectedIndex((prev) => (prev - 1 + filteredMentionCharacters.length) % filteredMentionCharacters.length);
+          setMentionSelectedIndex(
+            (prev) =>
+              (prev - 1 + filteredMentionCharacters.length) %
+              filteredMentionCharacters.length,
+          );
           return;
         }
-        if (e.nativeEvent.key === 'Enter' || e.nativeEvent.key === 'Tab') {
+        if (e.nativeEvent.key === "Enter" || e.nativeEvent.key === "Tab") {
           e.preventDefault();
-          const targetChar = filteredMentionCharacters[mentionSelectedIndex] || filteredMentionCharacters[0];
+          const targetChar =
+            filteredMentionCharacters[mentionSelectedIndex] ||
+            filteredMentionCharacters[0];
           if (targetChar) {
             handleSelectMentionCharacter(targetChar);
           }
           return;
         }
-        if (e.nativeEvent.key === 'Escape') {
+        if (e.nativeEvent.key === "Escape") {
           e.preventDefault();
           setShowMentionDropup(false);
           return;
         }
       }
 
-      if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+      if (e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) {
         e.preventDefault();
         if (!loading) {
           sendQuery();
@@ -156,7 +166,7 @@ export default function PersonaScreen() {
 
   const handleCopyText = async (text: string, id: string) => {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
       }
       setCopiedMsgId(id);
@@ -164,14 +174,25 @@ export default function PersonaScreen() {
         setCopiedMsgId(null);
       }, 2000);
     } catch (e) {
-      console.warn('Clipboard copy error:', e);
+      console.warn("Clipboard copy error:", e);
     }
   };
 
   const formatLocalTime = (timestamp?: string | number) => {
-    if (!timestamp) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (!timestamp)
+      return new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
     const d = new Date(timestamp);
-    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return isNaN(d.getTime())
+      ? ""
+      : d.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
   };
 
   const scrollRef = useRef<ScrollView>(null);
@@ -186,7 +207,10 @@ export default function PersonaScreen() {
       const ITEM_HEIGHT = 56;
       const targetY = Math.max(0, (mentionSelectedIndex - 2) * ITEM_HEIGHT);
       heroMentionScrollRef.current?.scrollTo({ y: targetY, animated: true });
-      consultationMentionScrollRef.current?.scrollTo({ y: targetY, animated: true });
+      consultationMentionScrollRef.current?.scrollTo({
+        y: targetY,
+        animated: true,
+      });
     }
   }, [mentionSelectedIndex, showMentionDropup]);
 
@@ -316,15 +340,18 @@ export default function PersonaScreen() {
   // ─── Session Restore Logic (identical to original) ──────────
 
   useEffect(() => {
-    const syncSession = () => {
+    const syncSession = async () => {
       if (!params.id) {
+        setIsSessionLoading(false);
         setSessionId("");
+        setActiveSessionId(null);
         setHasStartedConsultation(false);
         setCurrentStage("interviewing");
         setHistory([]);
         return;
       }
 
+      setSessionId(params.id as string);
       const all = loadAllSessions();
       const active = all.find(
         (s) => s.id === params.id && s.mode === "persona",
@@ -336,7 +363,6 @@ export default function PersonaScreen() {
         active.history &&
         active.history.length > 0
       ) {
-        setSessionId(active.id);
         if (active.stage) setCurrentStage(active.stage as any);
         const matchedGuide = ALL_CHARACTERS.find(
           (g) => g.name.toLowerCase() === active.character?.toLowerCase(),
@@ -351,10 +377,13 @@ export default function PersonaScreen() {
           })),
         );
         setHasStartedConsultation(true);
+        setIsSessionLoading(false);
       } else {
-        fetchSessionDetailFromDb(params.id as string).then((msgs) => {
+        setHistory([]);
+        setIsSessionLoading(true);
+        try {
+          const msgs = await fetchSessionDetailFromDb(params.id as string);
           if (msgs && msgs.length > 0) {
-            setSessionId(params.id as string);
             const foundSession = all.find((s) => s.id === params.id);
             const charName =
               foundSession?.character ||
@@ -373,13 +402,10 @@ export default function PersonaScreen() {
               })),
             );
             setHasStartedConsultation(true);
-          } else {
-            setSessionId("");
-            setHasStartedConsultation(false);
-            setCurrentStage("interviewing");
-            setHistory([]);
           }
-        });
+        } finally {
+          setIsSessionLoading(false);
+        }
       }
     };
 
@@ -410,6 +436,7 @@ export default function PersonaScreen() {
           })),
         );
         setHasStartedConsultation(true);
+        setIsSessionLoading(false);
       }
     });
 
@@ -619,7 +646,11 @@ export default function PersonaScreen() {
       <VedicTopBar onOpenDrawer={() => setDrawerVisible(true)} />
 
       {/* ═══ Section 1: Hero Character Selection Deck (Fixed, Non-Scrolling) ═══ */}
-      {!hasStartedConsultation ? (
+      {isSessionLoading ? (
+        <View style={styles.sessionLoaderWrapper}>
+          <ActivityIndicator size="large" color={theme.primaryContainer} />
+        </View>
+      ) : !hasStartedConsultation ? (
         <View style={styles.heroFullContainer}>
           {/* Top Header & About Box */}
           <View style={styles.heroTopContent}>
@@ -911,97 +942,99 @@ export default function PersonaScreen() {
                                   : "rgba(146,113,13,0.08)"
                                 : "transparent",
                             borderBottomColor: theme.outlineVariant,
-                            borderColor: isCandidateSelected ? theme.primary : "transparent",
+                            borderColor: isCandidateSelected
+                              ? theme.primary
+                              : "transparent",
                             borderWidth: isCandidateSelected ? 1.5 : 0,
                           },
                         ]}
                         onPress={() => handleSelectMentionCharacter(char)}
                         activeOpacity={0.7}
                       >
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 10,
-                              flex: 1,
-                            }}
-                          >
-                            <Text style={{ fontSize: 22 }}>{char.icon}</Text>
-                            <View style={{ flex: 1 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 10,
+                            flex: 1,
+                          }}
+                        >
+                          <Text style={{ fontSize: 22 }}>{char.icon}</Text>
+                          <View style={{ flex: 1 }}>
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.dropupName,
+                                  { color: theme.primary, fontFamily: serif },
+                                ]}
+                              >
+                                {char.name}
+                              </Text>
                               <View
-                                style={{
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  gap: 6,
-                                }}
+                                style={[
+                                  styles.dropupEpicPill,
+                                  {
+                                    backgroundColor: theme.isDark
+                                      ? "rgba(234,194,92,0.15)"
+                                      : "rgba(146,113,13,0.1)",
+                                  },
+                                ]}
                               >
                                 <Text
                                   style={[
-                                    styles.dropupName,
-                                    { color: theme.primary, fontFamily: serif },
-                                  ]}
-                                >
-                                  {char.name}
-                                </Text>
-                                <View
-                                  style={[
-                                    styles.dropupEpicPill,
+                                    styles.dropupEpicText,
                                     {
-                                      backgroundColor: theme.isDark
-                                        ? "rgba(234,194,92,0.15)"
-                                        : "rgba(146,113,13,0.1)",
+                                      color: theme.primaryContainer,
+                                      fontFamily: label,
                                     },
                                   ]}
                                 >
-                                  <Text
-                                    style={[
-                                      styles.dropupEpicText,
-                                      {
-                                        color: theme.primaryContainer,
-                                        fontFamily: label,
-                                      },
-                                    ]}
-                                  >
-                                    {char.epic}
-                                  </Text>
-                                </View>
+                                  {char.epic}
+                                </Text>
                               </View>
-                              <Text
-                                style={[
-                                  styles.dropupRole,
-                                  { color: theme.secondary, fontFamily: body },
-                                ]}
-                                numberOfLines={1}
-                              >
-                                {char.role} · {char.subtitle}
-                              </Text>
                             </View>
+                            <Text
+                              style={[
+                                styles.dropupRole,
+                                { color: theme.secondary, fontFamily: body },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {char.role} · {char.subtitle}
+                            </Text>
                           </View>
-                          {isCurrentGuide ? (
-                            <Text
-                              style={{
-                                color: theme.primaryContainer,
-                                fontWeight: "700",
-                                fontSize: 12,
-                                fontFamily: label,
-                              }}
-                            >
-                              Active ✓
-                            </Text>
-                          ) : (
-                            <Text
-                              style={{
-                                color: theme.textTertiary,
-                                fontSize: 12,
-                                fontFamily: label,
-                              }}
-                            >
-                              Choose →
-                            </Text>
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
+                        </View>
+                        {isCurrentGuide ? (
+                          <Text
+                            style={{
+                              color: theme.primaryContainer,
+                              fontWeight: "700",
+                              fontSize: 12,
+                              fontFamily: label,
+                            }}
+                          >
+                            Active ✓
+                          </Text>
+                        ) : (
+                          <Text
+                            style={{
+                              color: theme.textTertiary,
+                              fontSize: 12,
+                              fontFamily: label,
+                            }}
+                          >
+                            Choose →
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               </View>
             )}
@@ -1025,8 +1058,10 @@ export default function PersonaScreen() {
                 activeOpacity={0.7}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
-                  {isInputExpanded ? '🗗' : '⛶'}
+                <Text
+                  style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}
+                >
+                  {isInputExpanded ? "🗗" : "⛶"}
                 </Text>
               </TouchableOpacity>
 
@@ -1038,11 +1073,17 @@ export default function PersonaScreen() {
                   {
                     color: theme.text,
                     fontFamily: body,
-                    height: isInputExpanded ? 160 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 140),
+                    height: isInputExpanded
+                      ? 160
+                      : Math.min(
+                          Math.max(34, input.trim() ? inputHeight : 34),
+                          140,
+                        ),
                   },
-                  Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
+                  Platform.OS === "web" &&
+                    ({ resize: "none", overflowY: "auto" } as any),
                 ]}
-                placeholder={`Seek guidance from ${selectedGuide.name}... (Enter sends, Shift+Enter for new line)`}
+                placeholder={`Seek guidance from ${selectedGuide.name}...`}
                 placeholderTextColor={theme.textTertiary}
                 value={input}
                 onChangeText={handleInputChange}
@@ -1092,8 +1133,18 @@ export default function PersonaScreen() {
                     </Text>
                   </TouchableOpacity>
 
-                  <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
-                    <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+                  <View
+                    style={[
+                      styles.modelBadgePill,
+                      { backgroundColor: theme.bgSecondary },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.modelBadgeText,
+                        { color: theme.secondary, fontFamily: label },
+                      ]}
+                    >
                       {selectedGuide.icon} {selectedGuide.name}
                     </Text>
                   </View>
@@ -1104,7 +1155,10 @@ export default function PersonaScreen() {
                     styles.chatgptSendBtn,
                     input.trim().length > 0 && !loading
                       ? { backgroundColor: theme.primaryContainer }
-                      : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                      : {
+                          backgroundColor: theme.surfaceContainerLow,
+                          opacity: 0.5,
+                        },
                   ]}
                   onPress={() => {
                     if (!loading) sendQuery();
@@ -1115,7 +1169,12 @@ export default function PersonaScreen() {
                   <Text
                     style={[
                       styles.chatgptSendIcon,
-                      { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                      {
+                        color:
+                          input.trim().length > 0 && !loading
+                            ? theme.onPrimaryContainer
+                            : theme.secondary,
+                      },
                     ]}
                   >
                     ↑
@@ -1166,7 +1225,14 @@ export default function PersonaScreen() {
                       />
                       <View style={styles.aiContentInner}>
                         <View style={styles.aiHeaderRow}>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 8,
+                              flex: 1,
+                            }}
+                          >
                             <Text style={styles.aiAvatarIcon}>
                               {selectedGuide.icon}
                             </Text>
@@ -1182,20 +1248,50 @@ export default function PersonaScreen() {
                               {selectedGuide.name.toUpperCase()}
                             </Text>
                           </View>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                            <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.bubbleTime,
+                                { color: theme.secondary, fontFamily: label },
+                              ]}
+                            >
                               {formatLocalTime(msg.timestamp)}
                             </Text>
                             <TouchableOpacity
                               style={[
                                 styles.copyBtn,
-                                copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                                copiedMsgId === (msg.id || String(index)) && {
+                                  backgroundColor: theme.surfaceContainerLow,
+                                },
                               ]}
-                              onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                              onPress={() =>
+                                handleCopyText(
+                                  msg.content,
+                                  msg.id || String(index),
+                                )
+                              }
                               activeOpacity={0.7}
                             >
-                              <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
-                                {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
+                              <Text
+                                style={[
+                                  styles.copyIconText,
+                                  {
+                                    color:
+                                      copiedMsgId === (msg.id || String(index))
+                                        ? "#10B981"
+                                        : theme.secondary,
+                                  },
+                                ]}
+                              >
+                                {copiedMsgId === (msg.id || String(index))
+                                  ? "✓ Copied"
+                                  : "📋"}
                               </Text>
                             </TouchableOpacity>
                           </View>
@@ -1231,19 +1327,40 @@ export default function PersonaScreen() {
                         {msg.content}
                       </Text>
                       <View style={styles.bubbleFooter}>
-                        <Text style={[styles.bubbleTime, { color: theme.secondary, fontFamily: label }]}>
+                        <Text
+                          style={[
+                            styles.bubbleTime,
+                            { color: theme.secondary, fontFamily: label },
+                          ]}
+                        >
                           {formatLocalTime(msg.timestamp)}
                         </Text>
                         <TouchableOpacity
                           style={[
                             styles.copyBtn,
-                            copiedMsgId === (msg.id || String(index)) && { backgroundColor: theme.surfaceContainerLow },
+                            copiedMsgId === (msg.id || String(index)) && {
+                              backgroundColor: theme.surfaceContainerLow,
+                            },
                           ]}
-                          onPress={() => handleCopyText(msg.content, msg.id || String(index))}
+                          onPress={() =>
+                            handleCopyText(msg.content, msg.id || String(index))
+                          }
                           activeOpacity={0.7}
                         >
-                          <Text style={[styles.copyIconText, { color: copiedMsgId === (msg.id || String(index)) ? "#10B981" : theme.secondary }]}>
-                            {copiedMsgId === (msg.id || String(index)) ? "✓ Copied" : "📋"}
+                          <Text
+                            style={[
+                              styles.copyIconText,
+                              {
+                                color:
+                                  copiedMsgId === (msg.id || String(index))
+                                    ? "#10B981"
+                                    : theme.secondary,
+                              },
+                            ]}
+                          >
+                            {copiedMsgId === (msg.id || String(index))
+                              ? "✓ Copied"
+                              : "📋"}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -1360,7 +1477,9 @@ export default function PersonaScreen() {
                                   : "rgba(146,113,13,0.08)"
                                 : "transparent",
                             borderBottomColor: theme.outlineVariant,
-                            borderColor: isCandidateSelected ? theme.primary : "transparent",
+                            borderColor: isCandidateSelected
+                              ? theme.primary
+                              : "transparent",
                             borderWidth: isCandidateSelected ? 1.5 : 0,
                           },
                         ]}
@@ -1413,8 +1532,10 @@ export default function PersonaScreen() {
                 activeOpacity={0.7}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}>
-                  {isInputExpanded ? '🗗' : '⛶'}
+                <Text
+                  style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}
+                >
+                  {isInputExpanded ? "🗗" : "⛶"}
                 </Text>
               </TouchableOpacity>
 
@@ -1426,11 +1547,17 @@ export default function PersonaScreen() {
                   {
                     color: theme.text,
                     fontFamily: body,
-                    height: isInputExpanded ? 180 : Math.min(Math.max(34, input.trim() ? inputHeight : 34), 160),
+                    height: isInputExpanded
+                      ? 180
+                      : Math.min(
+                          Math.max(34, input.trim() ? inputHeight : 34),
+                          160,
+                        ),
                   },
-                  Platform.OS === 'web' && ({ resize: 'none', overflowY: 'auto' } as any),
+                  Platform.OS === "web" &&
+                    ({ resize: "none", overflowY: "auto" } as any),
                 ]}
-                placeholder={`Seek guidance from ${selectedGuide.name}... (Enter sends, Shift+Enter for new line)`}
+                placeholder={`Seek guidance from ${selectedGuide.name}...`}
                 placeholderTextColor={theme.textTertiary}
                 value={input}
                 onChangeText={handleInputChange}
@@ -1480,8 +1607,18 @@ export default function PersonaScreen() {
                     </Text>
                   </TouchableOpacity>
 
-                  <View style={[styles.modelBadgePill, { backgroundColor: theme.bgSecondary }]}>
-                    <Text style={[styles.modelBadgeText, { color: theme.secondary, fontFamily: label }]}>
+                  <View
+                    style={[
+                      styles.modelBadgePill,
+                      { backgroundColor: theme.bgSecondary },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.modelBadgeText,
+                        { color: theme.secondary, fontFamily: label },
+                      ]}
+                    >
                       {selectedGuide.icon} {selectedGuide.name}
                     </Text>
                   </View>
@@ -1492,7 +1629,10 @@ export default function PersonaScreen() {
                     styles.chatgptSendBtn,
                     input.trim().length > 0 && !loading
                       ? { backgroundColor: theme.primaryContainer }
-                      : { backgroundColor: theme.surfaceContainerLow, opacity: 0.5 },
+                      : {
+                          backgroundColor: theme.surfaceContainerLow,
+                          opacity: 0.5,
+                        },
                   ]}
                   onPress={() => {
                     if (!loading) sendQuery();
@@ -1503,7 +1643,12 @@ export default function PersonaScreen() {
                   <Text
                     style={[
                       styles.chatgptSendIcon,
-                      { color: input.trim().length > 0 && !loading ? theme.onPrimaryContainer : theme.secondary },
+                      {
+                        color:
+                          input.trim().length > 0 && !loading
+                            ? theme.onPrimaryContainer
+                            : theme.secondary,
+                      },
                     ]}
                   >
                     ↑
@@ -1712,6 +1857,13 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: "center",
     overflow: "hidden",
+  },
+  sessionLoaderWrapper: {
+    flex: 1,
+    width: "100%",
+    minHeight: 400,
+    justifyContent: "center",
+    alignItems: "center",
   },
   heroTopContent: {
     paddingHorizontal: 16,
