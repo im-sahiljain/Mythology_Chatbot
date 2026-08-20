@@ -77,9 +77,18 @@ export default function LoginScreen() {
   const resendConfirmation = async () => {
     if (!email) return;
     setResending(true);
+    const redirectTo = process.env.EXPO_PUBLIC_SITE_URL
+      ? `${process.env.EXPO_PUBLIC_SITE_URL}/auth/callback`
+      : Platform.OS === 'web' && typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : undefined;
+
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email.trim(),
+      options: {
+        emailRedirectTo: redirectTo,
+      },
     });
     setResending(false);
 

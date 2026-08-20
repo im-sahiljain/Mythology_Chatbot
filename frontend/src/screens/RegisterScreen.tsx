@@ -43,11 +43,18 @@ export default function RegisterScreen() {
 
     setLoading(true);
     console.log('🔄 [Register] Calling supabase.auth.signUp for:', email.trim());
+    const redirectTo = process.env.EXPO_PUBLIC_SITE_URL
+      ? `${process.env.EXPO_PUBLIC_SITE_URL}/auth/callback`
+      : Platform.OS === 'web' && typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : undefined;
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: redirectTo,
           data: {
             full_name: fullName.trim() || 'Seeker',
           },
