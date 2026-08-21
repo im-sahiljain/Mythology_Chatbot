@@ -6,11 +6,16 @@ import {
   Platform,
   TouchableOpacity,
   Modal,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../hooks/useAuth";
 import { createNewSession, setActiveSessionId } from "../services/chatStorage";
+import { useLanguage } from "../context/LanguageContext";
+import { LanguageSelectorModal } from "./LanguageSelectorModal";
 
 const serif =
   Platform.OS === "web"
@@ -30,10 +35,21 @@ interface VedicTopBarProps {
 }
 
 export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
+  const { effectiveChatLanguage } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+
+  // Compact chrome on narrow/mobile widths so the right pill doesn't clip
+  const isCompact = screenWidth < 600;
+  const safeTopPadding =
+    Math.max(insets.top, Platform.OS === "ios" ? 44 : 12) +
+    (Platform.OS === "web" ? 12 : 8);
 
   const handleStartMode = (
     mode: "full-chat" | "persona" | "roundtable" | "scholar",
@@ -63,6 +79,11 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
       <View
         style={[
           styles.topFloatingHeader,
+          {
+            paddingTop: safeTopPadding,
+            paddingHorizontal: isCompact ? 10 : 16,
+            gap: isCompact ? 8 : 12,
+          },
           Platform.OS === "web"
             ? ({
                 background: `linear-gradient(to bottom, ${theme.bg} 40%, ${theme.bg}BB 65%, ${theme.bg}00 100%)`,
@@ -74,6 +95,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
         <TouchableOpacity
           style={[
             styles.floatingPillBtn,
+            isCompact && styles.floatingPillBtnCompact,
             {
               backgroundColor: theme.surface,
               borderColor: theme.outlineVariant,
@@ -88,26 +110,40 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Right Floating Pill Group [ 🔑 Login | 📜 New Chat | 🌙 Theme ] */}
+        {/* Right Floating Pill Group [ 🔑 Login | 🌐 Lang | 📜 New Chat | 🌙 Theme ] */}
         <View
           style={[
             styles.floatingPillGroup,
+            isCompact && styles.floatingPillGroupCompact,
             {
               backgroundColor: theme.surface,
               borderColor: theme.outlineVariant,
               shadowColor: theme.shadow,
+              maxWidth: isCompact ? screenWidth - 68 : undefined,
             },
           ]}
         >
           {!user && (
             <>
               <TouchableOpacity
-                style={styles.pillIconTouch}
+                style={[
+                  styles.pillIconTouch,
+                  isCompact && styles.pillIconTouchCompact,
+                ]}
                 onPress={() => router.push("/login")}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.pillLoginText, { color: theme.primary }]}>
-                  🔑 Login
+                <Text
+                  style={[
+                    styles.pillLoginText,
+                    isCompact && styles.pillLoginTextCompact,
+                    { color: theme.primary },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {isCompact
+                    ? `🔑 ${t("common.signIn", "Sign In")}`
+                    : `🔑 ${t("drawer.signIn", "Sign In with Email")}`}
                 </Text>
               </TouchableOpacity>
 
@@ -120,8 +156,42 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
             </>
           )}
 
+          {/* Quick Language Switcher Pill */}
           <TouchableOpacity
-            style={styles.pillIconTouch}
+            style={[
+              styles.pillIconTouch,
+              isCompact && styles.pillIconTouchCompact,
+            ]}
+            onPress={() => setLanguageModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.pillIconText,
+                {
+                  color: theme.primary,
+                  fontSize: isCompact ? 12 : 13,
+                  fontFamily: label,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              🌐 {effectiveChatLanguage.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+
+          <View
+            style={[
+              styles.pillDivider,
+              { backgroundColor: theme.outlineVariant },
+            ]}
+          />
+
+          <TouchableOpacity
+            style={[
+              styles.pillIconTouch,
+              isCompact && styles.pillIconTouchCompact,
+            ]}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.7}
           >
@@ -138,7 +208,10 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
           />
 
           <TouchableOpacity
-            style={styles.pillIconTouch}
+            style={[
+              styles.pillIconTouch,
+              isCompact && styles.pillIconTouchCompact,
+            ]}
             onPress={toggleTheme}
             activeOpacity={0.7}
           >
@@ -156,7 +229,15 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.modalOverlay,
+            {
+              paddingTop: Math.max(insets.top, 16),
+              paddingBottom: Math.max(insets.bottom, 16),
+            },
+          ]}
+        >
           <TouchableOpacity
             style={styles.modalBackdrop}
             activeOpacity={1}
@@ -187,7 +268,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                     { color: theme.primary, fontFamily: serif },
                   ]}
                 >
-                  Start New Inquiry
+                  {t("drawer.startNewInquiry", "Start New Inquiry")}
                 </Text>
                 <Text
                   style={[
@@ -195,7 +276,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                     { color: theme.secondary, fontFamily: body },
                   ]}
                 >
-                  Choose how you wish to seek Vedic wisdom
+                  {t("drawer.chooseMode", "Choose how you wish to seek Vedic wisdom")}
                 </Text>
               </View>
               <TouchableOpacity
@@ -234,7 +315,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                       { color: theme.text, fontFamily: label },
                     ]}
                   >
-                    Full Interactive Chat
+                    {t("drawer.fullChat", "Full Interactive Chat")}
                   </Text>
                   <View
                     style={[
@@ -251,7 +332,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                         },
                       ]}
                     >
-                      Universal
+                      {t("drawer.universal", "Universal")}
                     </Text>
                   </View>
                 </View>
@@ -261,8 +342,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                     { color: theme.secondary, fontFamily: body },
                   ]}
                 >
-                  Multi-turn inquiry with vector scripture citations & deep epic
-                  comparison
+                  {t("drawer.fullChatDesc", "Topic matrix & deep comparison")}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -295,7 +375,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                       { color: theme.text, fontFamily: label },
                     ]}
                   >
-                    Speak with Legends
+                    {t("drawer.speakWithLegends", "Speak with Legends")}
                   </Text>
                   <View
                     style={[
@@ -309,7 +389,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                         { color: theme.onPrimaryContainer, fontFamily: label },
                       ]}
                     >
-                      Avatar
+                      {t("drawer.avatar", "Avatar")}
                     </Text>
                   </View>
                 </View>
@@ -319,8 +399,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                     { color: theme.secondary, fontFamily: body },
                   ]}
                 >
-                  1st-person avatar consultation with Krishna, Sita, Arjuna, and
-                  sages
+                  {t("drawer.speakWithLegendsDesc", "1st-person avatar consultation")}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -353,7 +432,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                       { color: theme.text, fontFamily: label },
                     ]}
                   >
-                    Vedic Roundtable
+                    {t("drawer.vedicRoundtable", "Vedic Roundtable")}
                   </Text>
                   <View
                     style={[
@@ -370,7 +449,7 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                         },
                       ]}
                     >
-                      Council
+                      {t("drawer.council", "Council")}
                     </Text>
                   </View>
                 </View>
@@ -380,14 +459,21 @@ export const VedicTopBar: React.FC<VedicTopBarProps> = ({ onOpenDrawer }) => {
                     { color: theme.secondary, fontFamily: body },
                   ]}
                 >
-                  Multi-legend council debate with @mentions, custom invites,
-                  and mute controls
+                  {t("drawer.vedicRoundtableDesc", "Multi-legend council debate")}
                 </Text>
               </View>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      {languageModalVisible && (
+        <LanguageSelectorModal
+          visible={languageModalVisible}
+          mode="chat"
+          onClose={() => setLanguageModalVisible(false)}
+        />
+      )}
     </>
   );
 };
@@ -417,6 +503,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 4,
+    flexShrink: 0,
+  },
+  floatingPillBtnCompact: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   floatingPillGroup: {
     flexDirection: "row",
@@ -430,11 +522,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 4,
+    flexShrink: 1,
+  },
+  floatingPillGroupCompact: {
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 6,
+    gap: 2,
   },
   pillIconTouch: {
     padding: 6,
     alignItems: "center",
     justifyContent: "center",
+  },
+  pillIconTouchCompact: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   pillIconText: {
     fontSize: 18,
@@ -443,6 +546,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     fontFamily: label,
+  },
+  pillLoginTextCompact: {
+    fontSize: 12,
   },
   pillDivider: {
     width: 1,

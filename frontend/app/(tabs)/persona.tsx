@@ -8,12 +8,15 @@ import {
   Platform,
   Image,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Pressable as RNPressable,
   useWindowDimensions,
   ActivityIndicator,
+  Keyboard,
+  Animated as RNAnimated,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import Animated, {
   SharedValue,
   useSharedValue,
@@ -31,6 +34,7 @@ import { useTheme } from "../../src/context/ThemeContext";
 import { FadeSlide, TypingDots } from "../../src/components/AnimatedComponents";
 import { VedicDrawer } from "../../src/components/VedicDrawer";
 import { VedicTopBar } from "../../src/components/VedicTopBar";
+import { getLocalizedCharacter } from "../../src/i18n/characterTranslations";
 const useObserve = () => ({ markInteractive: () => {} });
 
 const serif =
@@ -87,11 +91,79 @@ interface ChatMsg {
 // ─── Main Screen ───────────────────────────────────────────────
 
 export default function PersonaScreen() {
+  const insets = useSafeAreaInsets();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { markInteractive } = useObserve();
+  const { t, i18n } = useTranslation();
+
+  const safeTopPadding = Math.max(insets.top, Platform.OS === "ios" ? 44 : 16) + 68;
+  const safeBottomPadding = Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 8 : 4);
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardAnim = useRef(new RNAnimated.Value(0)).current;
+
+  const animatedBottom = keyboardAnim.interpolate({
+    inputRange: [0, 50, 600],
+    outputRange: [0, 64, 614],
+  });
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const vv = window.visualViewport;
+      if (vv) {
+        const update = () => {
+          const occluded = Math.max(
+            0,
+            window.innerHeight - vv.height - vv.offsetTop,
+          );
+          setKeyboardHeight(occluded);
+          RNAnimated.timing(keyboardAnim, {
+            toValue: occluded,
+            duration: 150,
+            useNativeDriver: false,
+          }).start();
+        };
+
+        vv.addEventListener("resize", update);
+        vv.addEventListener("scroll", update);
+        update();
+        return () => {
+          vv.removeEventListener("resize", update);
+          vv.removeEventListener("scroll", update);
+        };
+      }
+    }
+
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const targetHeight = e.endCoordinates.height;
+      setKeyboardHeight(targetHeight);
+      RNAnimated.timing(keyboardAnim, {
+        toValue: targetHeight,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      setKeyboardHeight(0);
+      RNAnimated.timing(keyboardAnim, {
+        toValue: 0,
+        duration: e?.duration || 200,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     markInteractive();
@@ -124,6 +196,28 @@ export default function PersonaScreen() {
       c.name.toLowerCase().includes(mentionQuery) ||
       c.role.toLowerCase().includes(mentionQuery),
   );
+
+  const getEpicName = (epicStr?: string) => {
+    if (!epicStr) return t('scripture.allEpics', 'Epic');
+    const lower = epicStr.toLowerCase();
+    if (lower.includes('mahabharata')) return t('epics.mahabharata', 'Mahabharata');
+    if (lower.includes('ramayana')) return t('epics.ramayana', 'Ramayana');
+    return epicStr;
+  };
+
+  const getCategoryLabel = (labelKey: string) => {
+    const key = labelKey.toLowerCase();
+    switch (key) {
+      case 'all': return t('categories.all', 'All');
+      case 'ramayana': return t('categories.ramayana', 'Ramayana');
+      case 'mahabharata': return t('categories.mahabharata', 'Mahabharata');
+      case 'heroes': return t('categories.heroes', 'Heroes');
+      case 'queens': return t('categories.queens', 'Queens');
+      case 'sages': return t('categories.sages', 'Sages');
+      case 'warriors': return t('categories.warriors', 'Warriors');
+      default: return labelKey;
+    }
+  };
 
   const handleKeyDown = (e: any) => {
     if (Platform.OS === "web") {
@@ -634,10 +728,7 @@ export default function PersonaScreen() {
   // ─── JSX ────────────────────────────────────────────────────
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <VedicDrawer
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
@@ -657,7 +748,7 @@ export default function PersonaScreen() {
           <ActivityIndicator size="large" color={theme.primaryContainer} />
         </View>
       ) : !hasStartedConsultation ? (
-        <View style={styles.heroFullContainer}>
+        <View style={[styles.heroFullContainer, { paddingTop: safeTopPadding + 24 }]}>
           {/* Top Header & About Box */}
           <View style={styles.heroTopContent}>
             <View style={styles.heroHeader}>
@@ -667,7 +758,7 @@ export default function PersonaScreen() {
                   { color: theme.primaryContainer, fontFamily: serif },
                 ]}
               >
-                Speak with Legends
+                {t("personaScreen.title", "Speak with Legends")}
               </Text>
               <Text
                 style={[
@@ -675,71 +766,79 @@ export default function PersonaScreen() {
                   { color: theme.secondary, fontFamily: body },
                 ]}
               >
-                Seek timeless wisdom from epic heroes, queens & sages
+                {t(
+                  "personaScreen.subtitle",
+                  "Seek timeless wisdom from epic heroes, queens & sages",
+                )}
               </Text>
             </View>
 
             {/* About Character Section (Animated on Swipe) */}
-            <Animated.View
-              style={[
-                styles.aboutSection,
-                {
-                  backgroundColor: theme.surfaceContainerLowest,
-                  borderColor: theme.outlineVariant,
-                },
-                aboutAnimatedStyle,
-              ]}
-            >
-              <View style={styles.aboutTopRow}>
-                <Text style={[styles.aboutIcon]}>{selectedGuide.icon}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[
-                      styles.aboutName,
-                      { color: theme.primary, fontFamily: serif },
-                    ]}
-                  >
-                    {selectedGuide.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.aboutRole,
-                      { color: theme.secondary, fontFamily: label },
-                    ]}
-                  >
-                    {selectedGuide.role}
-                  </Text>
-                </View>
-                <View
+            {(() => {
+              const localizedGuide = getLocalizedCharacter(selectedGuide, i18n.language);
+              return (
+                <Animated.View
                   style={[
-                    styles.epicTag,
+                    styles.aboutSection,
                     {
-                      backgroundColor: theme.isDark
-                        ? "rgba(234,194,92,0.15)"
-                        : "rgba(146,113,13,0.1)",
+                      backgroundColor: theme.surfaceContainerLowest,
+                      borderColor: theme.outlineVariant,
                     },
+                    aboutAnimatedStyle,
                   ]}
                 >
+                  <View style={styles.aboutTopRow}>
+                    <Text style={[styles.aboutIcon]}>{selectedGuide.icon}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.aboutName,
+                          { color: theme.primary, fontFamily: serif },
+                        ]}
+                      >
+                        {localizedGuide.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.aboutRole,
+                          { color: theme.secondary, fontFamily: label },
+                        ]}
+                      >
+                        {localizedGuide.role}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.epicTag,
+                        {
+                          backgroundColor: theme.isDark
+                            ? "rgba(234,194,92,0.15)"
+                            : "rgba(146,113,13,0.1)",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.epicTagText,
+                          { color: theme.primaryContainer, fontFamily: label },
+                        ]}
+                      >
+                        {getEpicName(selectedGuide.epic)}
+                      </Text>
+                    </View>
+                  </View>
                   <Text
                     style={[
-                      styles.epicTagText,
-                      { color: theme.primaryContainer, fontFamily: label },
+                      styles.aboutQuote,
+                      { color: theme.textSecondary, fontFamily: body },
                     ]}
+                    numberOfLines={2}
                   >
-                    {selectedGuide.epic}
+                    {localizedGuide.quote}
                   </Text>
-                </View>
-              </View>
-              <Text
-                style={[
-                  styles.aboutQuote,
-                  { color: theme.textSecondary, fontFamily: body },
-                ]}
-                numberOfLines={2}
-              >
-                {selectedGuide.quote}
-              </Text>
-            </Animated.View>
+                </Animated.View>
+              );
+            })()}
           </View>
 
           {/* ═══ Center 3D Floating Carousel: Parallax Centered Active Card ═══ */}
@@ -833,8 +932,8 @@ export default function PersonaScreen() {
             />
           </View>
 
-          {/* Bottom Fixed Area: Category Filter Pills + Input Bar (Per Figma) */}
-          <View style={styles.heroBottomControls}>
+          {/* Bottom Fixed Area: Category Filter Pills (Per Figma) */}
+          <View style={[styles.heroBottomControls, { paddingBottom: safeBottomPadding }]}>
             {/* Category Filter Pills (Horizontal Scroll at bottom) */}
             <ScrollView
               horizontal
@@ -871,323 +970,13 @@ export default function PersonaScreen() {
                         },
                       ]}
                     >
-                      {cat.icon} {cat.label}
+                      {cat.icon} {getCategoryLabel(cat.label)}
                       {idx === 0 ? ` (${ALL_CHARACTERS.length})` : ""}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
-
-            {/* Autocomplete Dropup when typing @ or clicking @ button */}
-            {showMentionDropup && (
-              <View
-                style={[
-                  styles.mentionDropupCard,
-                  {
-                    backgroundColor: theme.surfaceContainerLowest,
-                    borderColor: theme.outlineVariant,
-                    shadowColor: theme.shadow,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.dropupHeader,
-                    { borderBottomColor: theme.outlineVariant },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dropupHeaderTitle,
-                      { color: theme.secondary, fontFamily: label },
-                    ]}
-                  >
-                    SELECT 1 {CATEGORIES[activeCategory].label.toUpperCase()}{" "}
-                    LEGEND
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowMentionDropup(false)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        color: theme.textTertiary,
-                        fontWeight: "700",
-                      }}
-                    >
-                      ✕
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView
-                  ref={heroMentionScrollRef}
-                  style={{ maxHeight: 260 }}
-                  showsVerticalScrollIndicator={true}
-                  keyboardShouldPersistTaps="always"
-                >
-                  {filteredMentionCharacters.map((char, index) => {
-                    const isCandidateSelected = index === mentionSelectedIndex;
-                    const isCurrentGuide =
-                      selectedGuide.name.toLowerCase() ===
-                      char.name.toLowerCase();
-
-                    return (
-                      <TouchableOpacity
-                        key={char.name}
-                        style={[
-                          styles.dropupRow,
-                          {
-                            backgroundColor: isCandidateSelected
-                              ? theme.surfaceContainerLow
-                              : isCurrentGuide
-                                ? theme.isDark
-                                  ? "rgba(234,194,92,0.12)"
-                                  : "rgba(146,113,13,0.08)"
-                                : "transparent",
-                            borderBottomColor: theme.outlineVariant,
-                            borderColor: isCandidateSelected
-                              ? theme.primary
-                              : "transparent",
-                            borderWidth: isCandidateSelected ? 1.5 : 0,
-                          },
-                        ]}
-                        onPress={() => handleSelectMentionCharacter(char)}
-                        activeOpacity={0.7}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 10,
-                            flex: 1,
-                          }}
-                        >
-                          <Text style={{ fontSize: 22 }}>{char.icon}</Text>
-                          <View style={{ flex: 1 }}>
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                            >
-                              <Text
-                                style={[
-                                  styles.dropupName,
-                                  { color: theme.primary, fontFamily: serif },
-                                ]}
-                              >
-                                {char.name}
-                              </Text>
-                              <View
-                                style={[
-                                  styles.dropupEpicPill,
-                                  {
-                                    backgroundColor: theme.isDark
-                                      ? "rgba(234,194,92,0.15)"
-                                      : "rgba(146,113,13,0.1)",
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.dropupEpicText,
-                                    {
-                                      color: theme.primaryContainer,
-                                      fontFamily: label,
-                                    },
-                                  ]}
-                                >
-                                  {char.epic}
-                                </Text>
-                              </View>
-                            </View>
-                            <Text
-                              style={[
-                                styles.dropupRole,
-                                { color: theme.secondary, fontFamily: body },
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {char.role} · {char.subtitle}
-                            </Text>
-                          </View>
-                        </View>
-                        {isCurrentGuide ? (
-                          <Text
-                            style={{
-                              color: theme.primaryContainer,
-                              fontWeight: "700",
-                              fontSize: 12,
-                              fontFamily: label,
-                            }}
-                          >
-                            Active ✓
-                          </Text>
-                        ) : (
-                          <Text
-                            style={{
-                              color: theme.textTertiary,
-                              fontSize: 12,
-                              fontFamily: label,
-                            }}
-                          >
-                            Choose →
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Bottom ChatGPT Input Card in Hero */}
-            <View
-              style={[
-                styles.chatgptInputCard,
-                {
-                  backgroundColor: theme.surfaceContainerLowest,
-                  borderColor: theme.outlineVariant,
-                  shadowColor: theme.shadow,
-                },
-                isInputExpanded && { minHeight: 180 },
-              ]}
-            >
-              {/* Top-Right Absolute Expand Button */}
-              <TouchableOpacity
-                style={styles.expandToggleBtn}
-                onPress={() => setIsInputExpanded(!isInputExpanded)}
-                activeOpacity={0.7}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text
-                  style={{ fontSize: 13, color: theme.secondary, opacity: 0.8 }}
-                >
-                  {isInputExpanded ? "🗗" : "⛶"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Multiline TextInput */}
-              <TextInput
-                ref={inputRef}
-                style={[
-                  styles.chatgptTextInput,
-                  {
-                    color: theme.text,
-                    fontFamily: body,
-                    height: isInputExpanded
-                      ? 160
-                      : Math.min(
-                          Math.max(34, input.trim() ? inputHeight : 34),
-                          140,
-                        ),
-                  },
-                  Platform.OS === "web" &&
-                    ({ resize: "none", overflowY: "auto" } as any),
-                ]}
-                placeholder={`Seek guidance from ${selectedGuide.name}...`}
-                placeholderTextColor={theme.textTertiary}
-                value={input}
-                onChangeText={handleInputChange}
-                multiline
-                onContentSizeChange={(e) => {
-                  if (input.trim()) {
-                    setInputHeight(e.nativeEvent.contentSize.height);
-                  } else {
-                    setInputHeight(36);
-                  }
-                }}
-                onKeyPress={handleKeyDown}
-              />
-
-              {/* Bottom Bar: @ Mention & Guide Name + Send Button */}
-              <View style={styles.chatgptBottomBar}>
-                <View style={styles.bottomBarLeft}>
-                  <TouchableOpacity
-                    style={[
-                      styles.atMentionTriggerBtn,
-                      {
-                        backgroundColor: showMentionDropup
-                          ? theme.primaryContainer
-                          : theme.isDark
-                            ? "rgba(234,194,92,0.12)"
-                            : "rgba(146,113,13,0.08)",
-                        borderColor: showMentionDropup
-                          ? theme.primaryContainer
-                          : theme.outlineVariant,
-                      },
-                    ]}
-                    onPress={toggleMentionDropup}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.atMentionTriggerText,
-                        {
-                          color: showMentionDropup
-                            ? theme.onPrimaryContainer
-                            : theme.primaryContainer,
-                          fontFamily: label,
-                        },
-                      ]}
-                    >
-                      @
-                    </Text>
-                  </TouchableOpacity>
-
-                  <View
-                    style={[
-                      styles.modelBadgePill,
-                      { backgroundColor: theme.bgSecondary },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.modelBadgeText,
-                        { color: theme.secondary, fontFamily: label },
-                      ]}
-                    >
-                      {selectedGuide.icon} {selectedGuide.name}
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.chatgptSendBtn,
-                    input.trim().length > 0 && !loading
-                      ? { backgroundColor: theme.primaryContainer }
-                      : {
-                          backgroundColor: theme.surfaceContainerLow,
-                          opacity: 0.5,
-                        },
-                  ]}
-                  onPress={() => {
-                    if (!loading) sendQuery();
-                  }}
-                  disabled={loading || !input.trim()}
-                  activeOpacity={loading ? 1 : 0.8}
-                >
-                  <Text
-                    style={[
-                      styles.chatgptSendIcon,
-                      {
-                        color:
-                          input.trim().length > 0 && !loading
-                            ? theme.onPrimaryContainer
-                            : theme.secondary,
-                      },
-                    ]}
-                  >
-                    ↑
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
         </View>
       ) : (
@@ -1196,7 +985,10 @@ export default function PersonaScreen() {
           <ScrollView
             ref={scrollRef}
             style={styles.scrollArea}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingTop: safeTopPadding },
+            ]}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.dialogueSection}>
@@ -1207,7 +999,10 @@ export default function PersonaScreen() {
                     { color: theme.primary, fontFamily: serif },
                   ]}
                 >
-                  Dialogue with {selectedGuide.name}
+                  {t("personaScreen.dialogueWith", {
+                    name: getLocalizedCharacter(selectedGuide, i18n.language).name,
+                    defaultValue: `Dialogue with ${getLocalizedCharacter(selectedGuide, i18n.language).name}`
+                  })}
                 </Text>
               </View>
 
@@ -1365,7 +1160,7 @@ export default function PersonaScreen() {
                             ]}
                           >
                             {copiedMsgId === (msg.id || String(index))
-                              ? "✓ Copied"
+                              ? t("common.copied", "✓ Copied")
                               : "📋"}
                           </Text>
                         </TouchableOpacity>
@@ -1393,20 +1188,25 @@ export default function PersonaScreen() {
                         { color: theme.secondary, fontFamily: body },
                       ]}
                     >
-                      {selectedGuide.name} is contemplating scripture...
+                      {t("personaScreen.thinking", "Contemplating your dilemma...")}
                     </Text>
                   </View>
                 </FadeSlide>
               )}
             </View>
 
-            <View style={{ height: 110 }} />
+            <View style={{ height: 130 + insets.bottom }} />
           </ScrollView>
 
           {/* Floating Bottom Input Pill for Consultation */}
-          <View
+          <RNAnimated.View
             style={[
               styles.floatingInputWrapper,
+              {
+                paddingBottom:
+                  keyboardHeight > 0 ? (Platform.OS === "ios" ? 8 : 4) : safeBottomPadding,
+                bottom: animatedBottom,
+              },
               Platform.OS === "web"
                 ? ({
                     background: `linear-gradient(to top, ${theme.bg} 40%, ${theme.bg}BB 65%, ${theme.bg}00 100%)`,
@@ -1502,7 +1302,7 @@ export default function PersonaScreen() {
                               { color: theme.primary, fontFamily: serif },
                             ]}
                           >
-                            {char.name}
+                            {getLocalizedCharacter(char, i18n.language).name}
                           </Text>
                           <Text
                             style={[
@@ -1510,7 +1310,7 @@ export default function PersonaScreen() {
                               { color: theme.secondary, fontFamily: body },
                             ]}
                           >
-                            {char.role}
+                            {getLocalizedCharacter(char, i18n.language).role}
                           </Text>
                         </View>
                       </TouchableOpacity>
@@ -1563,7 +1363,10 @@ export default function PersonaScreen() {
                   Platform.OS === "web" &&
                     ({ resize: "none", overflowY: "auto" } as any),
                 ]}
-                placeholder={`Seek guidance from ${selectedGuide.name}...`}
+                placeholder={t("personaScreen.placeholder", {
+                  name: getLocalizedCharacter(selectedGuide, i18n.language).name,
+                  defaultValue: `Seek guidance from ${getLocalizedCharacter(selectedGuide, i18n.language).name}...`
+                })}
                 placeholderTextColor={theme.textTertiary}
                 value={input}
                 onChangeText={handleInputChange}
@@ -1625,7 +1428,7 @@ export default function PersonaScreen() {
                         { color: theme.secondary, fontFamily: label },
                       ]}
                     >
-                      {selectedGuide.icon} {selectedGuide.name}
+                      {selectedGuide.icon} {getLocalizedCharacter(selectedGuide, i18n.language).name}
                     </Text>
                   </View>
                 </View>
@@ -1662,10 +1465,10 @@ export default function PersonaScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </RNAnimated.View>
         </>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -1690,6 +1493,8 @@ function FloatingCard({
   theme,
   onSelect,
 }: FloatingCardProps) {
+  const { t, i18n } = useTranslation();
+  const locItem = getLocalizedCharacter(item, i18n.language);
   const animatedCardStyle = useAnimatedStyle(() => {
     // translateY: 0 at center (relativeProgress = 0), and 34px lower at sides (-1 and 1)
     const translateY = interpolate(
@@ -1755,13 +1560,17 @@ function FloatingCard({
           },
         ]}
       >
-        {/* Golden glow ring for active card */}
+        {/* Glow halo on center item */}
         <Animated.View
           style={[
-            styles.glowOverlay,
+            StyleSheet.absoluteFillObject,
             {
-              borderColor: theme.primaryContainer,
-              shadowColor: theme.primaryContainer,
+              borderRadius: 22,
+              borderWidth: 2,
+              borderColor: theme.primary,
+              shadowColor: theme.primary,
+              shadowRadius: 18,
+              shadowOpacity: 0.35,
             },
             glowStyle,
           ]}
@@ -1777,7 +1586,12 @@ function FloatingCard({
           <View style={styles.cardImageOverlay} />
           <View style={styles.cardEpicPill}>
             <Text style={[styles.cardEpicPillText, { fontFamily: label }]}>
-              {item.icon} {item.epic}
+              {item.icon}{" "}
+              {item.epic?.toLowerCase().includes("mahabharata")
+                ? t("epics.mahabharata", "Mahabharata")
+                : item.epic?.toLowerCase().includes("ramayana")
+                ? t("epics.ramayana", "Ramayana")
+                : item.epic}
             </Text>
           </View>
         </View>
@@ -1796,7 +1610,7 @@ function FloatingCard({
             ]}
             numberOfLines={1}
           >
-            {item.name}
+            {locItem.name}
           </Text>
           <Text
             style={[
@@ -1805,7 +1619,7 @@ function FloatingCard({
             ]}
             numberOfLines={1}
           >
-            {item.role}
+            {locItem.role}
           </Text>
           <Text
             style={[
@@ -1814,7 +1628,7 @@ function FloatingCard({
             ]}
             numberOfLines={1}
           >
-            {item.subtitle}
+            {locItem.subtitle}
           </Text>
 
           {/* Consultation Button */}
@@ -1840,7 +1654,10 @@ function FloatingCard({
                 },
               ]}
             >
-              Consult {item.name} →
+              {t("personaScreen.consultBtn", {
+                name: locItem.name,
+                defaultValue: `Consult ${locItem.name} →`
+              })}
             </Text>
           </TouchableOpacity>
         </View>

@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../src/context/ThemeContext';
 import {
@@ -25,6 +26,10 @@ import {
   ScriptureInsights,
   RawTelemetryLog,
   CostProviderStat,
+  AdminLanguagesOverview,
+  ServerLanguageConfig,
+  LanguageAnalyticsOverview,
+  LanguagePerformanceStat,
   API_BASE_URL,
 } from '../src/services/api';
 import { supabase } from '../src/services/supabase';
@@ -89,9 +94,10 @@ export const formatISTDate = (isoString?: string | null): string => {
   }
 };
 
-type NavTab = 'overview' | 'users' | 'financials' | 'performance' | 'scripture' | 'logs';
+type NavTab = 'overview' | 'users' | 'languages' | 'financials' | 'performance' | 'scripture' | 'logs';
 
 export default function AdminDashboardScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
@@ -127,6 +133,13 @@ export default function AdminDashboardScreen() {
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [guestUsage, setGuestUsage] = useState<any>(null);
   const [rawLogs, setRawLogs] = useState<RawTelemetryLog[]>([]);
+  const [adminLanguages, setAdminLanguages] = useState<AdminLanguagesOverview | null>(null);
+  const [languageAnalytics, setLanguageAnalytics] = useState<LanguageAnalyticsOverview | null>(null);
+  const [languageViewMode, setLanguageViewMode] = useState<'matrix' | 'analytics'>('matrix');
+  const [languageSearchQuery, setLanguageSearchQuery] = useState('');
+  const [languageFilter, setLanguageFilter] = useState<'all' | 'app_enabled' | 'chat_enabled' | 'beta'>('all');
+  const [updatingLangCode, setUpdatingLangCode] = useState<string | null>(null);
+  const [resettingLanguages, setResettingLanguages] = useState(false);
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -160,6 +173,44 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  const handleToggleLanguage = async (code: string, updates: { is_app_enabled?: boolean; is_chat_enabled?: boolean; is_beta?: boolean }) => {
+    setUpdatingLangCode(code);
+    try {
+      await apiService.updateAdminLanguage(code, updates);
+      const [refreshedLangs, refreshedAnalytics] = await Promise.all([
+        apiService.fetchAdminLanguages(),
+        apiService.fetchAdminLanguageAnalytics(timeframeDays).catch(() => null),
+      ]);
+      setAdminLanguages(refreshedLangs);
+      if (refreshedAnalytics) setLanguageAnalytics(refreshedAnalytics);
+    } catch (err: any) {
+      alert(`Could not update language ${code}: ${err.message}`);
+    } finally {
+      setUpdatingLangCode(null);
+    }
+  };
+
+  const handleResetLanguages = async () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const ok = window.confirm("Reset all languages to default configuration?");
+      if (!ok) return;
+    }
+    setResettingLanguages(true);
+    try {
+      await apiService.resetAdminLanguages();
+      const [refreshedLangs, refreshedAnalytics] = await Promise.all([
+        apiService.fetchAdminLanguages(),
+        apiService.fetchAdminLanguageAnalytics(timeframeDays).catch(() => null),
+      ]);
+      setAdminLanguages(refreshedLangs);
+      if (refreshedAnalytics) setLanguageAnalytics(refreshedAnalytics);
+    } catch (err: any) {
+      alert(`Could not reset languages: ${err.message}`);
+    } finally {
+      setResettingLanguages(false);
+    }
+  };
+
   const fetchAllAdminData = async (days = timeframeDays) => {
     setLoading(true);
     setError(null);
@@ -175,6 +226,8 @@ export default function AdminDashboardScreen() {
         usersRes,
         guestRes,
         logsRes,
+        languagesRes,
+        langAnalyticsRes,
       ] = await Promise.all([
         apiService.fetchAdminOverview(),
         apiService.fetchAdminTimeSeries(days),
@@ -186,6 +239,8 @@ export default function AdminDashboardScreen() {
         apiService.fetchAdminUsers(0, 100),
         apiService.fetchAdminGuestUsage(),
         apiService.fetchAdminRawLogs(0, 50),
+        apiService.fetchAdminLanguages().catch(() => null),
+        apiService.fetchAdminLanguageAnalytics(days).catch(() => null),
       ]);
 
       setOverview(overviewRes);
@@ -198,6 +253,12 @@ export default function AdminDashboardScreen() {
       setUsers(usersRes);
       setGuestUsage(guestRes);
       setRawLogs(logsRes);
+      if (languagesRes) {
+        setAdminLanguages(languagesRes);
+      }
+      if (langAnalyticsRes) {
+        setLanguageAnalytics(langAnalyticsRes);
+      }
 
       // Auto-select first user if none selected
       if (!selectedUser && usersRes.length > 0) {
@@ -269,6 +330,19 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  const handleAdminLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      await apiService.logout();
+    } catch (e) {
+      console.warn('Admin logout error:', e);
+    } finally {
+      setOverview(null);
+      setError('Signed out');
+      router.replace('/login');
+    }
+  };
+
   const inspectUser = async (user: AdminUserItem) => {
     setSelectedUser(user);
     setLoadingUserChats(true);
@@ -311,7 +385,16 @@ export default function AdminDashboardScreen() {
   // If unauthenticated / error
   if (error && !overview) {
     return (
-      <View style={[styles.loginContainer, { backgroundColor: theme.bg }]}>
+      <View
+        style={[
+          styles.loginContainer,
+          {
+            backgroundColor: theme.bg,
+            paddingTop: Math.max(insets.top, 24) + 12,
+            paddingBottom: Math.max(insets.bottom, 24) + 12,
+          },
+        ]}
+      >
         <View style={[styles.loginCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
           <Text style={{ fontSize: 36, marginBottom: 8 }}>🔐</Text>
           <Text style={[styles.loginTitle, { color: theme.text, fontFamily: serif }]}>
@@ -339,26 +422,24 @@ export default function AdminDashboardScreen() {
 
           <TextInput
             style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.outlineVariant }]}
-            placeholder="Password"
+            placeholder="Admin Password"
             placeholderTextColor={theme.textTertiary}
             value={adminPassword}
             onChangeText={setAdminPassword}
             secureTextEntry
           />
 
-          <RNPressable
+          <TouchableOpacity
             onPress={handleAdminLogin}
             disabled={adminLoginLoading}
-            style={[styles.loginBtn, { backgroundColor: theme.accent }]}
+            style={[styles.loginBtn, { backgroundColor: theme.accent, opacity: adminLoginLoading ? 0.6 : 1 }]}
           >
             {adminLoginLoading ? (
-              <ActivityIndicator color="#09090B" />
+              <ActivityIndicator size="small" color="#09090B" />
             ) : (
-              <Text style={[styles.btnText, { color: '#09090B', fontFamily: bold }]}>
-                Sign In to Admin Dashboard →
-              </Text>
+              <Text style={[styles.btnText, { color: '#09090B', fontFamily: bold }]}>Sign In as Admin</Text>
             )}
-          </RNPressable>
+          </TouchableOpacity>
 
           <RNPressable onPress={() => router.replace('/(tabs)')} style={{ marginTop: 16, alignItems: 'center' }}>
             <Text style={{ color: theme.textSecondary, fontFamily: body, fontSize: 13 }}>← Return to Main App</Text>
@@ -414,10 +495,37 @@ export default function AdminDashboardScreen() {
       (s.created_at && formatISTDateTime(s.created_at).toLowerCase().includes(sessionSearchQuery.toLowerCase()))
   );
 
+  const allServerLangs = adminLanguages?.languages || [];
+  const filteredAdminLangs = allServerLangs.filter((l) => {
+    const q = languageSearchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      l.code.toLowerCase().includes(q) ||
+      l.name.toLowerCase().includes(q) ||
+      l.native_name.toLowerCase().includes(q) ||
+      (l.region && l.region.toLowerCase().includes(q));
+
+    if (!matchesSearch) return false;
+
+    if (languageFilter === 'app_enabled') return l.is_app_enabled;
+    if (languageFilter === 'chat_enabled') return l.is_chat_enabled;
+    if (languageFilter === 'beta') return l.is_beta;
+    return true;
+  });
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+    <View style={[styles.container, { backgroundColor: theme.bg, paddingBottom: insets.bottom }]}>
       {/* Top Navbar */}
-      <View style={[styles.topBar, { borderBottomColor: theme.outlineVariant, backgroundColor: theme.surface }]}>
+      <View
+        style={[
+          styles.topBar,
+          {
+            borderBottomColor: theme.outlineVariant,
+            backgroundColor: theme.surface,
+            paddingTop: Math.max(insets.top, 12) + (Platform.OS === 'web' ? 4 : 8),
+          },
+        ]}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <TouchableOpacity
             onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -473,6 +581,13 @@ export default function AdminDashboardScreen() {
           >
             <Text style={{ color: theme.text, fontSize: 12, fontFamily: bold }}>App ↗</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleAdminLogout}
+            style={[styles.actionBtn, { borderColor: 'rgba(239, 68, 68, 0.4)', backgroundColor: 'rgba(239, 68, 68, 0.08)' }]}
+          >
+            <Text style={{ color: '#EF4444', fontSize: 12, fontFamily: bold }}>🚪 Logout</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -523,6 +638,22 @@ export default function AdminDashboardScreen() {
             {!sidebarCollapsed && (
               <Text style={[styles.navText, { color: activeTab === 'users' ? theme.accent : theme.text, fontFamily: activeTab === 'users' ? bold : body }]}>
                 Chat Inspector
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setActiveTab('languages')}
+            style={[
+              styles.navItem,
+              activeTab === 'languages' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
+              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+            ]}
+          >
+            <Text style={{ fontSize: 18 }}>🌐</Text>
+            {!sidebarCollapsed && (
+              <Text style={[styles.navText, { color: activeTab === 'languages' ? theme.accent : theme.text, fontFamily: activeTab === 'languages' ? bold : body }]}>
+                Language Control
               </Text>
             )}
           </TouchableOpacity>
@@ -592,6 +723,22 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <View style={{ flex: 1 }} />
+
+          <TouchableOpacity
+            onPress={handleAdminLogout}
+            style={[
+              styles.navItem,
+              { borderColor: 'rgba(239, 68, 68, 0.3)', backgroundColor: 'rgba(239, 68, 68, 0.08)', marginBottom: 10 },
+              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+            ]}
+          >
+            <Text style={{ fontSize: 16 }}>🚪</Text>
+            {!sidebarCollapsed && (
+              <Text style={[styles.navText, { color: '#EF4444', fontFamily: bold }]}>
+                Sign Out
+              </Text>
+            )}
+          </TouchableOpacity>
 
           <View style={[styles.systemStatusBox, { backgroundColor: theme.inputBg, borderColor: theme.outlineVariant }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
@@ -1200,6 +1347,553 @@ export default function AdminDashboardScreen() {
               )}
 
               {/* ========================================================= */}
+              {/* TAB: LANGUAGE CONTROL & DETAILED ANALYTICS SUITE          */}
+              {/* ========================================================= */}
+              {activeTab === 'languages' && (
+                <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 80 }}>
+                  {/* Top Sub-Navigation Mode Switcher */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+                    <View style={[styles.subtabToggle, { backgroundColor: theme.inputBg, borderColor: theme.outlineVariant, width: 340 }]}>
+                      <TouchableOpacity
+                        onPress={() => setLanguageViewMode('matrix')}
+                        style={[styles.subtabBtn, languageViewMode === 'matrix' && { backgroundColor: theme.accent }]}
+                      >
+                        <Text style={{ color: languageViewMode === 'matrix' ? '#09090B' : theme.textSecondary, fontSize: 12, fontFamily: bold }}>
+                          🎛️ Availability Matrix ({adminLanguages?.total_languages || 23})
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setLanguageViewMode('analytics')}
+                        style={[styles.subtabBtn, languageViewMode === 'analytics' && { backgroundColor: theme.accent }]}
+                      >
+                        <Text style={{ color: languageViewMode === 'analytics' ? '#09090B' : theme.textSecondary, fontSize: 12, fontFamily: bold }}>
+                          📊 Usage & Metrics ({languageAnalytics?.total_queries || 0})
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={handleResetLanguages}
+                        disabled={resettingLanguages}
+                        style={[styles.actionBtn, { borderColor: theme.outlineVariant, backgroundColor: theme.inputBg }]}
+                      >
+                        <Text style={{ color: theme.textSecondary, fontSize: 11, fontFamily: bold }}>
+                          {resettingLanguages ? 'Resetting...' : '↺ Reset Defaults'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => fetchAllAdminData(timeframeDays)}
+                        style={[styles.actionBtn, { borderColor: theme.accent, backgroundColor: theme.surface }]}
+                      >
+                        <Text style={{ color: theme.accent, fontSize: 11, fontFamily: bold }}>🔄 Refresh</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {languageViewMode === 'matrix' ? (
+                    <>
+                      {/* Top Stats Cards */}
+                      <View style={styles.kpiGrid}>
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>TOTAL SCHEDULED LANGUAGES</Text>
+                          <Text style={[styles.kpiValue, { color: theme.text, fontFamily: serif }]}>
+                            {adminLanguages?.total_languages || 23}
+                          </Text>
+                          <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 4 }}>
+                            🇮🇳 22 Eighth Schedule + English
+                          </Text>
+                        </View>
+
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>APP UI TRANSLATION ACTIVE</Text>
+                          <Text style={[styles.kpiValue, { color: theme.accent, fontFamily: serif }]}>
+                            {adminLanguages?.app_enabled_count ?? 14}
+                          </Text>
+                          <Text style={{ color: theme.accent, fontSize: 11, marginTop: 4 }}>
+                            ⚡ Full UI screens & drawer localized
+                          </Text>
+                        </View>
+
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>AI DEITY PERSONA CHAT ACTIVE</Text>
+                          <Text style={[styles.kpiValue, { color: '#10B981', fontFamily: serif }]}>
+                            {adminLanguages?.chat_enabled_count ?? 23}
+                          </Text>
+                          <Text style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>
+                            💬 Multilingual RAG & prompt generation
+                          </Text>
+                        </View>
+
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>BETA SCRIPT EXPERIMENTS</Text>
+                          <Text style={[styles.kpiValue, { color: '#F59E0B', fontFamily: serif }]}>
+                            {adminLanguages?.beta_count ?? 9}
+                          </Text>
+                          <Text style={{ color: '#F59E0B', fontSize: 11, marginTop: 4 }}>
+                            🧪 Flagged with Beta tag in picker
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Filter & Search Bar Box */}
+                      <View style={[styles.cardBox, { backgroundColor: theme.surface, borderColor: theme.outlineVariant, marginBottom: 16 }]}>
+                        <View style={{ flexDirection: isTablet ? 'row' : 'column', justifyContent: 'space-between', alignItems: isTablet ? 'center' : 'stretch', gap: 12, marginBottom: 12 }}>
+                          <View>
+                            <Text style={[styles.boxTitle, { color: theme.text, fontFamily: serif }]}>
+                              🌐 Language Availability Matrix
+                            </Text>
+                            <Text style={{ color: theme.textTertiary, fontSize: 11, fontFamily: body }}>
+                              Toggle client UI availability and AI prompt translation in real-time without app redeployment.
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Filter Pills & Search */}
+                        <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 10, alignItems: isTablet ? 'center' : 'stretch' }}>
+                          <View style={[styles.searchBox, { flex: 1, backgroundColor: theme.inputBg, borderColor: theme.outlineVariant }]}>
+                            <Text style={{ fontSize: 12, marginRight: 6 }}>🔍</Text>
+                            <TextInput
+                              style={{ flex: 1, color: theme.text, fontSize: 12, fontFamily: body }}
+                              placeholder="Search language name, code, script, or region..."
+                              placeholderTextColor={theme.textTertiary}
+                              value={languageSearchQuery}
+                              onChangeText={setLanguageSearchQuery}
+                            />
+                            {languageSearchQuery.length > 0 && (
+                              <TouchableOpacity onPress={() => setLanguageSearchQuery('')}>
+                                <Text style={{ color: theme.textTertiary, fontSize: 11 }}>✕</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+
+                          <View style={styles.filterPillsRow}>
+                            {(['all', 'app_enabled', 'chat_enabled', 'beta'] as const).map((filterKey) => {
+                              const labels: Record<string, string> = {
+                                all: `All (${allServerLangs.length})`,
+                                app_enabled: 'App UI Active',
+                                chat_enabled: 'AI Chat Active',
+                                beta: 'Beta Only',
+                              };
+                              const isSelected = languageFilter === filterKey;
+                              return (
+                                <TouchableOpacity
+                                  key={filterKey}
+                                  onPress={() => setLanguageFilter(filterKey)}
+                                  style={[
+                                    styles.filterPill,
+                                    {
+                                      backgroundColor: isSelected ? theme.accent : theme.inputBg,
+                                      borderColor: isSelected ? theme.accent : theme.outlineVariant,
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    style={{
+                                      color: isSelected ? '#09090B' : theme.textSecondary,
+                                      fontSize: 11,
+                                      fontFamily: isSelected ? bold : body,
+                                    }}
+                                  >
+                                    {labels[filterKey]}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Languages Grid */}
+                      <View style={styles.languageGrid}>
+                        {filteredAdminLangs.map((item) => {
+                          const isUpdating = updatingLangCode === item.code;
+
+                          return (
+                            <View
+                              key={item.code}
+                              style={[
+                                styles.langCard,
+                                {
+                                  backgroundColor: theme.surface,
+                                  borderColor: item.is_app_enabled ? theme.outlineVariant : 'rgba(239, 68, 68, 0.3)',
+                                },
+                              ]}
+                            >
+                              {/* Card Header: Code Badge + Names */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                                  <View
+                                    style={[
+                                      styles.langCodeBadge,
+                                      {
+                                        backgroundColor: item.is_app_enabled
+                                          ? (theme.isDark ? 'rgba(217, 119, 6, 0.2)' : '#F5E6D3')
+                                          : 'rgba(150, 150, 150, 0.1)',
+                                      },
+                                    ]}
+                                  >
+                                    <Text
+                                      style={{
+                                        color: item.is_app_enabled ? theme.accent : theme.textTertiary,
+                                        fontFamily: bold,
+                                        fontSize: 12,
+                                      }}
+                                    >
+                                      {item.code.toUpperCase()}
+                                    </Text>
+                                  </View>
+
+                                  <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                      <Text style={{ color: theme.text, fontSize: 14, fontFamily: bold }}>
+                                        {item.name}
+                                      </Text>
+                                      <Text style={{ color: theme.accent, fontSize: 13, fontFamily: serif }}>
+                                        ({item.native_name})
+                                      </Text>
+                                      {item.is_beta && (
+                                        <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                          <Text style={{ color: '#F59E0B', fontSize: 9, fontFamily: bold }}>BETA</Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                    {item.region && (
+                                      <Text style={{ color: theme.textTertiary, fontSize: 11, fontFamily: body, marginTop: 1 }}>
+                                        📍 {item.region}
+                                      </Text>
+                                    )}
+                                  </View>
+                                </View>
+
+                                {isUpdating && <ActivityIndicator size="small" color={theme.accent} />}
+                              </View>
+
+                              {/* Controls / Switches */}
+                              <View style={[styles.toggleRow, { borderTopWidth: 1, borderTopColor: theme.outlineVariant, paddingTop: 10 }]}>
+                                {/* Toggle 1: App UI */}
+                                <TouchableOpacity
+                                  onPress={() => handleToggleLanguage(item.code, { is_app_enabled: !item.is_app_enabled })}
+                                  disabled={isUpdating}
+                                  style={[
+                                    styles.toggleBtn,
+                                    {
+                                      flex: 1,
+                                      backgroundColor: item.is_app_enabled ? 'rgba(16, 185, 129, 0.12)' : theme.inputBg,
+                                      borderColor: item.is_app_enabled ? '#10B981' : theme.outlineVariant,
+                                    },
+                                  ]}
+                                >
+                                  <Text style={{ fontSize: 12 }}>{item.is_app_enabled ? '📱' : '⚪'}</Text>
+                                  <View>
+                                    <Text
+                                      style={{
+                                        color: item.is_app_enabled ? '#10B981' : theme.textTertiary,
+                                        fontSize: 10,
+                                        fontFamily: bold,
+                                      }}
+                                    >
+                                      APP UI
+                                    </Text>
+                                    <Text style={{ color: item.is_app_enabled ? '#10B981' : theme.textSecondary, fontSize: 9 }}>
+                                      {item.is_app_enabled ? 'Enabled' : 'Disabled'}
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+
+                                {/* Toggle 2: AI Chat */}
+                                <TouchableOpacity
+                                  onPress={() => handleToggleLanguage(item.code, { is_chat_enabled: !item.is_chat_enabled })}
+                                  disabled={isUpdating}
+                                  style={[
+                                    styles.toggleBtn,
+                                    {
+                                      flex: 1,
+                                      backgroundColor: item.is_chat_enabled ? 'rgba(59, 130, 246, 0.12)' : theme.inputBg,
+                                      borderColor: item.is_chat_enabled ? '#3B82F6' : theme.outlineVariant,
+                                    },
+                                  ]}
+                                >
+                                  <Text style={{ fontSize: 12 }}>{item.is_chat_enabled ? '🤖' : '⚪'}</Text>
+                                  <View>
+                                    <Text
+                                      style={{
+                                        color: item.is_chat_enabled ? '#3B82F6' : theme.textTertiary,
+                                        fontSize: 10,
+                                        fontFamily: bold,
+                                      }}
+                                    >
+                                      AI CHAT
+                                    </Text>
+                                    <Text style={{ color: item.is_chat_enabled ? '#3B82F6' : theme.textSecondary, fontSize: 9 }}>
+                                      {item.is_chat_enabled ? 'Active' : 'Disabled'}
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+
+                                {/* Toggle 3: Beta */}
+                                <TouchableOpacity
+                                  onPress={() => handleToggleLanguage(item.code, { is_beta: !item.is_beta })}
+                                  disabled={isUpdating}
+                                  style={[
+                                    styles.toggleBtn,
+                                    {
+                                      backgroundColor: item.is_beta ? 'rgba(245, 158, 11, 0.15)' : theme.inputBg,
+                                      borderColor: item.is_beta ? '#F59E0B' : theme.outlineVariant,
+                                    },
+                                  ]}
+                                >
+                                  <Text style={{ fontSize: 11 }}>{item.is_beta ? '🧪' : '🏷️'}</Text>
+                                  <Text
+                                    style={{
+                                      color: item.is_beta ? '#F59E0B' : theme.textSecondary,
+                                      fontSize: 10,
+                                      fontFamily: bold,
+                                    }}
+                                  >
+                                    {item.is_beta ? 'Beta' : 'Stable'}
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      {/* ========================================================= */}
+                      {/* VIEW 2: PER-LANGUAGE USAGE & PERFORMANCE ANALYTICS         */}
+                      {/* ========================================================= */}
+                      {/* Analytics KPI Row */}
+                      <View style={styles.kpiGrid}>
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>TOTAL TELEMETRY QUERIES</Text>
+                          <Text style={[styles.kpiValue, { color: theme.text, fontFamily: serif }]}>
+                            {languageAnalytics?.total_queries || 0}
+                          </Text>
+                          <Text style={{ color: theme.accent, fontSize: 11, marginTop: 4 }}>
+                            ⚡ Analyzed over past {timeframeDays} days
+                          </Text>
+                        </View>
+
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>TOTAL TOKENS CONSUMED</Text>
+                          <Text style={[styles.kpiValue, { color: '#3B82F6', fontFamily: serif }]}>
+                            {(languageAnalytics?.total_tokens || 0).toLocaleString()}
+                          </Text>
+                          <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 4 }}>
+                            🔥 Prompt + Completion tokens
+                          </Text>
+                        </View>
+
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>TOTAL MULTILINGUAL SPEND</Text>
+                          <Text style={[styles.kpiValue, { color: '#10B981', fontFamily: serif }]}>
+                            ${languageAnalytics?.total_cost_usd?.toFixed(4) || '0.0000'}
+                          </Text>
+                          <Text style={{ color: '#10B981', fontSize: 11, marginTop: 4 }}>
+                            💵 Estimated LLM token cost (USD)
+                          </Text>
+                        </View>
+
+                        <View style={[styles.kpiCard, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
+                          <Text style={[styles.kpiLabel, { color: theme.textTertiary, fontFamily: bold }]}>TOP ACTIVE LANGUAGE</Text>
+                          <Text style={[styles.kpiValue, { color: '#F59E0B', fontFamily: serif }]}>
+                            {languageAnalytics?.language_performance?.[0]?.name || 'Hindi / English'}
+                          </Text>
+                          <Text style={{ color: '#F59E0B', fontSize: 11, marginTop: 4 }}>
+                            {languageAnalytics?.language_performance?.[0] ? `${languageAnalytics.language_performance[0].traffic_share_percentage}% of total queries` : 'Leading regional adoption'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Charts Grid: Traffic Share & Cost */}
+                      <View style={styles.chartRow}>
+                        <View style={{ flex: 1, minWidth: 280 }}>
+                          <RankedBarChart
+                            title="📈 Language Consultation Volume"
+                            subtitle={`Query volume share across Indic languages (${timeframeDays}D)`}
+                            items={(languageAnalytics?.language_performance || [])
+                              .filter(l => l.query_count > 0)
+                              .map((l) => ({
+                                label: `${l.name} (${l.native_name})`,
+                                value: l.query_count,
+                                secondaryLabel: `${l.traffic_share_percentage}%`,
+                                icon: '🌐',
+                              }))}
+                            theme={theme}
+                            unit="queries"
+                          />
+                        </View>
+
+                        <View style={{ flex: 1, minWidth: 280 }}>
+                          <RankedBarChart
+                            title="🪙 LLM Token Spend by Language"
+                            subtitle="Total estimated API cost in USD broken down by language"
+                            items={(languageAnalytics?.language_performance || [])
+                              .filter(l => l.cost_usd > 0)
+                              .map((l) => ({
+                                label: `${l.name}`,
+                                value: l.cost_usd,
+                                secondaryLabel: `$${l.cost_usd.toFixed(4)}`,
+                                color: '#10B981',
+                                icon: '💵',
+                              }))}
+                            theme={theme}
+                            unit="USD"
+                          />
+                        </View>
+                      </View>
+
+                      {/* User Profile Language Preferences Distribution */}
+                      <View style={[styles.chartRow, { marginTop: 16 }]}>
+                        <View style={{ flex: 1, minWidth: 280 }}>
+                          <DistributionChart
+                            title="📱 User Selected App Interface Language"
+                            subtitle="Primary UI language configured by registered users"
+                            items={(languageAnalytics?.user_app_preferences || []).map((p, idx) => ({
+                              label: p.label,
+                              value: p.count,
+                              percentage: p.percentage,
+                              color: ['#D97706', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#6366F1'][idx % 6],
+                            }))}
+                            theme={theme}
+                          />
+                        </View>
+
+                        <View style={{ flex: 1, minWidth: 280 }}>
+                          <DistributionChart
+                            title="💬 User Selected AI Persona Chat Language"
+                            subtitle="AI deity dialogue language preferred by registered seekers"
+                            items={(languageAnalytics?.user_chat_preferences || []).map((p, idx) => ({
+                              label: p.label,
+                              value: p.count,
+                              percentage: p.percentage,
+                              color: ['#10B981', '#D97706', '#3B82F6', '#8B5CF6', '#F59E0B', '#14B8A6'][idx % 6],
+                            }))}
+                            theme={theme}
+                          />
+                        </View>
+                      </View>
+
+                      {/* Granular Language Performance Matrix Table */}
+                      <View style={[styles.cardBox, { backgroundColor: theme.surface, borderColor: theme.outlineVariant, marginTop: 16 }]}>
+                        <View style={{ marginBottom: 14 }}>
+                          <Text style={[styles.boxTitle, { color: theme.text, fontFamily: serif }]}>
+                            📋 Detailed Per-Language Performance Matrix
+                          </Text>
+                          <Text style={{ color: theme.textTertiary, fontSize: 11, fontFamily: body }}>
+                            Complete breakdown of query traffic, latency benchmarks, token density, and Vedic persona affinities.
+                          </Text>
+                        </View>
+
+                        {(languageAnalytics?.language_performance || []).map((lang) => (
+                          <View
+                            key={lang.code}
+                            style={[
+                              styles.logRow,
+                              {
+                                backgroundColor: theme.inputBg,
+                                borderBottomColor: theme.outlineVariant,
+                                marginBottom: 10,
+                              },
+                            ]}
+                          >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                <View
+                                  style={[
+                                    styles.langCodeBadge,
+                                    {
+                                      backgroundColor: lang.is_app_enabled
+                                        ? (theme.isDark ? 'rgba(217, 119, 6, 0.2)' : '#F5E6D3')
+                                        : 'rgba(150, 150, 150, 0.1)',
+                                    },
+                                  ]}
+                                >
+                                  <Text style={{ color: theme.accent, fontFamily: bold, fontSize: 11 }}>
+                                    {lang.code.toUpperCase()}
+                                  </Text>
+                                </View>
+
+                                <View>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Text style={{ color: theme.text, fontSize: 14, fontFamily: bold }}>
+                                      {lang.name}
+                                    </Text>
+                                    <Text style={{ color: theme.accent, fontSize: 13, fontFamily: serif }}>
+                                      ({lang.native_name})
+                                    </Text>
+                                  </View>
+                                  {lang.region && (
+                                    <Text style={{ color: theme.textTertiary, fontSize: 10 }}>
+                                      📍 {lang.region}
+                                    </Text>
+                                  )}
+                                </View>
+                              </View>
+
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                  <Text style={{ color: theme.text, fontSize: 12, fontFamily: bold }}>
+                                    {lang.query_count} queries ({lang.traffic_share_percentage}%)
+                                  </Text>
+                                  <Text style={{ color: theme.textTertiary, fontSize: 10 }}>
+                                    🔥 {lang.total_tokens.toLocaleString()} tokens • 💵 ${lang.cost_usd.toFixed(4)}
+                                  </Text>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.statusPill,
+                                    {
+                                      backgroundColor:
+                                        lang.avg_latency_ms < 1500
+                                          ? 'rgba(16, 185, 129, 0.15)'
+                                          : 'rgba(245, 158, 11, 0.15)',
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    style={{
+                                      color: lang.avg_latency_ms < 1500 ? '#10B981' : '#F59E0B',
+                                      fontSize: 10,
+                                      fontFamily: bold,
+                                    }}
+                                  >
+                                    ⚡ {lang.avg_latency_ms}ms avg
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            {/* Top Vedic Personas Consulted */}
+                            {lang.top_personas && lang.top_personas.length > 0 && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, borderTopWidth: 1, borderTopColor: theme.outlineVariant, paddingTop: 6 }}>
+                                <Text style={{ color: theme.textTertiary, fontSize: 10, fontFamily: bold }}>
+                                  🪷 Most Consulted Guides:
+                                </Text>
+                                {lang.top_personas.map((p, pIdx) => (
+                                  <View key={pIdx} style={{ backgroundColor: 'rgba(217, 119, 6, 0.12)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                    <Text style={{ color: theme.accent, fontSize: 10, fontFamily: bold }}>
+                                      {p.character} ({p.count})
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </ScrollView>
+              )}
+
+              {/* ========================================================= */}
               {/* TAB 3: FINANCIALS & COST ANALYTICS                        */}
               {/* ========================================================= */}
               {activeTab === 'financials' && (
@@ -1780,5 +2474,49 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 14,
+  },
+  languageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  langCard: {
+    flex: 1,
+    minWidth: 320,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+  },
+  langCodeBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
   },
 });

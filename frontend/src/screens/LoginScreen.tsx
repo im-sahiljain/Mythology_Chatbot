@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { API_BASE_URL } from '../services/api';
 
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { Card, Pressable, FadeSlide } from '../components/AnimatedComponents';
 
@@ -13,8 +15,10 @@ const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGro
 const bold = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -100,50 +104,69 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.bg }}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingTop: Math.max(insets.top, 24) + 12,
+          paddingBottom: Math.max(insets.bottom, 24) + 12,
+        },
+      ]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <FadeSlide delay={50}>
         <Card style={styles.card}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text, fontFamily: serif }]}>Welcome Back</Text>
+            <Text style={[styles.title, { color: theme.text, fontFamily: serif }]}>
+              {t('auth.welcomeBack', 'Welcome Back')}
+            </Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: body }]}>
-              Sign in to consult the ancient epics
+              {t('auth.loginSubtitle', 'Sign in to consult the ancient epics')}
             </Text>
           </View>
 
           {unconfirmedEmail && (
             <View style={[styles.unconfirmedBanner, { backgroundColor: 'rgba(234, 179, 8, 0.12)', borderColor: 'rgba(234, 179, 8, 0.3)' }]}>
-              <Text style={{ fontSize: 13, color: '#EAB308', fontFamily: bold }}>Email Not Verified Yet</Text>
+              <Text style={{ fontSize: 13, color: '#EAB308', fontFamily: bold }}>
+                {t('auth.emailNotVerified', 'Email Not Verified Yet')}
+              </Text>
               <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 4, lineHeight: 18 }}>
-                Please click the confirmation link sent to your inbox to activate your account.
+                {t('auth.emailNotVerifiedDesc', 'Please click the confirmation link sent to your inbox to activate your account.')}
               </Text>
               <Pressable onPress={resendConfirmation} disabled={resending} style={{ marginTop: 8 }}>
                 <Text style={{ color: theme.accent, fontSize: 12, fontWeight: '700', textDecorationLine: 'underline' }}>
-                  {resending ? 'Resending...' : 'Resend Verification Link →'}
+                  {resending ? t('auth.resending', 'Resending...') : t('auth.resendLink', 'Resend Verification Link →')}
                 </Text>
               </Pressable>
             </View>
           )}
 
           <View style={styles.form}>
-            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>EMAIL</Text>
+            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
+              {t('auth.email', 'EMAIL')}
+            </Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
               value={email}
               onChangeText={setEmail}
-              placeholder="seeker@vedic.ai"
+              placeholder={t('auth.emailPlaceholder', 'seeker@vedic.ai')}
               placeholderTextColor={theme.isDark ? '#666' : '#999'}
               autoCapitalize="none"
               keyboardType="email-address"
             />
 
-            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>PASSWORD</Text>
+            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
+              {t('auth.password', 'PASSWORD')}
+            </Text>
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Enter your password"
+                placeholder={t('auth.passwordPlaceholder', 'Enter your password')}
                 placeholderTextColor={theme.isDark ? '#666' : '#999'}
               />
               <TouchableOpacity
@@ -163,37 +186,39 @@ export default function LoginScreen() {
             <Pressable onPress={login} disabled={loading}>
               <View style={[styles.button, { backgroundColor: theme.accent, opacity: loading ? 0.6 : 1 }]}>
                 <Text style={[styles.buttonText, { fontFamily: bold }]}>
-                  {loading ? 'Signing In...' : 'Sign In'}
+                  {loading ? t('auth.signingIn', 'Signing In...') : t('auth.signIn', 'Sign In')}
                 </Text>
               </View>
             </Pressable>
 
             <View style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.textSecondary, fontFamily: body }]}>
-                Don't have an account?{' '}
+                {t('auth.noAccount', "Don't have an account?")}{' '}
               </Text>
               <Pressable onPress={() => router.push('/register')}>
-                <Text style={[styles.linkText, { color: theme.accent, fontFamily: bold }]}>Register</Text>
+                <Text style={[styles.linkText, { color: theme.accent, fontFamily: bold }]}>
+                  {t('auth.register', 'Register')}
+                </Text>
               </Pressable>
             </View>
 
             <View style={{ marginTop: 14, alignItems: 'center' }}>
               <Pressable onPress={() => router.replace('/(tabs)')}>
                 <Text style={[styles.skipText, { color: theme.textTertiary, fontFamily: body }]}>
-                  Continue as Guest (3 turns) →
+                  {t('auth.continueAsGuest', 'Continue as Guest (3 turns) →')}
                 </Text>
               </Pressable>
             </View>
           </View>
         </Card>
       </FadeSlide>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
   },

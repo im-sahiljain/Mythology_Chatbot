@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import i18n, { CHAT_LANGUAGE_KEY, APP_LANGUAGE_KEY } from '../i18n';
 
 // Extract host IP dynamically from Expo or fallback to localhost
 const getLocalIp = (): string => {
@@ -17,6 +19,18 @@ export const API_BASE_URL =
   (Platform.OS === 'web' ? 'http://localhost:8000' : getLocalIp());
 
 console.log(`🌐 [API Service] Platform: ${Platform.OS} | Target API URL: ${API_BASE_URL}`);
+
+export const getEffectiveLanguage = async (): Promise<string> => {
+  try {
+    const savedChat = await AsyncStorage.getItem(CHAT_LANGUAGE_KEY);
+    if (savedChat && savedChat !== 'auto') return savedChat;
+    const savedApp = await AsyncStorage.getItem(APP_LANGUAGE_KEY);
+    if (savedApp) return savedApp;
+  } catch (e) {
+    // Ignore storage read errors
+  }
+  return i18n?.language || 'en';
+};
 
 // Client-side Guest ID management
 let cachedGuestId: string | null = null;
@@ -41,9 +55,11 @@ export const getGuestId = (): string => {
 
 // Builds authenticated headers with Supabase JWT and Guest ID
 const getHeaders = async (): Promise<Record<string, string>> => {
+  const lang = await getEffectiveLanguage();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Guest-ID': getGuestId(),
+    'Accept-Language': lang,
   };
 
   try {
@@ -300,10 +316,11 @@ export interface UserChatSessionDetail {
 
 export const apiService = {
   // 1. General Guidance RAG Mode (POST /chat)
-  async universalChat(message: string, provider?: string): Promise<ChatResponse> {
+  async universalChat(message: string, provider?: string, language?: string): Promise<ChatResponse> {
+    const lang = language || await getEffectiveLanguage();
     const res = await customFetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
-      body: JSON.stringify({ message, mode: 'guidance', provider }),
+      body: JSON.stringify({ message, mode: 'guidance', provider, language: lang }),
     });
     return handleApiResponse(res, 'Failed to fetch universal chat response');
   },
@@ -315,8 +332,10 @@ export const apiService = {
     chatHistory?: any[],
     forceResolve: boolean = false,
     sessionId?: string,
-    provider?: string
+    provider?: string,
+    language?: string
   ): Promise<ChatResponse> {
+    const lang = language || await getEffectiveLanguage();
     const res = await customFetch(`${API_BASE_URL}/chat-character`, {
       method: 'POST',
       body: JSON.stringify({
@@ -326,7 +345,8 @@ export const apiService = {
         force_resolve: forceResolve,
         session_id: sessionId,
         mode: 'guidance',
-        provider
+        provider,
+        language: lang,
       }),
     });
     return handleApiResponse(res, 'Failed to fetch character response');
@@ -338,9 +358,10 @@ export const apiService = {
     chatHistory?: any[],
     forceResolve: boolean = false,
     sessionId?: string,
-    provider?: string
+    provider?: string,
+    language?: string
   ): Promise<ChatResponse> {
-    return this.characterChat(message, character, chatHistory, forceResolve, sessionId, provider);
+    return this.characterChat(message, character, chatHistory, forceResolve, sessionId, provider, language);
   },
 
   // 3. User-Controlled Multi-Legend Council (POST /chat-roundtable)
@@ -351,8 +372,10 @@ export const apiService = {
     chatHistory?: any[],
     forceResolve?: boolean,
     sessionId?: string,
-    provider?: string
+    provider?: string,
+    language?: string
   ): Promise<RoundtableChatResponse> {
+    const lang = language || await getEffectiveLanguage();
     const res = await customFetch(`${API_BASE_URL}/chat-roundtable`, {
       method: 'POST',
       body: JSON.stringify({
@@ -363,6 +386,7 @@ export const apiService = {
         force_resolve: forceResolve,
         session_id: sessionId,
         provider,
+        language: lang,
       }),
     });
     return handleApiResponse(res, 'Failed to fetch roundtable response');
@@ -374,11 +398,13 @@ export const apiService = {
     chat_history: { role: string; content: string; sources?: SourceCitation[] }[],
     force_resolve?: boolean,
     session_id?: string,
-    provider?: string
+    provider?: string,
+    language?: string
   ): Promise<FullChatResponse> {
+    const lang = language || await getEffectiveLanguage();
     const res = await customFetch(`${API_BASE_URL}/strategy/full-chat`, {
       method: 'POST',
-      body: JSON.stringify({ message, chat_history, force_resolve, session_id, provider }),
+      body: JSON.stringify({ message, chat_history, force_resolve, session_id, provider, language: lang }),
     });
     return handleApiResponse(res, 'Failed to fetch full chat response');
   },
@@ -490,6 +516,78 @@ export const apiService = {
     return res.json();
   },
 
+  // -------------------------------------------------------------
+  // USER PREFERENCES & CLOUD SYNC
+  // -------------------------------------------------------------
+  async getUserPreferences(): Promise<{ preferred_app_language?: string; preferred_chat_language?: string } | null> {
+    try {
+      const res = await customFetch(`${API_BASE_URL}/api/auth/preferences`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async updateUserPreferences(preferred_app_language?: string, preferred_chat_language?: string): Promise<any> {
+    try {
+      const res = await customFetch(`${API_BASE_URL}/api/auth/preferences`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          preferred_app_language,
+          preferred_chat_language,
+        }),
+      });
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  // -------------------------------------------------------------
+  // DYNAMIC LANGUAGE MANAGEMENT & ADMIN CONTROLS
+  // -------------------------------------------------------------
+  async fetchPublicLanguages(): Promise<ServerLanguageConfig[]> {
+    try {
+      const res = await customFetch(`${API_BASE_URL}/api/languages`);
+      if (!res.ok) throw new Error('Failed to fetch languages');
+      return res.json();
+    } catch (e) {
+      console.warn('[API] Could not fetch public languages:', e);
+      return [];
+    }
+  },
+
+  async fetchAdminLanguages(): Promise<AdminLanguagesOverview> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/languages`);
+    if (!res.ok) throw new Error('Failed to fetch admin languages');
+    return res.json();
+  },
+
+  async updateAdminLanguage(code: string, updates: { is_app_enabled?: boolean; is_chat_enabled?: boolean; is_beta?: boolean; display_order?: number }): Promise<ServerLanguageConfig> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/languages/${code}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error(`Failed to update language ${code}`);
+    return res.json();
+  },
+
+  async resetAdminLanguages(): Promise<ServerLanguageConfig[]> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/languages/reset-defaults`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to reset languages');
+    return res.json();
+  },
+
+  async fetchAdminLanguageAnalytics(days: number = 30): Promise<LanguageAnalyticsOverview> {
+    const res = await customFetch(`${API_BASE_URL}/api/admin/language-analytics?days=${days}`);
+    if (!res.ok) throw new Error('Failed to fetch language analytics');
+    return res.json();
+  },
+
   async logout(): Promise<void> {
     try {
       await customFetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST' });
@@ -499,3 +597,61 @@ export const apiService = {
   }
 };
 
+export interface ServerLanguageConfig {
+  code: string;
+  name: string;
+  native_name: string;
+  region?: string;
+  is_app_enabled: boolean;
+  is_chat_enabled: boolean;
+  is_beta: boolean;
+  display_order: number;
+  updated_at?: string;
+}
+
+export interface AdminLanguagesOverview {
+  total_languages: number;
+  app_enabled_count: number;
+  chat_enabled_count: number;
+  beta_count: number;
+  languages: ServerLanguageConfig[];
+}
+
+export interface LanguagePerformanceStat {
+  code: string;
+  name: string;
+  native_name: string;
+  region: string;
+  is_app_enabled: boolean;
+  is_chat_enabled: boolean;
+  is_beta: boolean;
+  query_count: number;
+  traffic_share_percentage: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_usd: number;
+  avg_latency_ms: number;
+  unique_registered_users: number;
+  unique_guests: number;
+  success_count: number;
+  error_count: number;
+  top_personas: { character: string; count: number }[];
+}
+
+export interface UserLanguagePreferenceStat {
+  code: string;
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface LanguageAnalyticsOverview {
+  timeframe_days: number;
+  total_queries: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  language_performance: LanguagePerformanceStat[];
+  user_app_preferences: UserLanguagePreferenceStat[];
+  user_chat_preferences: UserLanguagePreferenceStat[];
+}

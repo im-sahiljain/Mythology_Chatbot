@@ -10,8 +10,10 @@ import {
   TouchableWithoutFeedback,
   Animated,
   Easing,
+  PanResponder,
 } from "react-native";
 import { useRouter, usePathname, useGlobalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";
 import {
   loadAllSessions,
@@ -28,6 +30,7 @@ import {
 import { apiService } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../services/supabase";
+import { useTranslation } from "react-i18next";
 
 const serif =
   Platform.OS === "web"
@@ -91,6 +94,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   onClose,
   onSelectAction,
 }) => {
+  const insets = useSafeAreaInsets();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
@@ -102,9 +106,27 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
   const [activeSessionId, setActiveId] = useState<string | null>(null);
   const [newChatPickerVisible, setNewChatPickerVisible] = useState(false);
 
+  const { t } = useTranslation();
+
   const [modalVisible, setModalVisible] = useState(visible);
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  const drawerPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return gestureState.dx < -15 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx < -30) {
+          onClose();
+        }
+      },
+    })
+  ).current;
+
+  const safeTopPadding = Math.max(insets.top, Platform.OS === "ios" ? 44 : 20) + 8;
+  const safeBottomPadding = Math.max(insets.bottom, 16);
 
   // Load and subscribe to chat sessions whenever drawer opens or changes
   useEffect(() => {
@@ -251,7 +273,13 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
     <>
       {/* Profile Header */}
       <View
-        style={[styles.header, { borderBottomColor: theme.outlineVariant }]}
+        style={[
+          styles.header,
+          {
+            borderBottomColor: theme.outlineVariant,
+            paddingTop: safeTopPadding,
+          },
+        ]}
       >
         <View style={styles.profileRow}>
           <View
@@ -285,7 +313,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
             >
               {user
                 ? user.user_metadata?.full_name || user.email?.split("@")[0]
-                : "Guest Seeker"}
+                : t("drawer.guestSeeker", "Guest Seeker")}
             </Text>
             <Text
               style={[
@@ -294,7 +322,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
               ]}
               numberOfLines={1}
             >
-              {user ? user.email : "Free Explorer"}
+              {user ? user.email : t("drawer.freeExplorer", "Free Explorer")}
             </Text>
             <View
               style={[
@@ -315,7 +343,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   },
                 ]}
               >
-                {user ? "✨ UNLIMITED TURNS" : "⚡ GUEST (3 TURNS)"}
+                {user ? t("drawer.unlimitedTurns", "✨ UNLIMITED TURNS") : t("drawer.guestTurns", "⚡ GUEST (3 TURNS)")}
               </Text>
             </View>
           </View>
@@ -342,10 +370,35 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
             { color: theme.primary, fontFamily: label },
           ]}
         >
-          COUNSEL & EXPLORATION MODES
+          {t("drawer.counselModes", "COUNSEL & EXPLORATION MODES")}
         </Text>
 
-        {APP_NAVIGATION_TABS.map((tab) => {
+        {[
+          {
+            id: "full-chat",
+            route: "/(tabs)/full-chat",
+            title: t("drawer.fullChat", "Full Interactive Chat"),
+            subtitle: t("drawer.fullChatDesc", "Topic matrix & deep comparison"),
+            icon: "🏛️",
+            tag: t("drawer.universal", "Universal"),
+          },
+          {
+            id: "persona",
+            route: "/(tabs)/persona",
+            title: t("drawer.speakWithLegends", "Speak with Legends"),
+            subtitle: t("drawer.speakWithLegendsDesc", "1st-person avatar consultation"),
+            icon: "👑",
+            tag: t("drawer.avatar", "Avatar"),
+          },
+          {
+            id: "roundtable",
+            route: "/(tabs)/roundtable",
+            title: t("drawer.vedicRoundtable", "Vedic Roundtable"),
+            subtitle: t("drawer.vedicRoundtableDesc", "Multi-legend council debate"),
+            icon: "🪷",
+            tag: t("drawer.council", "Council"),
+          },
+        ].map((tab) => {
           const isActive = checkIsActive(tab.route);
           return (
             <TouchableOpacity
@@ -444,7 +497,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                     { color: theme.primary, fontFamily: label },
                   ]}
                 >
-                  MY CHATS ({displaySessions.length})
+                  {t("drawer.myChats", "MY CHATS")} ({displaySessions.length})
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -460,7 +513,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                       { color: theme.onPrimaryContainer, fontFamily: label },
                     ]}
                   >
-                    + New Chat
+                    {t("drawer.newChat", "+ New Chat")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -500,7 +553,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                           ]}
                           numberOfLines={1}
                         >
-                          {s.title || "Untitled Consultation"}
+                          {s.title || t("drawer.untitledConsultation", "Untitled Consultation")}
                         </Text>
 
                         <View
@@ -565,7 +618,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                       { color: theme.secondary, fontFamily: body },
                     ]}
                   >
-                    No saved chats yet. Tap to begin your first inquiry!
+                    {t("drawer.noSavedChats", "No saved chats yet. Tap to begin your first inquiry!")}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -584,9 +637,10 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
             { color: theme.textTertiary, fontFamily: label },
           ]}
         >
-          PREFERENCES & SYSTEM
+          {t("drawer.preferences_system", "PREFERENCES & SYSTEM")}
         </Text>
 
+        {/* Theme Toggle */}
         <TouchableOpacity
           style={styles.menuItemSimple}
           onPress={toggleTheme}
@@ -599,8 +653,33 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
               { color: theme.text, fontFamily: body },
             ]}
           >
-            {theme.isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+            {theme.isDark ? t("drawer.theme_light", "Switch to Light Theme") : t("drawer.theme_dark", "Switch to Dark Theme")}
           </Text>
+        </TouchableOpacity>
+
+        {/* Dedicated Settings Page Link */}
+        <TouchableOpacity
+          style={[styles.menuItemSimple, { marginTop: 4 }]}
+          onPress={() => {
+            onClose();
+            router.push("/settings" as any);
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.itemIcon}>⚙️</Text>
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text
+              style={[
+                styles.itemTitleSimple,
+                { color: theme.text, fontFamily: body },
+              ]}
+            >
+              {t("settingsScreen.title", "General Settings")}
+            </Text>
+            <Text style={{ fontSize: 12, color: theme.primary, fontFamily: label }}>
+              {t("common.open", "Open")} ›
+            </Text>
+          </View>
         </TouchableOpacity>
 
         {user ? (
@@ -622,7 +701,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                 { color: "#EF4444", fontFamily: body },
               ]}
             >
-              Sign Out
+              {t("drawer.signOut", "Sign Out")}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -644,21 +723,29 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                 { color: theme.accent, fontFamily: label },
               ]}
             >
-              Sign In with Email
+              {t("drawer.signIn", "Sign In with Email")}
             </Text>
           </TouchableOpacity>
         )}
       </ScrollView>
 
       {/* Drawer Footer */}
-      <View style={[styles.footer, { borderTopColor: theme.outlineVariant }]}>
+      <View
+        style={[
+          styles.footer,
+          {
+            borderTopColor: theme.outlineVariant,
+            paddingBottom: safeBottomPadding,
+          },
+        ]}
+      >
         <Text
           style={[
             styles.footerText,
             { color: theme.textTertiary, fontFamily: serif },
           ]}
         >
-          VedicRAG AI • 475+ Curated Scenarios
+          {t("drawer.footer", "VedicRAG AI • 475+ Curated Scenarios")}
         </Text>
       </View>
     </>
@@ -671,7 +758,15 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
       animationType="fade"
       onRequestClose={() => setNewChatPickerVisible(false)}
     >
-      <View style={styles.modalOverlay}>
+      <View
+        style={[
+          styles.modalOverlay,
+          {
+            paddingTop: Math.max(insets.top, 16),
+            paddingBottom: Math.max(insets.bottom, 16),
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.modalBackdrop}
           activeOpacity={1}
@@ -702,7 +797,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   { color: theme.primary, fontFamily: serif },
                 ]}
               >
-                Start New Inquiry
+                {t("drawer.startNewInquiry", "Start New Inquiry")}
               </Text>
               <Text
                 style={[
@@ -710,7 +805,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   { color: theme.secondary, fontFamily: body },
                 ]}
               >
-                Choose how you wish to seek Vedic wisdom
+                {t("drawer.chooseMode", "Choose how you wish to seek Vedic wisdom")}
               </Text>
             </View>
             <TouchableOpacity
@@ -752,7 +847,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                     { color: theme.text, fontFamily: label },
                   ]}
                 >
-                  Full Interactive Chat
+                  {t("drawer.fullChat", "Full Interactive Chat")}
                 </Text>
                 <View
                   style={[
@@ -766,7 +861,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                       { color: theme.onSecondaryContainer, fontFamily: label },
                     ]}
                   >
-                    Universal
+                    {t("drawer.universal", "Universal")}
                   </Text>
                 </View>
               </View>
@@ -776,8 +871,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   { color: theme.secondary, fontFamily: body },
                 ]}
               >
-                Multi-turn inquiry with vector scripture citations & deep epic
-                comparison
+                {t("drawer.fullChatDesc", "Topic matrix & deep comparison")}
               </Text>
             </View>
           </TouchableOpacity>
@@ -810,7 +904,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                     { color: theme.text, fontFamily: label },
                   ]}
                 >
-                  Speak with Legends
+                  {t("drawer.speakWithLegends", "Speak with Legends")}
                 </Text>
                 <View
                   style={[
@@ -824,7 +918,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                       { color: theme.onPrimaryContainer, fontFamily: label },
                     ]}
                   >
-                    Avatar
+                    {t("drawer.avatar", "Avatar")}
                   </Text>
                 </View>
               </View>
@@ -834,8 +928,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   { color: theme.secondary, fontFamily: body },
                 ]}
               >
-                1st-person avatar consultation with Krishna, Sita, Arjuna, and
-                sages
+                {t("drawer.speakWithLegendsDesc", "1st-person avatar consultation")}
               </Text>
             </View>
           </TouchableOpacity>
@@ -868,7 +961,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                     { color: theme.text, fontFamily: label },
                   ]}
                 >
-                  Vedic Roundtable
+                  {t("drawer.vedicRoundtable", "Vedic Roundtable")}
                 </Text>
                 <View
                   style={[
@@ -882,7 +975,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                       { color: theme.onSecondaryContainer, fontFamily: label },
                     ]}
                   >
-                    Council
+                    {t("drawer.council", "Council")}
                   </Text>
                 </View>
               </View>
@@ -892,8 +985,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
                   { color: theme.secondary, fontFamily: body },
                 ]}
               >
-                Multi-legend council debate with @mentions, custom invites, and
-                mute controls
+                {t("drawer.vedicRoundtableDesc", "Multi-legend council debate")}
               </Text>
             </View>
           </TouchableOpacity>
@@ -963,6 +1055,7 @@ export const VedicDrawer: React.FC<VedicDrawerProps> = ({
           <Animated.View style={[styles.overlay, { opacity: backdropAnim }]}>
             <TouchableWithoutFeedback>
               <Animated.View
+                {...drawerPanResponder.panHandlers}
                 style={[
                   styles.drawer,
                   {

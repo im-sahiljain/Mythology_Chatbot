@@ -6,13 +6,17 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Modal,
   Dimensions,
+  Keyboard,
+  Animated,
+  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../../src/context/ThemeContext";
 import { apiService, SourceCitation } from "../../src/services/api";
 import {
@@ -29,6 +33,7 @@ import { SourceCard } from "../../src/components/SourceCard";
 import { VedicTopBar } from "../../src/components/VedicTopBar";
 import { VedicDrawer } from "../../src/components/VedicDrawer";
 import { FadeSlide } from "../../src/components/AnimatedComponents";
+import { getLocalizedCharacter } from "../../src/i18n/characterTranslations";
 const useObserve = () => ({ markInteractive: () => {} });
 
 const serif =
@@ -82,10 +87,86 @@ const PRESET_COUNCILS = [
 ];
 
 export default function RoundtableScreen() {
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { markInteractive } = useObserve();
+  const { t, i18n } = useTranslation();
+
+  const safeTopPadding = Math.max(insets.top, Platform.OS === "ios" ? 44 : 16) + 68;
+  const safeBottomPadding = Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 8 : 4);
+  const { height: screenHeight } = useWindowDimensions();
+  const isWeb = Platform.OS === "web";
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardAnim = useRef(new Animated.Value(0)).current;
+
+  const animatedBottom = keyboardAnim.interpolate({
+    inputRange: [0, 50, 600],
+    outputRange: [0, 64, 614],
+  });
+
+  const heroTranslateY = keyboardAnim.interpolate({
+    inputRange: [0, 300],
+    outputRange: [0, -130],
+    extrapolate: "clamp",
+  });
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const vv = window.visualViewport;
+      if (vv) {
+        const update = () => {
+          const occluded = Math.max(
+            0,
+            window.innerHeight - vv.height - vv.offsetTop,
+          );
+          setKeyboardHeight(occluded);
+          Animated.timing(keyboardAnim, {
+            toValue: occluded,
+            duration: 150,
+            useNativeDriver: false,
+          }).start();
+        };
+
+        vv.addEventListener("resize", update);
+        vv.addEventListener("scroll", update);
+        update();
+        return () => {
+          vv.removeEventListener("resize", update);
+          vv.removeEventListener("scroll", update);
+        };
+      }
+    }
+
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const targetHeight = e.endCoordinates.height;
+      setKeyboardHeight(targetHeight);
+      Animated.timing(keyboardAnim, {
+        toValue: targetHeight,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      setKeyboardHeight(0);
+      Animated.timing(keyboardAnim, {
+        toValue: 0,
+        duration: e?.duration || 200,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     markInteractive();
@@ -528,10 +609,7 @@ export default function RoundtableScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <VedicTopBar onOpenDrawer={() => setDrawerVisible(true)} />
       <VedicDrawer
         visible={drawerVisible}
@@ -559,8 +637,28 @@ export default function RoundtableScreen() {
           style={styles.chatScroll}
           contentContainerStyle={[
             styles.chatContent,
-            { paddingTop: 80, paddingBottom: 220 },
+            {
+              paddingTop: safeTopPadding,
+              paddingBottom:
+                240 +
+                insets.bottom +
+                (keyboardHeight > 0 ? keyboardHeight + 14 : 0),
+            },
+            history.length === 0 &&
+              !isSessionLoading &&
+              !isWeb && {
+                flexGrow: 1,
+                justifyContent: "center",
+                minHeight: Math.max(
+                  320,
+                  screenHeight -
+                    (keyboardHeight > 0 ? keyboardHeight + 14 : 0),
+                ),
+                paddingBottom: 200,
+              },
           ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
         >
           {isSessionLoading ? (
@@ -568,8 +666,13 @@ export default function RoundtableScreen() {
               <ActivityIndicator size="large" color={theme.primary} />
             </View>
           ) : history.length === 0 ? (
-            <FadeSlide delay={50} distance={15}>
-              <View style={styles.welcomeContainer}>
+            <FadeSlide delay={50} distance={15} style={{ width: "100%" }}>
+              <Animated.View
+                style={[
+                  styles.welcomeContainer,
+                  { transform: [{ translateY: heroTranslateY }] },
+                ]}
+              >
                 <View style={styles.heroBadge}>
                   <Text
                     style={[
@@ -577,7 +680,7 @@ export default function RoundtableScreen() {
                       { color: theme.primary, fontFamily: label },
                     ]}
                   >
-                    MULTI-LEGEND SABHA
+                    {t("roundtableScreen.badge", "MULTI-LEGEND SABHA")}
                   </Text>
                 </View>
                 <Text
@@ -586,7 +689,7 @@ export default function RoundtableScreen() {
                     { color: theme.primary, fontFamily: serif },
                   ]}
                 >
-                  Council of Ancient Wisdom
+                  {t("roundtableScreen.title", "Council of Ancient Wisdom")}
                 </Text>
                 <Text
                   style={[
@@ -594,105 +697,128 @@ export default function RoundtableScreen() {
                     { color: theme.secondary, fontFamily: body },
                   ]}
                 >
-                  Convene a sacred roundtable of ancient figures. Debate your
-                  dilemmas across multiple epic viewpoints simultaneously.
+                  {t(
+                    "roundtableScreen.subtitle",
+                    "Convene a sacred roundtable of ancient figures. Debate your dilemmas across multiple epic viewpoints simultaneously.",
+                  )}
                 </Text>
+              </Animated.View>
 
-                {/* Preset Council Quick Picks */}
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: theme.text, fontFamily: serif },
-                  ]}
-                >
-                  Recommended Sabha Presets
-                </Text>
-                <View style={styles.presetsGrid}>
-                  {PRESET_COUNCILS.map((preset) => {
-                    const isSelected =
-                      preset.members.length === activeCouncil.length &&
-                      preset.members.every((m) => activeCouncil.includes(m));
+                {isWeb && (
+                  <>
+                    <Text
+                      style={[
+                        styles.sectionTitle,
+                        { color: theme.text, fontFamily: serif },
+                      ]}
+                    >
+                      {t(
+                        "roundtableScreen.presetsTitle",
+                        "Recommended Sabha Presets",
+                      )}
+                    </Text>
+                    <View style={styles.presetsGrid}>
+                      {PRESET_COUNCILS.map((preset) => {
+                        const isSelected =
+                          preset.members.length === activeCouncil.length &&
+                          preset.members.every((m) =>
+                            activeCouncil.includes(m),
+                          );
 
-                    return (
-                      <TouchableOpacity
-                        key={preset.id}
-                        style={[
-                          styles.presetCard,
-                          {
-                            backgroundColor: isSelected
-                              ? theme.primaryContainer
-                              : theme.surface,
-                            borderColor: isSelected
-                              ? theme.primary
-                              : theme.outlineVariant,
-                            shadowColor: theme.shadow,
-                          },
-                        ]}
-                        onPress={() => handleSelectPreset(preset)}
-                        activeOpacity={0.8}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <Text style={{ fontSize: 20 }}>{preset.icon}</Text>
-                          <Text
+                        return (
+                          <TouchableOpacity
+                            key={preset.id}
                             style={[
-                              styles.presetTitle,
+                              styles.presetCard,
                               {
-                                color: isSelected
-                                  ? theme.onPrimaryContainer
-                                  : theme.text,
-                                fontFamily: label,
+                                backgroundColor: isSelected
+                                  ? theme.primaryContainer
+                                  : theme.surface,
+                                borderColor: isSelected
+                                  ? theme.primary
+                                  : theme.outlineVariant,
+                                shadowColor: theme.shadow,
                               },
                             ]}
+                            onPress={() => handleSelectPreset(preset)}
+                            activeOpacity={0.8}
                           >
-                            {preset.title}
-                          </Text>
-                        </View>
-                        <Text
-                          style={[
-                            styles.presetDesc,
-                            {
-                              color: isSelected
-                                ? theme.onPrimaryContainer
-                                : theme.secondary,
-                              fontFamily: body,
-                            },
-                          ]}
-                        >
-                          {preset.desc}
-                        </Text>
-                        <View style={styles.presetMembersRow}>
-                          {preset.members.map((m) => (
                             <View
-                              key={m}
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <Text style={{ fontSize: 20 }}>{preset.icon}</Text>
+                              <Text
+                                style={[
+                                  styles.presetTitle,
+                                  {
+                                    color: isSelected
+                                      ? theme.onPrimaryContainer
+                                      : theme.text,
+                                    fontFamily: label,
+                                  },
+                                ]}
+                              >
+                                {t(
+                                  `roundtableScreen.presets.${preset.id}.title`,
+                                  preset.title,
+                                )}
+                              </Text>
+                            </View>
+                            <Text
                               style={[
-                                styles.memberMiniTag,
+                                styles.presetDesc,
                                 {
-                                  backgroundColor: theme.surfaceContainerLowest,
+                                  color: isSelected
+                                    ? theme.onPrimaryContainer
+                                    : theme.secondary,
+                                  fontFamily: body,
                                 },
                               ]}
                             >
-                              <Text
-                                style={[
-                                  styles.memberMiniTagText,
-                                  { color: theme.text, fontFamily: label },
-                                ]}
-                              >
-                                {getLegendInfo(m).icon} {m}
-                              </Text>
+                              {t(
+                                `roundtableScreen.presets.${preset.id}.desc`,
+                                preset.desc,
+                              )}
+                            </Text>
+                            <View style={styles.presetMembersRow}>
+                              {preset.members.map((m) => (
+                                <View
+                                  key={m}
+                                  style={[
+                                    styles.memberMiniTag,
+                                    {
+                                      backgroundColor:
+                                        theme.surfaceContainerLowest,
+                                    },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.memberMiniTagText,
+                                      { color: theme.text, fontFamily: label },
+                                    ]}
+                                  >
+                                    {getLegendInfo(m).icon}{" "}
+                                    {
+                                      getLocalizedCharacter(
+                                        { name: m, role: "" },
+                                        i18n.language,
+                                      ).name
+                                    }
+                                  </Text>
+                                </View>
+                              ))}
                             </View>
-                          ))}
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
             </FadeSlide>
           ) : (
             history.map((msg, index) => {
@@ -763,7 +889,7 @@ export default function RoundtableScreen() {
                               ]}
                             >
                               {copiedMsgId === (msg.id || String(index))
-                                ? "✓ Copied"
+                                ? t("common.copied", "✓ Copied")
                                 : "📋"}
                             </Text>
                           </TouchableOpacity>
@@ -804,7 +930,7 @@ export default function RoundtableScreen() {
                                 { color: profile.color, fontFamily: serif },
                               ]}
                             >
-                              {profile.name}
+                              {getLocalizedCharacter({ name: profile.name, role: profile.archetype }, i18n.language).name}
                             </Text>
                             <Text
                               style={[
@@ -812,7 +938,11 @@ export default function RoundtableScreen() {
                                 { color: theme.secondary, fontFamily: body },
                               ]}
                             >
-                              {profile.epic} • {profile.archetype}
+                              {profile.epic?.toLowerCase().includes("mahabharata")
+                                ? t("epics.mahabharata", "Mahabharata")
+                                : profile.epic?.toLowerCase().includes("ramayana")
+                                ? t("epics.ramayana", "Ramayana")
+                                : profile.epic} • {getLocalizedCharacter({ name: profile.name, role: profile.archetype }, i18n.language).role}
                             </Text>
                           </View>
                         </View>
@@ -877,7 +1007,7 @@ export default function RoundtableScreen() {
                               ]}
                             >
                               {copiedMsgId === (msg.id || String(index))
-                                ? "✓ Copied"
+                                ? t("common.copied", "✓ Copied")
                                 : "📋"}
                             </Text>
                           </TouchableOpacity>
@@ -924,7 +1054,7 @@ export default function RoundtableScreen() {
                   { color: theme.secondary, fontFamily: body },
                 ]}
               >
-                The Council is deliberating your dilemma...
+                {t("roundtableScreen.thinking", "The Council is deliberating your dilemma...")}
               </Text>
             </View>
           )}
@@ -944,16 +1074,27 @@ export default function RoundtableScreen() {
         />
 
         {/* Floating Input Dock with Integrated Council Controls & Mention Autocomplete */}
-        <View
+        <Animated.View
           style={[
-            styles.dockContainer,
+            styles.dockAnchor,
             {
-              backgroundColor: theme.surface,
-              borderColor: theme.outlineVariant,
-              shadowColor: theme.shadow,
+              paddingBottom:
+                keyboardHeight > 0 ? (Platform.OS === "ios" ? 8 : 4) : safeBottomPadding,
+              bottom: animatedBottom,
             },
           ]}
+          pointerEvents="box-none"
         >
+          <View
+            style={[
+              styles.dockContainer,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.outlineVariant,
+                shadowColor: theme.shadow,
+              },
+            ]}
+          >
           {/* Integrated Council Header & Active Member Chips */}
           <View style={styles.councilBarTitleRow}>
             <View
@@ -966,7 +1107,7 @@ export default function RoundtableScreen() {
                   { color: theme.primary, fontFamily: serif },
                 ]}
               >
-                Vedic Council
+                {t("roundtableScreen.councilTitle", "Vedic Council")}
               </Text>
             </View>
             <TouchableOpacity
@@ -983,7 +1124,7 @@ export default function RoundtableScreen() {
                   { color: theme.onPrimaryContainer, fontFamily: label },
                 ]}
               >
-                ➕ Invite Legend
+                {t("roundtableScreen.inviteLegendBtn", "➕ Invite Legend")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -997,6 +1138,7 @@ export default function RoundtableScreen() {
             {activeCouncil.map((charName) => {
               const profile = getLegendInfo(charName);
               const isMuted = mutedCouncil.includes(charName);
+              const locName = getLocalizedCharacter({ name: charName, role: "" }, i18n.language).name;
 
               return (
                 <View
@@ -1024,7 +1166,7 @@ export default function RoundtableScreen() {
                         { color: theme.text, fontFamily: label },
                       ]}
                     >
-                      @{charName}
+                      @{locName}
                     </Text>
                   </TouchableOpacity>
 
@@ -1086,7 +1228,7 @@ export default function RoundtableScreen() {
                     { color: theme.secondary, fontFamily: label },
                   ]}
                 >
-                  SELECT LEGEND TO ADDRESS & INVITE
+                  {t("roundtableScreen.selectLegendDropup", "SELECT LEGEND TO ADDRESS & INVITE")}
                 </Text>
                 <TouchableOpacity onPress={() => setShowMentionDropup(false)}>
                   <Text style={{ fontSize: 13, color: theme.secondary }}>
@@ -1104,6 +1246,7 @@ export default function RoundtableScreen() {
                 {filteredMentionCandidates.map((legend, index) => {
                   const isInCouncil = activeCouncil.includes(legend.name);
                   const isSelected = index === mentionSelectedIndex;
+                  const locLeg = getLocalizedCharacter(legend, i18n.language);
 
                   return (
                     <TouchableOpacity
@@ -1148,7 +1291,7 @@ export default function RoundtableScreen() {
                                 { color: theme.text, fontFamily: serif },
                               ]}
                             >
-                              {legend.name}
+                              {locLeg.name}
                             </Text>
                             <Text
                               style={[
@@ -1156,7 +1299,11 @@ export default function RoundtableScreen() {
                                 { color: theme.secondary, fontFamily: label },
                               ]}
                             >
-                              ({legend.epic})
+                              ({legend.epic?.toLowerCase().includes("mahabharata")
+                                ? t("epics.mahabharata", "Mahabharata")
+                                : legend.epic?.toLowerCase().includes("ramayana")
+                                ? t("epics.ramayana", "Ramayana")
+                                : legend.epic})
                             </Text>
                           </View>
                           <Text
@@ -1166,7 +1313,7 @@ export default function RoundtableScreen() {
                             ]}
                             numberOfLines={1}
                           >
-                            {legend.archetype}
+                            {locLeg.role} · {locLeg.subtitle}
                           </Text>
                         </View>
                       </View>
@@ -1192,7 +1339,9 @@ export default function RoundtableScreen() {
                             },
                           ]}
                         >
-                          {isInCouncil ? "● In Council" : "➕ Add & Tag"}
+                          {isInCouncil
+                            ? t("roundtableScreen.inCouncil", "● In Council")
+                            : t("roundtableScreen.addTag", "➕ Add & Tag")}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -1224,7 +1373,7 @@ export default function RoundtableScreen() {
                     { color: theme.onPrimaryContainer, fontFamily: label },
                   ]}
                 >
-                  ⚡ Seek Counsel Now (Deliver Scripture Wisdom)
+                  {t("roundtableScreen.forceResolve", "⚡ Convene Final Council Verdict")}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1273,7 +1422,7 @@ export default function RoundtableScreen() {
                 Platform.OS === "web" &&
                   ({ resize: "none", overflowY: "auto" } as any),
               ]}
-              placeholder="Type @ to summon legends, e.g. '@Krishna what should I do?'"
+              placeholder={t("roundtableScreen.placeholder", "Ask the Council your question (or @mention a legend)...")}
               placeholderTextColor={theme.textTertiary}
               value={input}
               onChangeText={handleInputChange}
@@ -1341,7 +1490,10 @@ export default function RoundtableScreen() {
                       { color: theme.secondary, fontFamily: label },
                     ]}
                   >
-                    👥 {activeCouncil.length} Legends in Sabha
+                    {t("roundtableScreen.legendsCount", {
+                      count: activeCouncil.length,
+                      defaultValue: `👥 ${activeCouncil.length} Legends in Sabha`
+                    })}
                   </Text>
                 </View>
               </View>
@@ -1378,7 +1530,8 @@ export default function RoundtableScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </View>
+        </Animated.View>
       </View>
 
       {/* Invite Legend Modal */}
@@ -1388,7 +1541,15 @@ export default function RoundtableScreen() {
         animationType="fade"
         onRequestClose={() => setInviteModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.modalOverlay,
+            {
+              paddingTop: Math.max(insets.top, 16),
+              paddingBottom: Math.max(insets.bottom, 16),
+            },
+          ]}
+        >
           <TouchableOpacity
             style={styles.modalBackdrop}
             activeOpacity={1}
@@ -1417,7 +1578,7 @@ export default function RoundtableScreen() {
                     { color: theme.primary, fontFamily: serif },
                   ]}
                 >
-                  Invite to Council
+                  {t("roundtableScreen.inviteModalTitle", "Invite to Council")}
                 </Text>
                 <Text
                   style={[
@@ -1425,7 +1586,7 @@ export default function RoundtableScreen() {
                     { color: theme.secondary, fontFamily: body },
                   ]}
                 >
-                  Add another epic legend to your active discussion
+                  {t("roundtableScreen.inviteModalSubtitle", "Add another epic legend to your active discussion")}
                 </Text>
               </View>
               <TouchableOpacity
@@ -1442,6 +1603,7 @@ export default function RoundtableScreen() {
             >
               {AVAILABLE_LEGENDS.map((legend) => {
                 const isAlreadyInCouncil = activeCouncil.includes(legend.name);
+                const locLeg = getLocalizedCharacter(legend, i18n.language);
 
                 return (
                   <TouchableOpacity
@@ -1469,7 +1631,7 @@ export default function RoundtableScreen() {
                             { color: theme.text, fontFamily: serif },
                           ]}
                         >
-                          {legend.name}
+                          {locLeg.name}
                         </Text>
                         <Text
                           style={[
@@ -1477,7 +1639,11 @@ export default function RoundtableScreen() {
                             { color: theme.secondary, fontFamily: body },
                           ]}
                         >
-                          {legend.epic} • {legend.archetype}
+                          {legend.epic?.toLowerCase().includes("mahabharata")
+                            ? t("epics.mahabharata", "Mahabharata")
+                            : legend.epic?.toLowerCase().includes("ramayana")
+                            ? t("epics.ramayana", "Ramayana")
+                            : legend.epic} • {locLeg.role} · {locLeg.subtitle}
                         </Text>
                       </View>
                     </View>
@@ -1502,7 +1668,9 @@ export default function RoundtableScreen() {
                           },
                         ]}
                       >
-                        {isAlreadyInCouncil ? "Present" : "➕ Invite"}
+                        {isAlreadyInCouncil
+                          ? t("roundtableScreen.presentBadge", "Present")
+                          : t("roundtableScreen.inviteBadge", "➕ Invite")}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -1512,7 +1680,7 @@ export default function RoundtableScreen() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -1602,8 +1770,11 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   welcomeContainer: {
+    width: "100%",
     alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 24,
+    paddingHorizontal: 8,
   },
   heroBadge: {
     paddingVertical: 4,
@@ -1611,24 +1782,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "rgba(212, 175, 55, 0.12)",
     marginBottom: 10,
+    alignSelf: "center",
   },
   heroBadgeText: {
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1,
+    textAlign: "center",
   },
   welcomeTitle: {
     fontSize: 28,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 8,
+    width: "100%",
   },
   welcomeSubtitle: {
     fontSize: 14.5,
     textAlign: "center",
     lineHeight: 22,
     maxWidth: 580,
+    width: "100%",
     marginBottom: 28,
+    alignSelf: "center",
   },
   sectionTitle: {
     fontSize: 18,
@@ -1896,10 +2072,17 @@ const styles = StyleSheet.create({
     height: 220,
     zIndex: 5,
   },
-  dockContainer: {
+  dockAnchor: {
     position: "absolute",
+    left: 0,
+    right: 0,
     bottom: 16,
-    width: "92%",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    zIndex: 20,
+  },
+  dockContainer: {
+    width: "100%",
     maxWidth: 820,
     borderRadius: 22,
     borderWidth: 1.5,
@@ -1908,7 +2091,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    zIndex: 20,
   },
   mentionChipsScroll: {
     flexDirection: "row",

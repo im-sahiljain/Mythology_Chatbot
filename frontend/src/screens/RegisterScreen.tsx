@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../services/supabase';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { Card, Pressable, FadeSlide } from '../components/AnimatedComponents';
 
@@ -11,8 +13,10 @@ const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGro
 const bold = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
 
 export default function RegisterScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -69,7 +73,7 @@ export default function RegisterScreen() {
           status: (error as any).status,
           fullErrorObj: error
         });
-        alert(`Registration Error: ${error.message}\n(Check browser console F12 for full details)`);
+        alert(`Registration Error: ${error.message}`);
         return;
       }
 
@@ -82,80 +86,111 @@ export default function RegisterScreen() {
     } catch (err: any) {
       setLoading(false);
       console.error('❌ [Register Exception]:', err);
-      alert(`Unexpected Network Error: ${err?.message || err}\nPlease check network/CORS settings or open F12 Console.`);
+      alert(`Unexpected Network Error: ${err?.message || err}`);
     }
   };
 
   if (emailSent) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.bg }}
+        contentContainerStyle={[
+          styles.container,
+          {
+            paddingTop: Math.max(insets.top, 24) + 12,
+            paddingBottom: Math.max(insets.bottom, 24) + 12,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <FadeSlide delay={50}>
           <Card style={styles.card}>
             <View style={{ alignItems: 'center', marginVertical: 20 }}>
               <Text style={{ fontSize: 48, marginBottom: 16 }}>📩</Text>
               <Text style={[styles.title, { color: theme.text, fontFamily: serif, textAlign: 'center' }]}>
-                Check Your Inbox
+                {t('auth.checkInbox', 'Check Your Inbox')}
               </Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: body, textAlign: 'center', marginTop: 8 }]}>
-                We have sent a confirmation link to{'\n'}
+                {t('auth.emailSentTo', 'We have sent a confirmation link to')}{'\n'}
                 <Text style={{ color: theme.accent, fontWeight: '700' }}>{email}</Text>
               </Text>
               <Text style={{ fontSize: 13, color: theme.textTertiary, textAlign: 'center', marginTop: 14, lineHeight: 20 }}>
-                Click the link in the email to activate your account and enjoy unlimited consultations.
+                {t('auth.emailSentDesc', 'Click the link in the email to activate your account and enjoy unlimited consultations.')}
               </Text>
 
               <Pressable onPress={() => router.replace('/login')} style={{ width: '100%', marginTop: 24 }}>
                 <View style={[styles.button, { backgroundColor: theme.accent }]}>
-                  <Text style={[styles.buttonText, { fontFamily: bold }]}>Go to Sign In</Text>
+                  <Text style={[styles.buttonText, { fontFamily: bold }]}>
+                    {t('auth.goToSignIn', 'Go to Sign In')}
+                  </Text>
                 </View>
               </Pressable>
             </View>
           </Card>
         </FadeSlide>
-      </View>
+      </ScrollView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.bg }}
+      contentContainerStyle={[
+        styles.container,
+        {
+          paddingTop: Math.max(insets.top, 24) + 12,
+          paddingBottom: Math.max(insets.bottom, 24) + 12,
+        },
+      ]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <FadeSlide delay={50}>
         <Card style={styles.card}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text, fontFamily: serif }]}>Create Account</Text>
+            <Text style={[styles.title, { color: theme.text, fontFamily: serif }]}>
+              {t('auth.createAccount', 'Create Account')}
+            </Text>
             <Text style={[styles.subtitle, { color: theme.textSecondary, fontFamily: body }]}>
-              Join to unlock unlimited Vedic consultations
+              {t('auth.registerSubtitle', 'Join to unlock unlimited Vedic consultations')}
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>YOUR NAME</Text>
+            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
+              {t('auth.fullName', 'YOUR NAME')}
+            </Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
               value={fullName}
               onChangeText={setFullName}
-              placeholder="Arjuna"
+              placeholder={t('auth.namePlaceholder', 'Arjuna')}
               placeholderTextColor={theme.isDark ? '#666' : '#999'}
             />
 
-            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>EMAIL</Text>
+            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
+              {t('auth.email', 'EMAIL')}
+            </Text>
             <TextInput
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
               value={email}
               onChangeText={setEmail}
-              placeholder="seeker@vedic.ai"
+              placeholder={t('auth.emailPlaceholder', 'seeker@vedic.ai')}
               placeholderTextColor={theme.isDark ? '#666' : '#999'}
               autoCapitalize="none"
               keyboardType="email-address"
             />
 
-            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>PASSWORD</Text>
+            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
+              {t('auth.password', 'PASSWORD')}
+            </Text>
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="At least 6 characters"
+                placeholder={t('auth.passwordPlaceholder', 'Minimum 6 characters')}
                 placeholderTextColor={theme.isDark ? '#666' : '#999'}
               />
               <TouchableOpacity
@@ -172,14 +207,16 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>CONFIRM PASSWORD</Text>
+            <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
+              {t('auth.confirmPassword', 'CONFIRM PASSWORD')}
+            </Text>
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
                 secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Confirm password"
+                placeholder={t('auth.confirmPasswordPlaceholder', 'Re-enter your password')}
                 placeholderTextColor={theme.isDark ? '#666' : '#999'}
               />
               <TouchableOpacity
@@ -199,37 +236,39 @@ export default function RegisterScreen() {
             <Pressable onPress={register} disabled={loading}>
               <View style={[styles.button, { backgroundColor: theme.accent, opacity: loading ? 0.6 : 1 }]}>
                 <Text style={[styles.buttonText, { fontFamily: bold }]}>
-                  {loading ? 'Sending Link...' : 'Sign Up with Email'}
+                  {loading ? t('auth.creatingAccount', 'Creating Account...') : t('auth.signUp', 'Create Account')}
                 </Text>
               </View>
             </Pressable>
 
             <View style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.textSecondary, fontFamily: body }]}>
-                Already have an account?{' '}
+                {t('auth.hasAccount', 'Already have an account?')}{' '}
               </Text>
               <Pressable onPress={() => router.push('/login')}>
-                <Text style={[styles.linkText, { color: theme.accent, fontFamily: bold }]}>Sign In</Text>
+                <Text style={[styles.linkText, { color: theme.accent, fontFamily: bold }]}>
+                  {t('auth.signIn', 'Sign In')}
+                </Text>
               </Pressable>
             </View>
 
             <View style={{ marginTop: 14, alignItems: 'center' }}>
               <Pressable onPress={() => router.replace('/(tabs)')}>
                 <Text style={[styles.skipText, { color: theme.textTertiary, fontFamily: body }]}>
-                  Continue as Guest (3 turns) →
+                  {t('auth.continueAsGuest', 'Continue as Guest (3 turns) →')}
                 </Text>
               </Pressable>
             </View>
           </View>
         </Card>
       </FadeSlide>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
   },

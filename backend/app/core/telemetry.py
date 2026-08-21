@@ -36,7 +36,8 @@ def record_api_telemetry(
     completion_text: str = "",
     characters_tagged: Optional[List[str]] = None,
     prompt_tokens: Optional[int] = None,
-    completion_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None,
+    language: str = "en"
 ):
     """
     Logs API request telemetry and increments guest counter if applicable.
@@ -59,7 +60,8 @@ def record_api_telemetry(
             prompt_tokens=p_tokens,
             completion_tokens=c_tokens,
             estimated_cost_usd=round(cost_usd, 7),
-            characters_tagged_json=characters_tagged or []
+            characters_tagged_json=characters_tagged or [],
+            language=(language or "en").lower().strip()
         )
         db.add(log_entry)
 

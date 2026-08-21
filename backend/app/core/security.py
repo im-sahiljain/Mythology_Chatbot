@@ -17,7 +17,9 @@ class AuthContext:
         guest_id: Optional[str] = None,
         email: Optional[str] = None,
         role: str = "user",
-        remaining_guest_turns: Optional[int] = None
+        remaining_guest_turns: Optional[int] = None,
+        preferred_app_language: Optional[str] = "en",
+        preferred_chat_language: Optional[str] = "auto"
     ):
         self.is_authenticated = is_authenticated
         self.user_id = user_id
@@ -25,6 +27,8 @@ class AuthContext:
         self.email = email
         self.role = role
         self.remaining_guest_turns = remaining_guest_turns
+        self.preferred_app_language = preferred_app_language or "en"
+        self.preferred_chat_language = preferred_chat_language or "auto"
 
 def decode_supabase_jwt(token: str) -> Dict[str, Any]:
     """Decodes and validates a Supabase JWT token."""
@@ -146,7 +150,9 @@ def get_current_user_optional(
                     user_id=profile.id,
                     email=profile.email,
                     role=profile.role,
-                    remaining_guest_turns=None # Unlimited!
+                    remaining_guest_turns=None, # Unlimited!
+                    preferred_app_language=getattr(profile, 'preferred_app_language', 'en') or 'en',
+                    preferred_chat_language=getattr(profile, 'preferred_chat_language', 'auto') or 'auto'
                 )
         except Exception as e:
             print(f"⚠️ [Auth Cookie/Token Error]: {e}")

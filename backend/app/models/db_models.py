@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime, JSON, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, Text, DateTime, JSON, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -14,6 +14,8 @@ class Profile(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=True)
     role = Column(String, default="user", nullable=False)  # "user" or "admin"
+    preferred_app_language = Column(String, default="en", nullable=True)
+    preferred_chat_language = Column(String, default="auto", nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login_at = Column(DateTime, default=datetime.utcnow)
 
@@ -76,6 +78,7 @@ class ApiTelemetryLog(Base):
     status_code = Column(Integer, default=200, nullable=False)
     latency_ms = Column(Float, default=0.0, nullable=False)
     provider_used = Column(String, default="gemini/gemini-3.5-flash-lite")
+    language = Column(String(10), default="en", index=True)  # "hi", "ta", "en", "te", etc.
     prompt_tokens = Column(Integer, default=0)
     completion_tokens = Column(Integer, default=0)
     estimated_cost_usd = Column(Float, default=0.0)
@@ -98,4 +101,19 @@ class EpicScenarioEmbeddingModel(Base):
     verse_refs = Column(JSON, default=list)
     search_text = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class SupportedLanguageModel(Base):
+    __tablename__ = "supported_languages"
+
+    code = Column(String(10), primary_key=True, index=True)  # e.g., "hi", "en", "ta", "te"
+    name = Column(String(100), nullable=False)               # e.g., "Hindi"
+    native_name = Column(String(100), nullable=False)        # e.g., "हिन्दी"
+    region = Column(String(150), nullable=True)              # e.g., "Pan-India / North & Central"
+    is_app_enabled = Column(Boolean, default=True, nullable=False)   # UI translation availability
+    is_chat_enabled = Column(Boolean, default=True, nullable=False)  # AI persona / LLM availability
+    is_beta = Column(Boolean, default=False, nullable=False)         # Beta badge in picker
+    display_order = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+
 

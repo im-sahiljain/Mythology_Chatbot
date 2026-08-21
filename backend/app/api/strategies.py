@@ -35,7 +35,8 @@ async def full_chat_endpoint(
             chat_history=request.chat_history,
             force_resolve=request.force_resolve or False,
             session_id=request.session_id,
-            provider=request.provider
+            provider=request.provider,
+            language=request.language or "en"
         )
         latency_ms = (time.time() - start_time) * 1000
 
@@ -51,7 +52,8 @@ async def full_chat_endpoint(
             prompt_text=request.message,
             completion_text=response_data.get("reply", ""),
             prompt_tokens=response_data.get("prompt_tokens"),
-            completion_tokens=response_data.get("completion_tokens")
+            completion_tokens=response_data.get("completion_tokens"),
+            language=request.language or "en"
         )
 
         auto_save_chat_turn(
@@ -80,7 +82,8 @@ async def full_chat_endpoint(
             status_code=500,
             user_id=auth.user_id,
             guest_id=auth.guest_id,
-            prompt_text=request.message
+            prompt_text=request.message,
+            language=request.language or "en"
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
