@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, case
 
 from app.db.session import get_db
 from app.core.security import require_admin, AuthContext
@@ -13,7 +13,8 @@ from app.models.db_models import (
     ChatMessageModel,
     ApiTelemetryLog,
     GuestUsageTracker,
-    EpicScenarioEmbeddingModel
+    EpicScenarioEmbeddingModel,
+    SupportedLanguageModel
 )
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -127,6 +128,172 @@ def get_cost_analytics(
     return {
         "timeframe_days": days,
         "providers": providers
+    }
+
+@router.get("/language-analytics", summary="Per-Language Performance & Usage Analytics")
+def get_language_analytics(
+    days: int = Query(30, ge=1, le=365),
+    admin: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Returns comprehensive metrics for each language:
+    - Total queries and traffic share
+    - Tokens consumed (prompt vs completion) and estimated LLM spend ($USD)
+    - Average response latency (ms)
+    - Error rate / HTTP 200 vs 500 counts
+    - Top Vedic persona affinity per language
+    - User base preference distributions (app language and chat language)
+    """
+    since_date = datetime.utcnow() - timedelta(days=days)
+    
+    # 1. Fetch language registry metadata for friendly names & native script
+    lang_map = {l.code: l for l in db.query(SupportedLanguageModel).all()}
+
+    # 2. Query telemetry aggregated by language
+    telemetry_stats = db.query(
+        ApiTelemetryLog.language,
+        func.count(ApiTelemetryLog.id).label("query_count"),
+        func.sum(ApiTelemetryLog.prompt_tokens).label("prompt_tokens"),
+        func.sum(ApiTelemetryLog.completion_tokens).label("completion_tokens"),
+        func.sum(ApiTelemetryLog.prompt_tokens + ApiTelemetryLog.completion_tokens).label("total_tokens"),
+        func.sum(ApiTelemetryLog.estimated_cost_usd).label("cost_usd"),
+        func.avg(ApiTelemetryLog.latency_ms).label("avg_latency"),
+        func.count(func.distinct(ApiTelemetryLog.user_id)).label("unique_registered_users"),
+        func.count(func.distinct(ApiTelemetryLog.guest_id)).label("unique_guests"),
+        func.sum(case((ApiTelemetryLog.status_code == 200, 1), else_=0)).label("success_count"),
+        func.sum(case((ApiTelemetryLog.status_code != 200, 1), else_=0)).label("error_count")
+    ).filter(
+        ApiTelemetryLog.timestamp >= since_date
+    ).group_by(
+        ApiTelemetryLog.language
+    ).order_by(desc("query_count")).all()
+
+    total_queries = sum([s.query_count for s in telemetry_stats]) or 1
+    total_spend = sum([float(s.cost_usd or 0.0) for s in telemetry_stats]) or 0.0
+    total_tokens = sum([int(s.total_tokens or 0) for s in telemetry_stats]) or 0
+
+    # 3. Persona affinity per language
+    persona_logs = db.query(
+        ApiTelemetryLog.language,
+        ApiTelemetryLog.characters_tagged_json
+    ).filter(
+        ApiTelemetryLog.timestamp >= since_date,
+        ApiTelemetryLog.characters_tagged_json != None
+    ).all()
+
+    lang_characters_map = {}
+    for l_code, chars in persona_logs:
+        if not chars:
+            continue
+        c_list = chars if isinstance(chars, list) else []
+        code_key = (l_code or "en").lower().strip()
+        if code_key not in lang_characters_map:
+            lang_characters_map[code_key] = {}
+        for c in c_list:
+            if c:
+                lang_characters_map[code_key][c] = lang_characters_map[code_key].get(c, 0) + 1
+
+    language_performance = []
+    for s in telemetry_stats:
+        code = (s.language or "en").lower().strip()
+        meta = lang_map.get(code)
+        
+        # Get top 3 characters consulted in this language
+        top_chars_dict = lang_characters_map.get(code, {})
+        sorted_chars = sorted(top_chars_dict.items(), key=lambda x: x[1], reverse=True)[:3]
+        top_personas = [{"character": char, "count": cnt} for char, cnt in sorted_chars]
+
+        language_performance.append({
+            "code": code,
+            "name": meta.name if meta else code.upper(),
+            "native_name": meta.native_name if meta else code.upper(),
+            "region": meta.region if meta else "",
+            "is_app_enabled": meta.is_app_enabled if meta else True,
+            "is_chat_enabled": meta.is_chat_enabled if meta else True,
+            "is_beta": meta.is_beta if meta else False,
+            "query_count": s.query_count,
+            "traffic_share_percentage": round((s.query_count / total_queries) * 100, 1),
+            "prompt_tokens": int(s.prompt_tokens or 0),
+            "completion_tokens": int(s.completion_tokens or 0),
+            "total_tokens": int(s.total_tokens or 0),
+            "cost_usd": round(float(s.cost_usd or 0.0), 5),
+            "avg_latency_ms": round(float(s.avg_latency or 0.0), 2),
+            "unique_registered_users": int(s.unique_registered_users or 0),
+            "unique_guests": int(s.unique_guests or 0),
+            "success_count": int(s.success_count or 0),
+            "error_count": int(s.error_count or 0),
+            "top_personas": top_personas
+        })
+
+    # If no telemetry yet, populate from registered languages with zero stats
+    if not language_performance:
+        for code, meta in lang_map.items():
+            language_performance.append({
+                "code": code,
+                "name": meta.name,
+                "native_name": meta.native_name,
+                "region": meta.region or "",
+                "is_app_enabled": meta.is_app_enabled,
+                "is_chat_enabled": meta.is_chat_enabled,
+                "is_beta": meta.is_beta,
+                "query_count": 0,
+                "traffic_share_percentage": 0.0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd": 0.0,
+                "avg_latency_ms": 0.0,
+                "unique_registered_users": 0,
+                "unique_guests": 0,
+                "success_count": 0,
+                "error_count": 0,
+                "top_personas": []
+            })
+
+    # 4. User profile language preferences
+    user_app_prefs = db.query(
+        Profile.preferred_app_language,
+        func.count(Profile.id).label("count")
+    ).group_by(Profile.preferred_app_language).order_by(desc("count")).all()
+
+    user_chat_prefs = db.query(
+        Profile.preferred_chat_language,
+        func.count(Profile.id).label("count")
+    ).group_by(Profile.preferred_chat_language).order_by(desc("count")).all()
+
+    total_profile_users = db.query(func.count(Profile.id)).scalar() or 1
+
+    app_prefs_data = []
+    for p in user_app_prefs:
+        c = (p.preferred_app_language or "en").lower().strip()
+        meta = lang_map.get(c)
+        app_prefs_data.append({
+            "code": c,
+            "label": f"{meta.name} ({meta.native_name})" if meta else c.upper(),
+            "count": p.count,
+            "percentage": round((p.count / total_profile_users) * 100, 1)
+        })
+
+    chat_prefs_data = []
+    for p in user_chat_prefs:
+        c = (p.preferred_chat_language or "auto").lower().strip()
+        label = "Auto (Same as App)" if c == "auto" else (f"{lang_map[c].name} ({lang_map[c].native_name})" if c in lang_map else c.upper())
+        chat_prefs_data.append({
+            "code": c,
+            "label": label,
+            "count": p.count,
+            "percentage": round((p.count / total_profile_users) * 100, 1)
+        })
+
+    return {
+        "timeframe_days": days,
+        "total_queries": total_queries if telemetry_stats else 0,
+        "total_tokens": total_tokens,
+        "total_cost_usd": round(total_spend, 5),
+        "language_performance": language_performance,
+        "user_app_preferences": app_prefs_data,
+        "user_chat_preferences": chat_prefs_data
     }
 
 @router.get("/latency-analytics", summary="API Latency & Health Percentiles")

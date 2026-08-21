@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SourceCitation } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { FadeSlide, Pressable } from './AnimatedComponents';
@@ -51,35 +52,32 @@ function parseVerseCitations(rawCitations?: any[]): { id?: string; text: string 
         }
         continue;
       } catch {
-        const idMatch = str.match(/verse_id['"]?\s*:\s*['"]([^'"]+)['"]/);
-        const textMatch = str.match(/english['"]?\s*:\s*['"]([^'"]+)['"]/);
-        if (idMatch || textMatch) {
-          results.push({
-            id: idMatch ? idMatch[1].replace(/_/g, ' ') : undefined,
-            text: textMatch ? textMatch[1] : str,
-          });
-          continue;
-        }
+        // Fallback to plain string extraction if malformed
       }
     }
 
-    // Handle "MBH BP CH025 V028: Text" format
-    if (str.includes(': "') || str.includes(':"')) {
-      const splitIdx = str.indexOf(':');
-      const idPart = str.slice(0, splitIdx).trim();
-      const textPart = str.slice(splitIdx + 1).trim().replace(/^["']|["']$/g, '');
-      results.push({ id: idPart, text: textPart });
-      continue;
+    // Standard raw text format: "verse_1_4: text" or "text"
+    const colonIdx = str.indexOf(':');
+    if (colonIdx > 0 && colonIdx < 30) {
+      results.push({
+        id: str.substring(0, colonIdx).trim().replace(/_/g, ' '),
+        text: str.substring(colonIdx + 1).trim(),
+      });
+    } else {
+      results.push({ text: str });
     }
-
-    results.push({ text: str.replace(/^["']|["']$/g, '') });
   }
 
   return results;
 }
 
-export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources }) => {
+interface SourceCardProps {
+  sources: SourceCitation[];
+}
+
+export const SourceCard: React.FC<SourceCardProps> = ({ sources }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -103,9 +101,9 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
   };
 
   const activeSource = sources[activeIndex] || sources[0];
-  const isMbh = activeSource.epic?.toLowerCase().includes('mahabharata');
-  const activeColor = isMbh ? theme.teal : theme.accent;
-  const activeSubtle = isMbh ? theme.tealSubtle : theme.accentSubtle;
+  const isMahabharata = activeSource.epic?.toLowerCase().includes('mahabharata');
+  const activeColor = isMahabharata ? theme.teal : theme.accent;
+  const activeSubtle = isMahabharata ? theme.tealSubtle : theme.accentSubtle;
 
   // Split story narrative and core teaching if present
   const fullText = activeSource.summary_snippet || '';
@@ -120,14 +118,22 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
 
   const parsedVerses = parseVerseCitations(activeSource.verse_citations);
 
+  const getEpicName = (epicStr?: string) => {
+    if (!epicStr) return t('scripture.allEpics', 'Epic');
+    const lower = epicStr.toLowerCase();
+    if (lower.includes('mahabharata')) return t('epics.mahabharata', 'Mahabharata');
+    if (lower.includes('ramayana')) return t('epics.ramayana', 'Ramayana');
+    return epicStr;
+  };
+
   return (
     <View style={s.wrap}>
       <View style={s.headerRow}>
         <Text style={[s.label, { color: theme.textTertiary, fontFamily: label }]}>
-          SCRIPTURE SOURCES ({sources.length})
+          {t('scripture.sources', 'SCRIPTURE SOURCES')} ({sources.length})
         </Text>
         <Text style={[s.hint, { color: theme.textTertiary, fontFamily: body }]}>
-          Tap card to read full story ↗
+          {t('scripture.tapToRead', 'Tap card to read full story ↗')}
         </Text>
       </View>
 
@@ -146,7 +152,7 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
                   <View style={s.badges}>
                     <View style={[s.badge, { backgroundColor: subtle }]}>
                       <Text style={[s.badgeText, { color, fontFamily: label }]}>
-                        {src.epic || 'Epic'}
+                        {getEpicName(src.epic)}
                       </Text>
                     </View>
                     {src.character && (
@@ -165,7 +171,7 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
                   )}
                   <View style={s.cardFooter}>
                     <Text style={[s.readMore, { color, fontFamily: label }]}>
-                      Read Complete Scripture Card →
+                      {t('scripture.readComplete', 'Read Complete Scripture Card →')}
                     </Text>
                   </View>
                 </View>
@@ -198,7 +204,7 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
               <View style={s.modalBadges}>
                 <View style={[s.badge, { backgroundColor: activeSubtle }]}>
                   <Text style={[s.badgeText, { color: activeColor, fontFamily: label }]}>
-                    {activeSource.epic || 'Epic'}
+                    {getEpicName(activeSource.epic)}
                   </Text>
                 </View>
                 {activeSource.character && (
@@ -233,7 +239,7 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
               {parsedVerses.length > 0 && (
                 <View style={[s.citationBox, { backgroundColor: theme.bgTertiary, borderColor: theme.surfaceBorder }]}>
                   <Text style={[s.citationLabel, { color: activeColor, fontFamily: label }]}>
-                    📜 SCRIPTURE CHAPTER & VERSE
+                    {t('scripture.chapterVerse', '📜 SCRIPTURE CHAPTER & VERSE')}
                   </Text>
                   {parsedVerses.map((v, vIdx) => (
                     <View key={vIdx} style={s.verseItem}>
@@ -257,7 +263,7 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
               {/* Full Untruncated Story Narrative */}
               <View style={s.bodySection}>
                 <Text style={[s.sectionHeader, { color: theme.textTertiary, fontFamily: label }]}>
-                  📖 FULL NARRATIVE STORY
+                  {t('scripture.fullStory', '📖 FULL NARRATIVE STORY')}
                 </Text>
                 <Text style={[s.modalFullText, { color: theme.text, fontFamily: body }]}>
                   {narrativeText}
@@ -268,7 +274,7 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
               {principleText ? (
                 <View style={[s.principleBox, { backgroundColor: activeSubtle, borderColor: activeColor }]}>
                   <Text style={[s.principleLabel, { color: activeColor, fontFamily: label }]}>
-                    ✨ CORE TEACHING & PRINCIPLE:
+                    {t('scripture.coreTeaching', '✨ CORE TEACHING & PRINCIPLE:')}
                   </Text>
                   <Text style={[s.principleText, { color: theme.text, fontFamily: body }]}>
                     {principleText}
@@ -288,7 +294,9 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
                     { backgroundColor: theme.bgTertiary, opacity: activeIndex === 0 ? 0.35 : 1 },
                   ]}
                 >
-                  <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>← Previous</Text>
+                  <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>
+                    {t('common.previous', '← Previous')}
+                  </Text>
                 </TouchableOpacity>
 
                 {/* Dots indicator */}
@@ -316,7 +324,9 @@ export const SourceCard: React.FC<{ sources: SourceCitation[] }> = ({ sources })
                     { backgroundColor: theme.bgTertiary, opacity: activeIndex === sources.length - 1 ? 0.35 : 1 },
                   ]}
                 >
-                  <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>Next →</Text>
+                  <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>
+                    {t('common.next', 'Next →')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}

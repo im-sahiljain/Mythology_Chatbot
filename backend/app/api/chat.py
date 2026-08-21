@@ -42,7 +42,8 @@ async def chat_endpoint(
         response_data = rag_service.query(
             message=request.message,
             mode=request.mode or "guidance",
-            provider=request.provider
+            provider=request.provider,
+            language=request.language or "en"
         )
         latency_ms = (time.time() - start_time) * 1000
 
@@ -59,7 +60,8 @@ async def chat_endpoint(
             prompt_text=request.message,
             completion_text=response_data.get("reply", ""),
             prompt_tokens=response_data.get("prompt_tokens"),
-            completion_tokens=response_data.get("completion_tokens")
+            completion_tokens=response_data.get("completion_tokens"),
+            language=request.language or "en"
         )
 
         auto_save_chat_turn(
@@ -86,7 +88,8 @@ async def chat_endpoint(
             status_code=500,
             user_id=auth.user_id,
             guest_id=auth.guest_id,
-            prompt_text=request.message
+            prompt_text=request.message,
+            language=request.language or "en"
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -117,7 +120,8 @@ async def chat_character_endpoint(
             chat_history=request.chat_history or [],
             force_resolve=request.force_resolve or False,
             session_id=request.session_id,
-            provider=request.provider
+            provider=request.provider,
+            language=request.language or "en"
         )
         latency_ms = (time.time() - start_time) * 1000
 
@@ -135,7 +139,8 @@ async def chat_character_endpoint(
             completion_text=response_data.get("reply", ""),
             characters_tagged=[request.character] if request.character else [],
             prompt_tokens=response_data.get("prompt_tokens"),
-            completion_tokens=response_data.get("completion_tokens")
+            completion_tokens=response_data.get("completion_tokens"),
+            language=request.language or "en"
         )
 
         auto_save_chat_turn(
@@ -163,7 +168,8 @@ async def chat_character_endpoint(
             status_code=500,
             user_id=auth.user_id,
             guest_id=auth.guest_id,
-            prompt_text=request.message
+            prompt_text=request.message,
+            language=request.language or "en"
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -175,7 +181,7 @@ async def chat_roundtable_endpoint(
     request: RoundtableChatRequest,
     auth: AuthContext = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
-) -> RoundtableChatResponse:
+):
     """
     User-Controlled Multi-Legend Council Endpoint (POST /chat-roundtable).
     Collaborative dialogue across multiple invited legends with 1st-person personas,
@@ -196,7 +202,8 @@ async def chat_roundtable_endpoint(
             chat_history=request.chat_history or [],
             force_resolve=request.force_resolve or False,
             session_id=request.session_id,
-            provider=request.provider
+            provider=request.provider,
+            language=request.language or "en"
         )
         latency_ms = (time.time() - start_time) * 1000
 
@@ -219,7 +226,8 @@ async def chat_roundtable_endpoint(
             completion_text=combined_replies,
             characters_tagged=spoken_chars or request.council_characters,
             prompt_tokens=response_data.get("prompt_tokens"),
-            completion_tokens=response_data.get("completion_tokens")
+            completion_tokens=response_data.get("completion_tokens"),
+            language=request.language or "en"
         )
 
         auto_save_chat_turn(
@@ -248,7 +256,8 @@ async def chat_roundtable_endpoint(
             status_code=500,
             user_id=auth.user_id,
             guest_id=auth.guest_id,
-            prompt_text=request.message
+            prompt_text=request.message,
+            language=request.language or "en"
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -10,6 +10,7 @@ class FullChatRequest(BaseModel):
     session_id: Optional[str] = Field(default=None, description="Optional unique session ID for tracking")
     force_resolve: Optional[bool] = Field(default=False, description="Manual override to trigger final epic counsel immediately")
     provider: Optional[str] = Field(default=None, description="LLM provider: 'gemini', 'ollama', or 'openai'")
+    language: Optional[str] = Field(default="en", description="Target response language ISO code")
 
 
 class FullChatResponse(BaseModel):

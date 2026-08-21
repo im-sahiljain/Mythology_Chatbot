@@ -5,6 +5,7 @@ class GeneralChatRequest(BaseModel):
     message: str = Field(..., description="User's dilemma, query, or prompt text", json_schema_extra={"example": "I feel conflicted because my company favors the founder's son over my most hardworking junior. What should I do?"})
     mode: Optional[str] = Field(default="guidance", description="Mode: 'guidance' (Scenario Match) or 'knowledge' (Raw Verses)")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider override: 'ollama', 'openai', or 'gemini'")
+    language: Optional[str] = Field(default="en", description="Target response language ISO code (e.g., 'en', 'hi', 'sa', 'ta', 'te', 'bn')")
 
 class CharacterChatRequest(BaseModel):
     message: str = Field(..., description="User's dilemma, query, or prompt text", json_schema_extra={"example": "I feel conflicted because my company favors the founder's son over my most hardworking junior. What should I do?"})
@@ -14,6 +15,7 @@ class CharacterChatRequest(BaseModel):
     force_resolve: Optional[bool] = Field(default=False, description="Manual override to trigger final counsel immediately")
     mode: Optional[str] = Field(default="guidance", description="Mode: 'guidance' (Scenario Match) or 'knowledge' (Raw Verses)")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider override: 'ollama', 'openai', or 'gemini'")
+    language: Optional[str] = Field(default="en", description="Target response language ISO code (e.g., 'en', 'hi', 'sa', 'ta', 'te', 'bn')")
 
 class SourceCitation(BaseModel):
     scenario_title: Optional[str] = None
@@ -27,6 +29,7 @@ class ConversationalChatRequest(BaseModel):
     chat_history: List[Dict[str, str]] = Field(default=[], description="Full conversation history: [{'role': 'user'|'assistant', 'content': '...'}]")
     character: Optional[str] = Field(default="Epic Counselor", description="Persona to chat with (e.g. 'Epic Counselor', 'Krishna', 'Sita', 'Vibhishana')")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider override")
+    language: Optional[str] = Field(default="en", description="Target response language ISO code")
 
 class ConversationalChatResponse(BaseModel):
     reply: str
@@ -40,6 +43,7 @@ class ChatRequest(BaseModel):
     mode: Optional[str] = Field(default="guidance", description="Mode: 'guidance' or 'knowledge'")
     character: Optional[str] = Field(default=None, description="Optional character persona for roleplay")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider override")
+    language: Optional[str] = Field(default="en", description="Target response language ISO code")
 
 class ChatResponse(BaseModel):
     reply: str
@@ -77,6 +81,7 @@ class RoundtableChatRequest(BaseModel):
     force_resolve: Optional[bool] = Field(default=False, description="Manual override to force immediate counsel resolution")
     session_id: Optional[str] = Field(default=None, description="Session ID")
     provider: Optional[str] = Field(default=None, description="Optional LLM provider override")
+    language: Optional[str] = Field(default="en", description="Target response language ISO code")
 
 class RoundtableChatResponse(BaseModel):
     replies: List[RoundtableSpeakerReply]

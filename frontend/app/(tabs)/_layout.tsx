@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Tabs } from "expo-router";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, StyleSheet, Platform, PanResponder } from "react-native";
 import { useTheme } from "../../src/context/ThemeContext";
 import { VedicDrawer } from "../../src/components/VedicDrawer";
 
@@ -17,8 +17,30 @@ export default function TabLayout() {
   const { theme } = useTheme();
   const [drawerVisible, setDrawerVisible] = useState(false);
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt, gestureState) => {
+        // Capture swipe starting from left edge on mobile
+        return !drawerVisible && evt.nativeEvent.pageX < 45;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return (
+          !drawerVisible &&
+          evt.nativeEvent.pageX < 60 &&
+          gestureState.dx > 15 &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
+        );
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 35) {
+          setDrawerVisible(true);
+        }
+      },
+    })
+  ).current;
+
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }} {...panResponder.panHandlers}>
       <VedicDrawer
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}

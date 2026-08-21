@@ -37,6 +37,45 @@ def _parse_verses(raw_verses) -> List[str]:
         return formatted
     return [str(parsed)]
 
+LANGUAGE_MAP: Dict[str, str] = {
+    "en": "English",
+    "hi": "Hindi (हिन्दी)",
+    "sa": "Sanskrit (संस्कृतम्)",
+    "ta": "Tamil (தமிழ்)",
+    "te": "Telugu (తెలుగు)",
+    "bn": "Bengali (বাংলা)",
+    "mr": "Marathi (मराठी)",
+    "gu": "Gujarati (ગુજરાતી)",
+    "kn": "Kannada (ಕನ್ನಡ)",
+    "ml": "Malayalam (മലയാളം)",
+    "pa": "Punjabi (ਪੰਜਾਬੀ)",
+    "or": "Odia (ଓଡ଼ିଆ)",
+    "as": "Assamese (অসমীয়া)",
+    "ur": "Urdu (اردو)",
+    "mai": "Maithili (मैथिली)",
+    "ks": "Kashmiri (कॉशुर)",
+    "ne": "Nepali (नेपाली)",
+    "sd": "Sindhi (سنڌي / सिंधी)",
+    "kok": "Konkani (कोंकणी)",
+    "doi": "Dogri (डोगरी)",
+    "mni": "Manipuri (মৈতৈলোন্)",
+    "brx": "Bodo (बड़ो)",
+    "sat": "Santali (संताली)",
+}
+
+def get_language_directive(language_code: Optional[str] = "en") -> str:
+    code = (language_code or "en").lower().strip()
+    lang_name = LANGUAGE_MAP.get(code, "English")
+    if code == "en":
+        return "\nLANGUAGE: Respond in clear, compassionate, everyday English."
+    
+    return f"""
+LANGUAGE & SCRIPT INSTRUCTION (CRITICAL):
+- You MUST respond ENTIRELY in {lang_name} using authentic native script and vocabulary.
+- If the seeker communicates in Roman script (e.g. Hinglish / Tanglish), understand their dilemma completely and respond in fluent {lang_name} native script.
+- Maintain your divine persona, profound mythological wisdom, and warm empathy while speaking fluently in {lang_name}.
+"""
+
 class RAGService:
     """Core Dual RAG Service handling General Guidance, Knowledge Mode, and Character-Strict Guidance."""
 
@@ -58,13 +97,14 @@ class RAGService:
         message: str,
         mode: str = "guidance",
         character: Optional[str] = None,
-        provider: str = None
+        provider: str = None,
+        language: str = "en"
     ) -> Dict[str, Any]:
         """General RAG Query (POST /chat) - Searches across all epic scenarios."""
         if mode == "guidance":
-            return self._handle_guidance_query(message, character, provider, mode=mode, strict_character=False)
+            return self._handle_guidance_query(message, character, provider, mode=mode, strict_character=False, language=language)
         else:
-            return self._handle_knowledge_query(message, character or "Krishna", provider)
+            return self._handle_knowledge_query(message, character or "Krishna", provider, language=language)
 
     def query_by_character(
         self,
@@ -72,10 +112,11 @@ class RAGService:
         character: str = "Krishna",
         mode: str = "guidance",
         provider: str = None,
-        chat_history: Optional[List[Dict[str, Any]]] = None
+        chat_history: Optional[List[Dict[str, Any]]] = None,
+        language: str = "en"
     ) -> Dict[str, Any]:
         """Character-Strict RAG Query (POST /chat-character) - Filters scenarios strictly from character's own story."""
-        return self._handle_guidance_query(message, character, provider, mode=mode, strict_character=True, chat_history=chat_history)
+        return self._handle_guidance_query(message, character, provider, mode=mode, strict_character=True, chat_history=chat_history, language=language)
 
     def _get_query_embedding(self, text_to_embed: str) -> Optional[List[float]]:
         """Generates 768-dim query embedding using Gemini."""
@@ -181,7 +222,8 @@ class RAGService:
         provider: str = None,
         mode: str = "guidance",
         strict_character: bool = False,
-        chat_history: Optional[List[Dict[str, Any]]] = None
+        chat_history: Optional[List[Dict[str, Any]]] = None,
+        language: str = "en"
     ) -> Dict[str, Any]:
         sources: List[SourceCitation] = []
         context_str = ""
@@ -245,6 +287,8 @@ class RAGService:
             for idx, s in enumerate(sources):
                 context_str += f"\n--- SCENARIO {idx+1} ---\nTitle: {s.scenario_title}\nEpic: {s.epic}\nSummary: {s.summary_snippet}\n"
 
+        lang_directive = get_language_directive(language)
+
         # Build System Prompt
         if strict_character:
             active_character = character or "Krishna"
@@ -258,6 +302,7 @@ RULES:
 3. Offer practical, ethical guidance to the user's dilemma based on your life principles.
 4. Maintain conversational continuity with the user, referencing prior context when appropriate.
 5. Keep your response crisp, impactful, and under 170 words.
+{lang_directive}
 """
         else:
             active_character = "Universal Epic Scholar"
@@ -268,10 +313,8 @@ Your role is to offer warm, wise, and practical help for the user's dilemma by s
 
 RULES:
 
-1. LANGUAGE & VOCABULARY (STRICT):
-   - Use very simple, 6th-grade everyday English.
-   - Do NOT use heavy, academic, or formal words (e.g., use "huge" instead of "insurmountable", "deep sadness" instead of "inconsolable grief", "ability" instead of "inherent resourcefulness").
-   - Keep sentences short, clear, and easy to read.
+1. LANGUAGE & VOCABULARY:
+   - Keep sentences short, clear, and easy to understand with deep empathy.
 
 2. STORYTELLING & EMPATHY:
    - First, reassure the user with warmth that they are not alone and others have faced similar hard times before.
@@ -280,7 +323,7 @@ RULES:
 
 3. SANSKRIT TERMS & PERSPECTIVE:
    - Reference epic characters in the 3rd person (e.g., "In the Ramayana, Rama faced...").
-   - If you mention terms like "Dharma", explain it in 2-3 simple words (e.g., "Dharma (your duty to protect yourself)").
+   - If you mention terms like "Dharma", explain it in 2-3 simple words.
 
 4. LESSON & ACTION:
    - End with a clear, simple lesson learned from the story.
@@ -292,6 +335,7 @@ RULES:
      a) NEVER prescribe medicines, diagnose health conditions, or suggest changing/stopping any doctor-prescribed treatment, medicine, or routine.
      b) ALWAYS explicitly advise the user to consult a qualified medical doctor or healthcare professional for all medical and prescription decisions.
      c) You may ONLY offer emotional resilience, peace of mind, patience, and courage from the epics to support their well-being alongside professional care.
+{lang_directive}
 """
 
         # Format conversation history if available
@@ -363,12 +407,15 @@ Provide wise, actionable guidance to help the user resolve their dilemma.
         self,
         message: str,
         character: str,
-        provider: str
+        provider: str,
+        language: str = "en"
     ) -> Dict[str, Any]:
-        system_prompt = """
+        lang_directive = get_language_directive(language)
+        system_prompt = f"""
 You are an expert scholar of Ancient Indian Scriptures (Vedas, Upanishads, Bhagavad Gita, Ramayana, Mahabharata).
 Answer the user's question clearly, factually, and accurately.
 Keep your answer extremely crisp, concise, and under a strict maximum limit of 150 words.
+{lang_directive}
 """
         prompt = f"User Question: {message}\nProvide a factual, scholarly answer based on ancient scriptures. Keep it under 150 words."
         llm_res = LLMFactory.generate_response(prompt, system_prompt, provider)
@@ -382,3 +429,4 @@ Keep your answer extremely crisp, concise, and under a strict maximum limit of 1
             "prompt_tokens": llm_res.get("prompt_tokens", 0),
             "completion_tokens": llm_res.get("completion_tokens", 0)
         }
+

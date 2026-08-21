@@ -1,9 +1,18 @@
-import { Platform } from "react-native";
+import { useEffect } from "react";
+import { Platform, Alert } from "react-native";
 import { Stack, useNavigationContainerRef } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as Updates from "expo-updates";
+import * as SplashScreen from "expo-splash-screen";
 import { ThemeProvider } from "../src/context/ThemeContext";
+import { LanguageProvider } from "../src/context/LanguageContext";
+import { FirstLaunchLanguageModal } from "../src/components/FirstLaunchLanguageModal";
+import "../src/i18n";
 import { useFonts, EBGaramond_700Bold, EBGaramond_600SemiBold } from '@expo-google-fonts/eb-garamond';
 import { HankenGrotesk_400Regular, HankenGrotesk_600SemiBold, HankenGrotesk_700Bold } from '@expo-google-fonts/hanken-grotesk';
+
+SplashScreen.preventAutoHideAsync();
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const linkId = 'google-fonts-stitch';
@@ -36,7 +45,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 function RootLayout() {
   const navigationRef = useNavigationContainerRef();
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     EBGaramond_700Bold,
     EBGaramond_600SemiBold,
     HankenGrotesk_400Regular,
@@ -44,15 +53,63 @@ function RootLayout() {
     HankenGrotesk_700Bold,
   });
 
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (__DEV__ || Platform.OS === "web") return;
+
+    (async () => {
+      try {
+        const result = await Updates.checkForUpdateAsync();
+        if (result.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          Alert.alert(
+            "✨ Update Ready",
+            "A new update has been downloaded. Restart the app now to apply changes?",
+            [
+              { text: "Later", style: "cancel" },
+              {
+                text: "Restart Now",
+                onPress: async () => {
+                  try {
+                    await Updates.reloadAsync();
+                  } catch (e) {
+                    // Fallback if reloadAsync fails
+                  }
+                },
+              },
+            ]
+          );
+        }
+      } catch {
+        // Ignore network / update check failures
+      }
+    })();
+  }, []);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="register" />
-        </Stack>
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="settings" />
+              <Stack.Screen name="login" />
+              <Stack.Screen name="register" />
+            </Stack>
+            <FirstLaunchLanguageModal />
+          </LanguageProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

@@ -7,12 +7,14 @@ import {
   ScrollView,
   Platform,
   TouchableOpacity,
-  Modal,
-  KeyboardAvoidingView,
   useWindowDimensions,
   ActivityIndicator,
+  Keyboard,
+  Animated,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import {
   apiService,
   SourceCitation,
@@ -59,44 +61,77 @@ import {
   ChatSession,
 } from "../../src/services/chatStorage";
 
-export const TOPIC_MATRIX = [
-  {
-    category: "Workplace & Ethics",
-    icon: "⚖️",
-    description: "Corporate dilemmas, favoritism, and professional Dharma.",
-    prompt:
-      "I feel conflicted because my company favors the founder’s son over my most hardworking junior. What should I do?",
-  },
-  {
-    category: "Family & Loyalties",
-    icon: "🏠",
-    description:
-      "Parental expectations, sibling rivalry, and personal boundaries.",
-    prompt:
-      "My parents want me to take over our family business, but my true calling is in social work. How do I navigate this?",
-  },
-  {
-    category: "Leadership & Vision",
-    icon: "👑",
-    description:
-      "Difficult decisions, team morale, and organizational conflict.",
-    prompt:
-      "I have to lay off 20% of my team to save the company from bankruptcy. How do I balance compassion with survival?",
-  },
-  {
-    category: "Personal Truth & Integrity",
-    icon: "🪷",
-    description: "Inner struggles, standing up for truth, and moral courage.",
-    prompt:
-      "I discovered financial irregularities committed by my mentor who helped build my career. Should I report it?",
-  },
-];
-
 export default function FullChatScreen() {
+  const insets = useSafeAreaInsets();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { markInteractive } = useObserve();
+  const { t } = useTranslation();
+  const isWeb = Platform.OS === "web";
+  const isNarrow = screenWidth < 600;
+
+  const safeTopPadding = Math.max(insets.top, Platform.OS === "ios" ? 44 : 16) + 68;
+  const safeBottomPadding = Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 8 : 4);
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const keyboardAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const vv = window.visualViewport;
+      if (vv) {
+        const update = () => {
+          const occluded = Math.max(
+            0,
+            window.innerHeight - vv.height - vv.offsetTop,
+          );
+          setKeyboardHeight(occluded);
+          Animated.timing(keyboardAnim, {
+            toValue: occluded,
+            duration: 150,
+            useNativeDriver: false,
+          }).start();
+        };
+
+        vv.addEventListener("resize", update);
+        vv.addEventListener("scroll", update);
+        update();
+        return () => {
+          vv.removeEventListener("resize", update);
+          vv.removeEventListener("scroll", update);
+        };
+      }
+    }
+
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const targetHeight = e.endCoordinates.height;
+      setKeyboardHeight(targetHeight);
+      Animated.timing(keyboardAnim, {
+        toValue: targetHeight,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      setKeyboardHeight(0);
+      Animated.timing(keyboardAnim, {
+        toValue: 0,
+        duration: e?.duration || 200,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     markInteractive();
@@ -112,7 +147,6 @@ export default function FullChatScreen() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [showMatrix, setShowMatrix] = useState(true);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
   const [isInputExpanded, setIsInputExpanded] = useState(false);
   const [inputHeight, setInputHeight] = useState(36);
@@ -170,8 +204,19 @@ export default function FullChatScreen() {
   };
 
   const scrollRef = useRef<ScrollView>(null);
-  const { width: screenWidth } = useWindowDimensions();
-  const isNarrow = screenWidth < 600;
+  const isEmptyState = !isSessionLoading && history.length === 0;
+  const inputReserve = 130 + insets.bottom;
+
+  const heroTranslateY = keyboardAnim.interpolate({
+    inputRange: [0, 300],
+    outputRange: [0, -130],
+    extrapolate: "clamp",
+  });
+
+  const animatedBottom = keyboardAnim.interpolate({
+    inputRange: [0, 50, 600],
+    outputRange: [0, 64, 614],
+  });
 
   useEffect(() => {
     const syncState = async () => {
@@ -186,7 +231,6 @@ export default function FullChatScreen() {
         setHistory([]);
         setCurrentStage(null);
         setInput("");
-        setShowMatrix(true);
         return;
       }
 
@@ -196,7 +240,6 @@ export default function FullChatScreen() {
         setActiveSessionId(active.id);
         setHistory(active.history);
         setCurrentStage(active.stage || null);
-        setShowMatrix(false);
         setIsSessionLoading(false);
       } else {
         setHistory([]);
@@ -207,7 +250,6 @@ export default function FullChatScreen() {
             setCurrentSessionId(params.id as string);
             setActiveSessionId(params.id as string);
             setHistory(msgs);
-            setShowMatrix(false);
           }
         } finally {
           setIsSessionLoading(false);
@@ -225,7 +267,6 @@ export default function FullChatScreen() {
         setCurrentSessionId(target.id);
         setHistory(target.history);
         setCurrentStage(target.stage || null);
-        setShowMatrix(false);
         setIsSessionLoading(false);
       }
     });
@@ -240,7 +281,6 @@ export default function FullChatScreen() {
   ) => {
     setHistory(newHistory);
     setCurrentStage(newStage);
-    if (newHistory.length > 0) setShowMatrix(false);
 
     const activeId = overrideSessionId || currentSessionId;
     if (!activeId) return;
@@ -286,7 +326,6 @@ export default function FullChatScreen() {
       setCurrentSessionId(target.id);
       setHistory(target.history);
       setCurrentStage(target.stage);
-      setShowMatrix(target.history.length === 0);
       saveAllSessions(sessions, target.id);
       router.setParams({ id: target.id });
       setTimeout(() => {
@@ -307,7 +346,6 @@ export default function FullChatScreen() {
       setInputHeight(36);
       setIsInputExpanded(false);
     }
-    setShowMatrix(false);
 
     let activeId = currentSessionId;
     if (!activeId) {
@@ -396,10 +434,7 @@ export default function FullChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
       {/* Slide-out Navigation Drawer */}
       <VedicDrawer
         visible={drawerVisible}
@@ -421,237 +456,280 @@ export default function FullChatScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: safeTopPadding },
+          isEmptyState &&
+            !isWeb && {
+              flexGrow: 1,
+              justifyContent: "center",
+              paddingBottom: inputReserve,
+              minHeight: Math.max(320, screenHeight - 120),
+            },
+          isEmptyState &&
+            isWeb && {
+              paddingBottom: inputReserve,
+            },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
       >
         {isSessionLoading ? (
           <View style={styles.sessionLoaderWrapper}>
             <ActivityIndicator size="large" color={theme.primary} />
           </View>
-        ) : history.length === 0 ? (
+        ) : isEmptyState ? (
           <>
-            {/* Section 1: Hero Header */}
-            <View style={styles.heroSection}>
+            <Animated.View
+              style={[
+                styles.heroSection,
+                { transform: [{ translateY: heroTranslateY }] },
+              ]}
+            >
               <Text
                 style={[
                   styles.displayTitle,
-                  { color: theme.primary, fontFamily: serif },
+                  { color: theme.primary, fontFamily: serif, textAlign: "center" },
                 ]}
               >
-                Epic Scholar Hub
+                {t("fullChatScreen.title", "Epic Scholar Hub")}
               </Text>
               <Text
                 style={[
                   styles.displaySubtitle,
-                  { color: theme.secondary, fontFamily: body },
+                  { color: theme.secondary, fontFamily: body, textAlign: "center" },
                 ]}
               >
-                Traverse the dual pillars of ancient wisdom. Delve into profound
-                philosophical inquiries across the grand epics.
+                {t(
+                  "fullChatScreen.subtitle",
+                  "Traverse the dual pillars of ancient wisdom. Delve into profound philosophical inquiries across the grand epics.",
+                )}
               </Text>
-            </View>
+            </Animated.View>
 
-            {/* Section 2: Vedic Filigree Divider */}
-            <View style={styles.filigreeWrap}>
-              <View
-                style={[
-                  styles.filigreeLine,
-                  { backgroundColor: theme.outlineVariant },
-                ]}
-              />
-              <View
-                style={[styles.filigreeIconWrap, { backgroundColor: theme.bg }]}
-              >
-                <Text
-                  style={[styles.filigreeIcon, { color: theme.outlineVariant }]}
-                >
-                  ✦
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.filigreeLine,
-                  { backgroundColor: theme.outlineVariant },
-                ]}
-              />
-            </View>
+            {isWeb && (
+              <>
+                <View style={styles.filigreeWrap}>
+                  <View
+                    style={[
+                      styles.filigreeLine,
+                      { backgroundColor: theme.outlineVariant },
+                    ]}
+                  />
+                  <View
+                    style={[styles.filigreeIconWrap, { backgroundColor: theme.bg }]}
+                  >
+                    <Text
+                      style={[styles.filigreeIcon, { color: theme.outlineVariant }]}
+                    >
+                      ✦
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.filigreeLine,
+                      { backgroundColor: theme.outlineVariant },
+                    ]}
+                  />
+                </View>
 
-            {/* Section 5: Core Contrast Card (Principles vs Strategies) */}
-            <View
-              style={[
-                styles.contrastCard,
-                {
-                  backgroundColor: theme.surfaceContainerLowest,
-                  borderColor: theme.outlineVariant,
-                },
-              ]}
-            >
-              {/* Ornamental Gold Manuscript Corner Brackets */}
-              <View
-                style={[
-                  styles.cornerBracket,
-                  styles.cornerTL,
-                  { borderColor: theme.outlineVariant },
-                ]}
-              />
-              <View
-                style={[
-                  styles.cornerBracket,
-                  styles.cornerTR,
-                  { borderColor: theme.outlineVariant },
-                ]}
-              />
-              <View
-                style={[
-                  styles.cornerBracket,
-                  styles.cornerBL,
-                  { borderColor: theme.outlineVariant },
-                ]}
-              />
-              <View
-                style={[
-                  styles.cornerBracket,
-                  styles.cornerBR,
-                  { borderColor: theme.outlineVariant },
-                ]}
-              />
-
-              <View style={styles.contrastHeader}>
                 <View
                   style={[
-                    styles.contrastBadge,
-                    { backgroundColor: theme.secondaryContainer },
+                    styles.contrastCard,
+                    {
+                      backgroundColor: theme.surfaceContainerLowest,
+                      borderColor: theme.outlineVariant,
+                    },
                   ]}
                 >
-                  <Text
+                  <View
                     style={[
-                      styles.contrastBadgeText,
-                      { color: theme.onSecondaryContainer, fontFamily: label },
+                      styles.cornerBracket,
+                      styles.cornerTL,
+                      { borderColor: theme.outlineVariant },
                     ]}
-                  >
-                    CORE CONTRAST
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.contrastTitle,
-                    { color: theme.primary, fontFamily: serif },
-                  ]}
-                >
-                  Principles vs Strategies
-                </Text>
-              </View>
+                  />
+                  <View
+                    style={[
+                      styles.cornerBracket,
+                      styles.cornerTR,
+                      { borderColor: theme.outlineVariant },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.cornerBracket,
+                      styles.cornerBL,
+                      { borderColor: theme.outlineVariant },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.cornerBracket,
+                      styles.cornerBR,
+                      { borderColor: theme.outlineVariant },
+                    ]}
+                  />
 
-              <View
-                style={[
-                  styles.contrastColumns,
-                  isNarrow && { flexDirection: "column" },
-                ]}
-              >
-                {/* Ramayana Column */}
-                <View style={styles.epicColumn}>
-                  <View style={styles.epicColTitleRow}>
-                    <Text style={styles.epicColIcon}>📖</Text>
-                    <Text
+                  <View style={styles.contrastHeader}>
+                    <View
                       style={[
-                        styles.epicColTitle,
-                        { color: theme.text, fontFamily: serif },
+                        styles.contrastBadge,
+                        { backgroundColor: theme.secondaryContainer },
                       ]}
                     >
-                      The Ramayana
+                      <Text
+                        style={[
+                          styles.contrastBadgeText,
+                          {
+                            color: theme.onSecondaryContainer,
+                            fontFamily: label,
+                          },
+                        ]}
+                      >
+                        {t("fullChatScreen.coreContrast", "CORE CONTRAST")}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.contrastTitle,
+                        { color: theme.primary, fontFamily: serif },
+                      ]}
+                    >
+                      {t(
+                        "fullChatScreen.contrastTitle",
+                        "Principles vs Strategies",
+                      )}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.epicColDesc,
-                      { color: theme.textSecondary, fontFamily: body },
-                    ]}
-                  >
-                    Emphasizes absolute adherence to moral law (Dharma)
-                    regardless of personal cost. It paints a world of clear
-                    ideals, where victory is achieved through unwavering
-                    righteousness.
-                  </Text>
-                  <View style={styles.bulletList}>
-                    <Text
-                      style={[
-                        styles.bulletItem,
-                        { color: theme.text, fontFamily: body },
-                      ]}
-                    >
-                      ✓ Idealism and Devotion
-                    </Text>
-                    <Text
-                      style={[
-                        styles.bulletItem,
-                        { color: theme.text, fontFamily: body },
-                      ]}
-                    >
-                      ✓ Clear moral binaries & vows
-                    </Text>
-                  </View>
-                </View>
 
-                {/* Mahabharata Column */}
-                <View
-                  style={[
-                    styles.epicColumn,
-                    isNarrow
-                      ? {
-                          borderTopWidth: 1,
-                          paddingTop: 16,
-                          borderLeftWidth: 0,
-                        }
-                      : {
-                          borderLeftWidth: 1,
-                          borderTopWidth: 0,
-                          paddingLeft: 16,
-                        },
-                    { borderColor: theme.outlineVariant },
-                  ]}
-                >
-                  <View style={styles.epicColTitleRow}>
-                    <Text style={styles.epicColIcon}>📜</Text>
-                    <Text
-                      style={[
-                        styles.epicColTitle,
-                        { color: theme.text, fontFamily: serif },
-                      ]}
-                    >
-                      The Mahabharata
-                    </Text>
-                  </View>
-                  <Text
+                  <View
                     style={[
-                      styles.epicColDesc,
-                      { color: theme.textSecondary, fontFamily: body },
+                      styles.contrastColumns,
+                      isNarrow && { flexDirection: "column" },
                     ]}
                   >
-                    Navigates the gray areas of morality, where Dharma is
-                    contextual and survival often requires strategic pragmatism,
-                    reflecting human complexities.
-                  </Text>
-                  <View style={styles.bulletList}>
-                    <Text
+                    <View style={styles.epicColumn}>
+                      <View style={styles.epicColTitleRow}>
+                        <Text style={styles.epicColIcon}>📖</Text>
+                        <Text
+                          style={[
+                            styles.epicColTitle,
+                            { color: theme.text, fontFamily: serif },
+                          ]}
+                        >
+                          {t("fullChatScreen.ramayanaTitle", "The Ramayana")}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.epicColDesc,
+                          { color: theme.textSecondary, fontFamily: body },
+                        ]}
+                      >
+                        {t(
+                          "fullChatScreen.ramayanaDesc",
+                          "Emphasizes absolute adherence to moral law (Dharma) regardless of personal cost. It paints a world of clear ideals, where victory is achieved through unwavering righteousness.",
+                        )}
+                      </Text>
+                      <View style={styles.bulletList}>
+                        <Text
+                          style={[
+                            styles.bulletItem,
+                            { color: theme.text, fontFamily: body },
+                          ]}
+                        >
+                          {t(
+                            "fullChatScreen.ramayanaPoint1",
+                            "✓ Idealism and Devotion",
+                          )}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.bulletItem,
+                            { color: theme.text, fontFamily: body },
+                          ]}
+                        >
+                          {t(
+                            "fullChatScreen.ramayanaPoint2",
+                            "✓ Clear moral binaries & vows",
+                          )}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
                       style={[
-                        styles.bulletItem,
-                        { color: theme.text, fontFamily: body },
+                        styles.epicColumn,
+                        isNarrow
+                          ? {
+                              borderTopWidth: 1,
+                              paddingTop: 16,
+                              borderLeftWidth: 0,
+                            }
+                          : {
+                              borderLeftWidth: 1,
+                              borderTopWidth: 0,
+                              paddingLeft: 16,
+                            },
+                        { borderColor: theme.outlineVariant },
                       ]}
                     >
-                      ✓ Pragmatism & Realpolitik
-                    </Text>
-                    <Text
-                      style={[
-                        styles.bulletItem,
-                        { color: theme.text, fontFamily: body },
-                      ]}
-                    >
-                      ✓ Nuanced moral ambiguities
-                    </Text>
+                      <View style={styles.epicColTitleRow}>
+                        <Text style={styles.epicColIcon}>📜</Text>
+                        <Text
+                          style={[
+                            styles.epicColTitle,
+                            { color: theme.text, fontFamily: serif },
+                          ]}
+                        >
+                          {t(
+                            "fullChatScreen.mahabharataTitle",
+                            "The Mahabharata",
+                          )}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.epicColDesc,
+                          { color: theme.textSecondary, fontFamily: body },
+                        ]}
+                      >
+                        {t(
+                          "fullChatScreen.mahabharataDesc",
+                          "Navigates the gray areas of morality, where Dharma is contextual and survival often requires strategic pragmatism, reflecting human complexities.",
+                        )}
+                      </Text>
+                      <View style={styles.bulletList}>
+                        <Text
+                          style={[
+                            styles.bulletItem,
+                            { color: theme.text, fontFamily: body },
+                          ]}
+                        >
+                          {t(
+                            "fullChatScreen.mahabharataPoint1",
+                            "✓ Pragmatism & Realpolitik",
+                          )}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.bulletItem,
+                            { color: theme.text, fontFamily: body },
+                          ]}
+                        >
+                          {t(
+                            "fullChatScreen.mahabharataPoint2",
+                            "✓ Nuanced moral ambiguities",
+                          )}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </View>
+              </>
+            )}
           </>
         ) : (
           /* Section 6: Conversational Stream & Source Cards */
@@ -694,7 +772,7 @@ export default function FullChatScreen() {
                               },
                             ]}
                           >
-                            UNIVERSAL EPIC SCHOLAR
+                            {t("fullChatScreen.scholarBadge", "UNIVERSAL EPIC SCHOLAR")}
                           </Text>
                           {msg.searched_vector_db && (
                             <View
@@ -712,7 +790,7 @@ export default function FullChatScreen() {
                                   },
                                 ]}
                               >
-                                RAG Grounded
+                                {t("fullChatScreen.ragGrounded", "RAG Grounded")}
                               </Text>
                             </View>
                           )}
@@ -760,7 +838,7 @@ export default function FullChatScreen() {
                               ]}
                             >
                               {copiedMsgId === (msg.id || String(index))
-                                ? "✓ Copied"
+                                ? t("common.copied", "✓ Copied")
                                 : "📋"}
                             </Text>
                           </TouchableOpacity>
@@ -777,7 +855,9 @@ export default function FullChatScreen() {
 
                       {/* Source Citation Cards */}
                       {msg.sources && msg.sources.length > 0 && (
-                        <SourceCard sources={msg.sources} />
+                        <View style={{ marginTop: 12 }}>
+                          <SourceCard sources={msg.sources} />
+                        </View>
                       )}
 
                       {/* Socratic Force Resolve CTA if in Interviewing stage */}
@@ -814,7 +894,7 @@ export default function FullChatScreen() {
                                 },
                               ]}
                             >
-                              ⚡ Give Me Grounded Counsel Now (Skip Questions)
+                              {t("fullChatScreen.forceResolve", "⚡ Give Me Grounded Counsel Now (Skip Questions)")}
                             </Text>
                           </TouchableOpacity>
                         );
@@ -872,7 +952,7 @@ export default function FullChatScreen() {
                           ]}
                         >
                           {copiedMsgId === (msg.id || String(index))
-                            ? "✓ Copied"
+                            ? t("common.copied", "✓ Copied")
                             : "📋"}
                         </Text>
                       </TouchableOpacity>
@@ -900,7 +980,7 @@ export default function FullChatScreen() {
                       { color: theme.secondary, fontFamily: body },
                     ]}
                   >
-                    Synthesizing lessons across Ramayana & Mahabharata...
+                    {t("fullChatScreen.thinking", "Synthesizing lessons across Ramayana & Mahabharata...")}
                   </Text>
                 </View>
               </FadeSlide>
@@ -908,13 +988,18 @@ export default function FullChatScreen() {
           </View>
         )}
 
-        <View style={{ height: 110 }} />
+        {!isEmptyState && <View style={{ height: inputReserve }} />}
       </ScrollView>
 
       {/* Floating Bottom ChatGPT-style Input Box */}
-      <View
+      <Animated.View
         style={[
           styles.floatingInputWrapper,
+          {
+            paddingBottom:
+              keyboardHeight > 0 ? (Platform.OS === "ios" ? 8 : 4) : safeBottomPadding,
+            bottom: animatedBottom,
+          },
           Platform.OS === "web"
             ? ({
                 background: `linear-gradient(to top, ${theme.bg} 40%, ${theme.bg}BB 65%, ${theme.bg}00 100%)`,
@@ -964,7 +1049,7 @@ export default function FullChatScreen() {
               Platform.OS === "web" &&
                 ({ resize: "none", overflowY: "auto" } as any),
             ]}
-            placeholder="What's your dilemma today?"
+            placeholder={t("fullChatScreen.placeholder", "What's your dilemma today?")}
             placeholderTextColor={theme.textTertiary}
             value={input}
             onChangeText={handleInputChange}
@@ -995,7 +1080,7 @@ export default function FullChatScreen() {
                     { color: theme.secondary, fontFamily: label },
                   ]}
                 >
-                  🏛️ Scholar
+                  {t("fullChatScreen.scholarModel", "🏛️ Scholar")}
                 </Text>
               </View>
 
@@ -1032,8 +1117,8 @@ export default function FullChatScreen() {
             </View>
           </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -1111,7 +1196,10 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "center",
+    width: "100%",
+    paddingHorizontal: 8,
+    marginBottom: Platform.OS === "web" ? 16 : 0,
   },
   displayTitle: {
     fontSize: Platform.OS === "web" ? 36 : 28,
@@ -1125,7 +1213,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 620,
     lineHeight: 23,
-    marginBottom: 20,
+    marginBottom: Platform.OS === "web" ? 20 : 0,
   },
   searchBox: {
     width: "100%",

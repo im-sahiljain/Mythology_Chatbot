@@ -46,3 +46,8 @@ Thumbs.db
 .vscode/
 .idea/
 pyrightconfig.json
+
+# Binaries & Scratch
+*.apk
+scratch/
+**/scratch/

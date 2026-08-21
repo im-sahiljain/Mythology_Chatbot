@@ -40,7 +40,8 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -56,7 +57,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/d0e50af5-657d-4aab-8b61-1132f47893b6"
+      "url": "https://u.expo.dev/d0e50af5-657d-4aab-8b61-1132f47893b6",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

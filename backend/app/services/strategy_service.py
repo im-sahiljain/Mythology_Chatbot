@@ -1,8 +1,63 @@
 from typing import Dict, Any, List
 from app.config import settings
-from app.services.rag_service import RAGService
+from app.services.rag_service import RAGService, get_language_directive
 from app.services.llm_factory import LLMFactory
 from app.models.schemas import SourceCitation
+
+def get_counsel_heading(language: str = "en", character: str = None) -> str:
+    lang = (language or "en").lower().strip()
+    if character:
+        headers = {
+            "hi": f"✨ **{character} से अंतिम मार्गदर्शन**",
+            "sa": f"✨ **{character}-मुखात् अन्तिमपरामर्शः**",
+            "ta": f"✨ **{character} இன் இறுதி ஆலோசனை**",
+            "te": f"✨ **{character} నుండి తుది ఇతిహాస సలహా**",
+            "bn": f"✨ **{character}-এর চূড়ান্ত পরামর্শ**",
+            "mr": f"✨ **{character} यांचे अंतिम मार्गदर्शन**",
+            "gu": f"✨ **{character} તરફથી અંતિમ પરામર્શ**",
+            "kn": f"✨ **{character} ರವರ ಅಂತಿಮ ಮಾರ್ಗದರ್ಶನ**",
+            "ml": f"✨ **{character} ൽ നിന്നുള്ള അന്തിമ ഉപദേശം**",
+            "pa": f"✨ **{character} ਵੱਲੋਂ ਅੰਤਿਮ ਸਲਾਹ**",
+            "or": f"✨ **{character}ଙ୍କ ଠାରୁ ଚୂଡ଼ାନ୍ତ ପରାମର୍ଶ**",
+            "as": f"✨ **{character}ৰ পৰা চূড়ান্ত পৰামৰ্শ**",
+            "ur": f"✨ **{character} کی جانب سے حتمی رہنمائی**",
+            "mai": f"✨ **{character} सँ अंतिम मार्गदर्शन**",
+            "ne": f"✨ **{character} बाट अन्तिम मार्गदर्शन**",
+            "kok": f"✨ **{character} कडल्यान निमाणो सल्लो**",
+            "doi": f"✨ **{character} थमां अंतिम सलाह**",
+            "ks": f"✨ **{character} کی طرفٕہ حتمی مشورہ**",
+            "sd": f"✨ **{character} پاران حتمي صلاح**",
+            "mni": f"✨ **{character} দগী অরোইবা পাউতাক**",
+            "brx": f"✨ **{character} निफ्राय जोबथा सुबुंथि**",
+            "sat": f"✨ **{character} ᱴᱷᱮᱱ ᱠᱷᱚᱱ ᱢᱩᱪᱟᱹᱫ ᱫᱤᱥᱟᱹ**",
+        }
+        return headers.get(lang, f"✨ **Final Counsel from {character}**")
+    else:
+        headers = {
+            "hi": "✨ **अंतिम महाकाव्य परामर्श**",
+            "sa": "✨ **अन्तिममहाकाव्यपरामर्शः**",
+            "ta": "✨ **இறுதி இதிகாச ஆலோசனை**",
+            "te": "✨ **తుది ఇతిహాస సలహా**",
+            "bn": "✨ **চূড়ান্ত মহাকাব্যিক পরামর্শ**",
+            "mr": "✨ **अंतिम महाकाव्य मार्गदर्शन**",
+            "gu": "✨ **અંતિમ મહાકાવ્ય પરામર્શ**",
+            "kn": "✨ **ಅಂತಿಮ ಮಹಾಕಾವ್ಯ ಸಲಹೆ**",
+            "ml": "✨ **അന്തിമ ഇതിഹാസ ഉപദേശം**",
+            "pa": "✨ **ਅੰਤਿਮ ਮਹਾਂਕਾਵਿ ਸਲਾਹ**",
+            "or": "✨ **ଚୂଡ଼ାନ୍ତ ମହାକାବ୍ୟ ପରାମର୍ଶ**",
+            "as": "✨ **চূড়ান্ত মহাকাব্যিক পৰামৰ্শ**",
+            "ur": "✨ **حتمی داستانی رہنمائی**",
+            "mai": "✨ **अंतिम महाकाव्य परामर्श**",
+            "ne": "✨ **अन्तिम महाकाव्य परामर्श**",
+            "kok": "✨ **निमाणो महाकाव्य सल्लो**",
+            "doi": "✨ **अंतिम महाकाव्य सलाह**",
+            "ks": "✨ **حتمی مہاکاوی مشورہ**",
+            "sd": "✨ **حتمي مهاڪاوين جي صلاح**",
+            "mni": "✨ **মহাকাব্যগী অরোইবা পাউতাক**",
+            "brx": "✨ **जोबथा महाकाव्य सुबुंथि**",
+            "sat": "✨ **ᱢᱩᱪᱟᱹᱫ ᱢᱟᱦᱟᱠᱟᱵᱽᱭᱚ ᱫᱤᱥᱟᱹ**",
+        }
+        return headers.get(lang, "✨ **Final Epic Counsel**")
 
 class StrategyService:
     def __init__(self):
@@ -18,7 +73,8 @@ class StrategyService:
         chat_history: List[Dict[str, Any]],
         force_resolve: bool = False,
         session_id: str = None,
-        provider: str = None
+        provider: str = None,
+        language: str = "en"
     ) -> Dict[str, Any]:
         """
         Stateful interactive chat with complete memory:
@@ -44,7 +100,7 @@ class StrategyService:
 
         # Check if Final Epic Counsel has already been delivered in history
         already_resolved = any(
-            t.get("role") == "assistant" and ("Final Epic Counsel" in t.get("content", "") or "✨" in t.get("content", ""))
+            t.get("stage") == "resolved" or "✨" in t.get("content", "") or "Final Epic Counsel" in t.get("content", "") or "अंतिम" in t.get("content", "")
             for t in chat_history
         )
 
@@ -66,18 +122,19 @@ class StrategyService:
 
             if needs_search:
                 print(f"   🔍 [Full Chat Tool Call] Vector Search TRIGGERED for: '{search_query}'")
-                rag_res = self.rag_service.query(message=search_query, provider=provider)
+                rag_res = self.rag_service.query(message=search_query, provider=provider, language=language)
                 sources = rag_res.get("sources", [])
                 context_str = "\n".join([f"Scenario: {s.scenario_title} ({s.epic}) - {s.summary_snippet}" for s in sources])
             else:
                 print(f"   ⚡ [Full Chat Direct Answer] Answering directly from conversation memory (No vector search needed)")
 
-            followup_system_prompt = """
+            lang_directive = get_language_directive(language)
+            followup_system_prompt = f"""
 You are a Wise Epic Mentor continuing a deep conversation with a user who has already received your Final Epic Counsel.
 Your task is to answer their follow-up questions with warmth, wisdom, and complete conversational continuity.
 
 RULES:
-1. LANGUAGE: Use simple, everyday 6th-grade English. Keep sentences clear, short, and warm.
+1. LANGUAGE: Keep sentences clear, short, empathetic, and warm.
 2. CONTINUITY: Maintain full awareness of the conversation history and your previous advice.
 3. REASONING: If the user asks why you made a judgment or compared them to a character, explain your reasoning simply.
 4. EXPLAINING EPICS: If new scripture context is provided, weave the story lessons naturally into your answer.
@@ -88,6 +145,7 @@ RULES:
      a) NEVER prescribe medicines, diagnose health conditions, or suggest changing/stopping any doctor-prescribed treatment, medicine, or routine.
      b) ALWAYS explicitly advise the user to consult a qualified medical doctor or healthcare professional for all medical and prescription decisions.
      c) You may ONLY offer emotional resilience, peace of mind, patience, and courage from the epics to support their well-being alongside professional care.
+{lang_directive}
 """
             scripture_section = f"Newly Retrieved Scripture Context:\n{context_str}" if context_str else "Answer directly using the established conversation context."
             followup_prompt = f"""
@@ -129,15 +187,17 @@ Provide a wise, simple, and direct follow-up response:
 
         if not is_sufficient:
             # Socratic Interview Question (Pure text, no chips)
-            interview_system_prompt = """
+            lang_directive = get_language_directive(language)
+            interview_system_prompt = f"""
 You are a wise, empathetic Master Counselor inspired by the Indian Epics (Ramayana & Mahabharata).
 Your task is to understand the user's dilemma deeply before giving any final advice.
 
 RULES:
 1. Do NOT give final advice or scripture citations yet.
 2. Empathetically acknowledge their situation in 1 simple sentence.
-3. Ask 1 deep, targeted Socratic question in natural, simple English to uncover the root cause or personal stakes.
-4. Use 6th-grade simple English. Keep your question warm, clear, and under 50 words.
+3. Ask 1 deep, targeted Socratic question to uncover the root cause or personal stakes.
+4. Keep your question warm, clear, and under 50 words.
+{lang_directive}
 """
             interview_prompt = f"{combined_text}\n\nAsk 1 deep, simple Socratic question to understand their dilemma better:"
             llm_res = LLMFactory.generate_response(interview_prompt, interview_system_prompt, provider)
@@ -154,10 +214,11 @@ RULES:
             }
         else:
             # Generate Final Epic Counsel with ChromaDB RAG
-            rag_res = self.rag_service.query(message=combined_text, provider=provider)
+            rag_res = self.rag_service.query(message=combined_text, provider=provider, language=language)
+            counsel_title = get_counsel_heading(language)
             return {
                 "stage": "resolved",
-                "reply": f"✨ **Final Epic Counsel**\n\n{rag_res['reply']}",
+                "reply": f"{counsel_title}\n\n{rag_res['reply']}",
                 "character": "Universal Epic Scholar",
                 "sources": rag_res.get("sources", []),
                 "searched_vector_db": True,
@@ -260,7 +321,8 @@ OR
         chat_history: List[Dict[str, Any]],
         force_resolve: bool = False,
         session_id: str = None,
-        provider: str = None
+        provider: str = None,
+        language: str = "en"
     ) -> Dict[str, Any]:
         """
         1st-Person Character-Strict Socratic Chat with complete memory:
@@ -275,7 +337,7 @@ OR
 
         # Check if Final Epic Counsel has already been delivered in history
         already_resolved = any(
-            t.get("role") == "assistant" and ("Final Counsel from" in t.get("content", "") or "✨" in t.get("content", "") or "Final Epic Counsel" in t.get("content", ""))
+            t.get("stage") == "resolved" or "✨" in t.get("content", "") or "Final Counsel from" in t.get("content", "") or "अंतिम" in t.get("content", "")
             for t in chat_history
         )
 
@@ -305,6 +367,7 @@ OR
                 sources = rag_res.get("sources", [])
                 context_str = "\n".join([f"Scenario: {s.scenario_title} ({s.epic}) - {s.summary_snippet}" for s in sources])
 
+            lang_directive = get_language_directive(language)
             followup_system_prompt = f"""
 You are {active_char} from the Indian Epics. You are in deep, 1st-person conversation with a seeker who has already received your primary counsel.
 Answer their follow-up thoughts, questions, or doubts with authentic 1st-person wisdom drawn from your own life and principles.
@@ -313,6 +376,7 @@ RULES:
 1. Speak exclusively in 1st person as {active_char}.
 2. Maintain full awareness of what the seeker has shared across all prior turns.
 3. Keep your response clear, warm, and under 150 words.
+{lang_directive}
 """
             scripture_section = f"Retrieved Character Memories/Stories:\n{context_str}" if context_str else "Respond directly from your persona and conversation memory."
             followup_prompt = f"""
@@ -354,6 +418,7 @@ Provide your 1st-person response as {active_char}:
         print(f"   ➔ Context Sufficiency: {'SUFFICIENT (Delivering Final Counsel)' if is_sufficient else 'INSUFFICIENT (Asking Socratic Q)'}")
 
         if not is_sufficient:
+            lang_directive = get_language_directive(language)
             interview_system_prompt = f"""
 You are {active_char}. A seeker has approached you for guidance with a personal dilemma.
 Before revealing your definitive judgment and the lessons from your own life, you must understand their circumstance more deeply.
@@ -365,6 +430,7 @@ RULES:
 4. Do NOT deliver your final advice or scripture citations yet.
 5. Keep your response under 55 words.
 6. MEDICAL & HEALTH SAFETY (CRITICAL & MANDATORY): If the seeker mentions health, prescriptions, or medicines, NEVER prescribe or change medical routines. Advise consulting a doctor, offering only emotional support.
+{lang_directive}
 """
             interview_prompt = f"{combined_text}\n\nAs {active_char}, ask 1 deep Socratic question to understand the seeker's dilemma better:"
             llm_res = LLMFactory.generate_response(interview_prompt, interview_system_prompt, provider)
@@ -386,12 +452,14 @@ RULES:
                 message=combined_text,
                 character=active_char,
                 provider=provider,
-                chat_history=chat_history
+                chat_history=chat_history,
+                language=language
             )
+            counsel_title = get_counsel_heading(language, active_char)
             return {
                 "stage": "resolved",
                 "mode": "guidance",
-                "reply": f"✨ **Final Counsel from {active_char}**\n\n{rag_res['reply']}",
+                "reply": f"{counsel_title}\n\n{rag_res['reply']}",
                 "character": active_char,
                 "sources": rag_res.get("sources", []),
                 "searched_vector_db": True,
@@ -411,7 +479,8 @@ RULES:
         chat_history: List[Dict[str, Any]] = None,
         force_resolve: bool = False,
         session_id: str = None,
-        provider: str = None
+        provider: str = None,
+        language: str = "en"
     ) -> Dict[str, Any]:
         """
         Multi-agent collaborative council (Vedic Sabha) with 3-Stage Lifecycle:
@@ -544,6 +613,8 @@ RULES:
         # -------------------------------------------------------------
         # STAGE 1: INTERVIEWING (Context-Building)
         # -------------------------------------------------------------
+        lang_directive = get_language_directive(language)
+
         if current_stage == "interviewing":
             lead_speaker = explicit_candidates[0] if explicit_candidates else targeted_speakers[0]
             print(f"   ❓ [Council Interviewing] Lead Inquirer selected: {lead_speaker}")
@@ -559,11 +630,12 @@ The seeker has shared an initial problem. Your task is NOT to give final scriptu
 Instead, ask ONE warm, probing 1st-person question from your epic perspective to help uncover their root dilemma, key relationships, or underlying choices.
 
 RULES:
-1. LANGUAGE & TONE: Use simple, clear, everyday 6th-grade English. Keep your tone warm, empathetic, and approachable. Avoid grandiloquent, archaic, or complex words.
+1. LANGUAGE & TONE: Keep your tone warm, empathetic, and approachable in clear sentences.
 2. 1ST PERSON PERSPECTIVE: Speak in 1st person as {lead_speaker}.
 3. 1 CONCISE QUESTION: Ask ONLY 1 concise probing question (under 45 words).
 4. NO FINAL COUNSEL: Do not quote scripture or give final resolutions yet.
 5. MEDICAL & HEALTH SAFETY (CRITICAL & MANDATORY): If the seeker mentions health, prescriptions, or medicines, NEVER prescribe or change medical routines. Advise consulting a doctor, offering only emotional support.
+{lang_directive}
 """
             interview_prompt = f"""
 SHARED CONVERSATION HISTORY:
@@ -627,7 +699,8 @@ Ask your 1st-person probing question as {lead_speaker}:
                     message=query_text,
                     character=speaker,
                     provider=provider,
-                    chat_history=history
+                    chat_history=history,
+                    language=language
                 )
                 sources = rag_res.get("sources", [])
                 stories_context = "\n".join([f"Scenario: {s.scenario_title} ({s.epic}) - {s.summary_snippet}" for s in sources])
@@ -644,7 +717,7 @@ You are {speaker} in the Council of Legends (Vedic Sabha).
 You are in live 1st-person conversation with the seeker.
 
 RULES:
-1. LANGUAGE & TONE: Use simple, clear, everyday 6th-grade English. Keep your tone warm, empathetic, and approachable. Avoid grandiloquent, archaic, or overly complex vocabulary.
+1. LANGUAGE & TONE: Keep your tone warm, empathetic, and approachable in clear sentences.
 2. 1ST PERSON PERSPECTIVE: Speak strictly in 1st person as {speaker} ("I", "my life", "my duty", "in my struggle").
 3. SANSKRIT TERMS: If you use terms like 'Dharma' or 'Karma', explain them in 2-3 simple words.
 4. DRAW FROM EPICS: Draw directly from your personal epic memories, decisions, and lived philosophy.
@@ -656,6 +729,7 @@ RULES:
      a) NEVER prescribe medicines, diagnose health conditions, or suggest changing/stopping any doctor-prescribed treatment, medicine, or routine.
      b) ALWAYS explicitly advise the user to consult a qualified medical doctor or healthcare professional for all medical and prescription decisions.
      c) You may ONLY offer emotional resilience, peace of mind, patience, and courage from the epics to support their well-being alongside professional care.
+{lang_directive}
 """
             prior_turn_speech = f"WORDS SPOKEN IN THIS TURN BY FELLOW COUNCIL MEMBERS:\n{current_turn_spoken_text}" if current_turn_spoken_text else ""
             prompt = f"""
