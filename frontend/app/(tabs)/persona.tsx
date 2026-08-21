@@ -31,6 +31,7 @@ import { useTheme } from "../../src/context/ThemeContext";
 import { FadeSlide, TypingDots } from "../../src/components/AnimatedComponents";
 import { VedicDrawer } from "../../src/components/VedicDrawer";
 import { VedicTopBar } from "../../src/components/VedicTopBar";
+const useObserve = () => ({ markInteractive: () => {} });
 
 const serif =
   Platform.OS === "web"
@@ -90,6 +91,11 @@ export default function PersonaScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { markInteractive } = useObserve();
+
+  useEffect(() => {
+    markInteractive();
+  }, [markInteractive]);
 
   const [selectedGuide, setSelectedGuide] = useState<GuideCard>(
     ALL_CHARACTERS[0],

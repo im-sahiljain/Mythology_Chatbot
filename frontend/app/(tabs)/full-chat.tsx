@@ -28,6 +28,7 @@ import {
 } from "../../src/components/AnimatedComponents";
 import { VedicDrawer } from "../../src/components/VedicDrawer";
 import { VedicTopBar } from "../../src/components/VedicTopBar";
+const useObserve = () => ({ markInteractive: () => {} });
 
 const serif =
   Platform.OS === "web"
@@ -95,6 +96,11 @@ export default function FullChatScreen() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
+  const { markInteractive } = useObserve();
+
+  useEffect(() => {
+    markInteractive();
+  }, [markInteractive]);
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string>("");

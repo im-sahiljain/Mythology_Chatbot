@@ -1,0 +1,27 @@
+{
+  "cli": {
+    "version": ">= 16.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://mythology-chatbot.onrender.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://bpcgixxlwqwnbnuhwxmn.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwY2dpeHhsd3F3bmJudWh3eG1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNDUwMjYsImV4cCI6MjEwMjcyMTAyNn0.wd3qB3ziqTIvOA7XPyRqAcfFCNrzFtOCQX0koGCpJgE"
+      }
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}

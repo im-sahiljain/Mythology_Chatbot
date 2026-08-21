@@ -22,14 +22,18 @@ console.log(`🌐 [API Service] Platform: ${Platform.OS} | Target API URL: ${API
 let cachedGuestId: string | null = null;
 export const getGuestId = (): string => {
   if (cachedGuestId) return cachedGuestId;
-  if (typeof window !== 'undefined' && window.localStorage) {
-    let stored = window.localStorage.getItem('vedic_guest_id');
-    if (!stored) {
-      stored = 'guest_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
-      window.localStorage.setItem('vedic_guest_id', stored);
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      let stored = window.localStorage.getItem('vedic_guest_id');
+      if (!stored) {
+        stored = 'guest_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+        window.localStorage.setItem('vedic_guest_id', stored);
+      }
+      cachedGuestId = stored;
+      return stored;
     }
-    cachedGuestId = stored;
-    return stored;
+  } catch (e) {
+    // Ignore localStorage errors on native platforms
   }
   cachedGuestId = 'guest_mobile_' + Math.random().toString(36).substring(2, 11);
   return cachedGuestId;

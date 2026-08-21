@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useNavigationContainerRef } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider } from "../src/context/ThemeContext";
 import { useFonts, EBGaramond_700Bold, EBGaramond_600SemiBold } from '@expo-google-fonts/eb-garamond';
@@ -34,7 +34,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   }
 }
 
-export default function RootLayout() {
+function RootLayout() {
+  const navigationRef = useNavigationContainerRef();
   const [fontsLoaded] = useFonts({
     EBGaramond_700Bold,
     EBGaramond_600SemiBold,
@@ -55,3 +56,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default RootLayout;

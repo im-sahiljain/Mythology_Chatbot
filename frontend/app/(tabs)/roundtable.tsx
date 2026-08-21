@@ -29,6 +29,7 @@ import { SourceCard } from "../../src/components/SourceCard";
 import { VedicTopBar } from "../../src/components/VedicTopBar";
 import { VedicDrawer } from "../../src/components/VedicDrawer";
 import { FadeSlide } from "../../src/components/AnimatedComponents";
+const useObserve = () => ({ markInteractive: () => {} });
 
 const serif =
   Platform.OS === "web"
@@ -84,6 +85,11 @@ export default function RoundtableScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
+  const { markInteractive } = useObserve();
+
+  useEffect(() => {
+    markInteractive();
+  }, [markInteractive]);
 
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
