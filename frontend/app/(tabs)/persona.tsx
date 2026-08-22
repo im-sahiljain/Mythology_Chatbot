@@ -35,6 +35,7 @@ import { FadeSlide, TypingDots } from "../../src/components/AnimatedComponents";
 import { VedicDrawer } from "../../src/components/VedicDrawer";
 import { VedicTopBar } from "../../src/components/VedicTopBar";
 import { getLocalizedCharacter } from "../../src/i18n/characterTranslations";
+import { useCharacters } from "../../src/context/CharacterContext";
 const useObserve = () => ({ markInteractive: () => {} });
 
 const serif =
@@ -67,12 +68,10 @@ import {
 } from "../../src/services/chatStorage";
 
 import {
-  ALL_CHARACTERS,
   GUIDE_CHARACTERS,
   GuideCard,
   CATEGORIES,
   CategoryDef,
-  getCharacterByName,
 } from "../../src/data/characters";
 
 export { GuideCard, GUIDE_CHARACTERS };
@@ -98,9 +97,13 @@ export default function PersonaScreen() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { markInteractive } = useObserve();
   const { t, i18n } = useTranslation();
+  const { characters: ALL_CHARACTERS, loading: charactersLoading } =
+    useCharacters();
 
-  const safeTopPadding = Math.max(insets.top, Platform.OS === "ios" ? 44 : 16) + 68;
-  const safeBottomPadding = Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 8 : 4);
+  const safeTopPadding =
+    Math.max(insets.top, Platform.OS === "ios" ? 44 : 16) + 68;
+  const safeBottomPadding =
+    Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 8 : 4);
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const keyboardAnim = useRef(new RNAnimated.Value(0)).current;
@@ -137,8 +140,10 @@ export default function PersonaScreen() {
       }
     }
 
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       const targetHeight = e.endCoordinates.height;
@@ -169,9 +174,7 @@ export default function PersonaScreen() {
     markInteractive();
   }, [markInteractive]);
 
-  const [selectedGuide, setSelectedGuide] = useState<GuideCard>(
-    ALL_CHARACTERS[0],
-  );
+  const [selectedGuide, setSelectedGuide] = useState<GuideCard | null>(null);
   const [sessionId, setSessionId] = useState<string>("");
   const [isSessionLoading, setIsSessionLoading] = useState(!!params.id);
   const [input, setInput] = useState("");
@@ -191,6 +194,12 @@ export default function PersonaScreen() {
   const [inputHeight, setInputHeight] = useState(36);
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
 
+  useEffect(() => {
+    if (!selectedGuide && ALL_CHARACTERS.length > 0) {
+      setSelectedGuide(ALL_CHARACTERS[0]);
+    }
+  }, [ALL_CHARACTERS, selectedGuide]);
+
   const filteredMentionCharacters = ALL_CHARACTERS.filter(
     (c) =>
       c.name.toLowerCase().includes(mentionQuery) ||
@@ -198,24 +207,33 @@ export default function PersonaScreen() {
   );
 
   const getEpicName = (epicStr?: string) => {
-    if (!epicStr) return t('scripture.allEpics', 'Epic');
+    if (!epicStr) return t("scripture.allEpics", "Epic");
     const lower = epicStr.toLowerCase();
-    if (lower.includes('mahabharata')) return t('epics.mahabharata', 'Mahabharata');
-    if (lower.includes('ramayana')) return t('epics.ramayana', 'Ramayana');
+    if (lower.includes("mahabharata"))
+      return t("epics.mahabharata", "Mahabharata");
+    if (lower.includes("ramayana")) return t("epics.ramayana", "Ramayana");
     return epicStr;
   };
 
   const getCategoryLabel = (labelKey: string) => {
     const key = labelKey.toLowerCase();
     switch (key) {
-      case 'all': return t('categories.all', 'All');
-      case 'ramayana': return t('categories.ramayana', 'Ramayana');
-      case 'mahabharata': return t('categories.mahabharata', 'Mahabharata');
-      case 'heroes': return t('categories.heroes', 'Heroes');
-      case 'queens': return t('categories.queens', 'Queens');
-      case 'sages': return t('categories.sages', 'Sages');
-      case 'warriors': return t('categories.warriors', 'Warriors');
-      default: return labelKey;
+      case "all":
+        return t("categories.all", "All");
+      case "ramayana":
+        return t("categories.ramayana", "Ramayana");
+      case "mahabharata":
+        return t("categories.mahabharata", "Mahabharata");
+      case "heroes":
+        return t("categories.heroes", "Heroes");
+      case "queens":
+        return t("categories.queens", "Queens");
+      case "sages":
+        return t("categories.sages", "Sages");
+      case "warriors":
+        return t("categories.warriors", "Warriors");
+      default:
+        return labelKey;
     }
   };
 
@@ -556,7 +574,7 @@ export default function PersonaScreen() {
       currentId = Date.now().toString();
       setSessionId(currentId);
     }
-    const charName = overrideChar || selectedGuide.name;
+    const charName = overrideChar || selectedGuide!.name;
     const firstUserMsg = msgs.find((m) => m.role === "user");
     let title = `${charName} Counsel`;
     if (firstUserMsg) {
@@ -644,7 +662,7 @@ export default function PersonaScreen() {
     setHasStartedConsultation(true);
 
     const baseHistory = customHistory || history;
-    const activeCharName = customGuideName || selectedGuide.name;
+    const activeCharName = customGuideName || selectedGuide!.name;
     const activeSession = customSessionId || sessionId;
 
     let nextHistory = [...baseHistory];
@@ -727,6 +745,36 @@ export default function PersonaScreen() {
 
   // ─── JSX ────────────────────────────────────────────────────
 
+  if (charactersLoading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.sessionLoaderWrapper,
+          { backgroundColor: theme.bg },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.primaryContainer} />
+      </View>
+    );
+  }
+
+  if (!selectedGuide || !ALL_CHARACTERS.length) {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.sessionLoaderWrapper,
+          { backgroundColor: theme.bg },
+        ]}
+      >
+        <Text style={{ color: theme.textSecondary, fontFamily: body }}>
+          No characters are available.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <VedicDrawer
@@ -748,7 +796,12 @@ export default function PersonaScreen() {
           <ActivityIndicator size="large" color={theme.primaryContainer} />
         </View>
       ) : !hasStartedConsultation ? (
-        <View style={[styles.heroFullContainer, { paddingTop: safeTopPadding + 24 }]}>
+        <View
+          style={[
+            styles.heroFullContainer,
+            { paddingTop: safeTopPadding + 24 },
+          ]}
+        >
           {/* Top Header & About Box */}
           <View style={styles.heroTopContent}>
             <View style={styles.heroHeader}>
@@ -775,7 +828,10 @@ export default function PersonaScreen() {
 
             {/* About Character Section (Animated on Swipe) */}
             {(() => {
-              const localizedGuide = getLocalizedCharacter(selectedGuide, i18n.language);
+              const localizedGuide = getLocalizedCharacter(
+                selectedGuide,
+                i18n.language,
+              );
               return (
                 <Animated.View
                   style={[
@@ -933,7 +989,12 @@ export default function PersonaScreen() {
           </View>
 
           {/* Bottom Fixed Area: Category Filter Pills (Per Figma) */}
-          <View style={[styles.heroBottomControls, { paddingBottom: safeBottomPadding }]}>
+          <View
+            style={[
+              styles.heroBottomControls,
+              { paddingBottom: safeBottomPadding },
+            ]}
+          >
             {/* Category Filter Pills (Horizontal Scroll at bottom) */}
             <ScrollView
               horizontal
@@ -1000,8 +1061,9 @@ export default function PersonaScreen() {
                   ]}
                 >
                   {t("personaScreen.dialogueWith", {
-                    name: getLocalizedCharacter(selectedGuide, i18n.language).name,
-                    defaultValue: `Dialogue with ${getLocalizedCharacter(selectedGuide, i18n.language).name}`
+                    name: getLocalizedCharacter(selectedGuide, i18n.language)
+                      .name,
+                    defaultValue: `Dialogue with ${getLocalizedCharacter(selectedGuide, i18n.language).name}`,
                   })}
                 </Text>
               </View>
@@ -1188,7 +1250,10 @@ export default function PersonaScreen() {
                         { color: theme.secondary, fontFamily: body },
                       ]}
                     >
-                      {t("personaScreen.thinking", "Contemplating your dilemma...")}
+                      {t(
+                        "personaScreen.thinking",
+                        "Contemplating your dilemma...",
+                      )}
                     </Text>
                   </View>
                 </FadeSlide>
@@ -1204,7 +1269,11 @@ export default function PersonaScreen() {
               styles.floatingInputWrapper,
               {
                 paddingBottom:
-                  keyboardHeight > 0 ? (Platform.OS === "ios" ? 8 : 4) : safeBottomPadding,
+                  keyboardHeight > 0
+                    ? Platform.OS === "ios"
+                      ? 8
+                      : 4
+                    : safeBottomPadding,
                 bottom: animatedBottom,
               },
               Platform.OS === "web"
@@ -1364,8 +1433,9 @@ export default function PersonaScreen() {
                     ({ resize: "none", overflowY: "auto" } as any),
                 ]}
                 placeholder={t("personaScreen.placeholder", {
-                  name: getLocalizedCharacter(selectedGuide, i18n.language).name,
-                  defaultValue: `Seek guidance from ${getLocalizedCharacter(selectedGuide, i18n.language).name}...`
+                  name: getLocalizedCharacter(selectedGuide, i18n.language)
+                    .name,
+                  defaultValue: `Seek guidance from ${getLocalizedCharacter(selectedGuide, i18n.language).name}...`,
                 })}
                 placeholderTextColor={theme.textTertiary}
                 value={input}
@@ -1428,7 +1498,8 @@ export default function PersonaScreen() {
                         { color: theme.secondary, fontFamily: label },
                       ]}
                     >
-                      {selectedGuide.icon} {getLocalizedCharacter(selectedGuide, i18n.language).name}
+                      {selectedGuide.icon}{" "}
+                      {getLocalizedCharacter(selectedGuide, i18n.language).name}
                     </Text>
                   </View>
                 </View>
@@ -1590,8 +1661,8 @@ function FloatingCard({
               {item.epic?.toLowerCase().includes("mahabharata")
                 ? t("epics.mahabharata", "Mahabharata")
                 : item.epic?.toLowerCase().includes("ramayana")
-                ? t("epics.ramayana", "Ramayana")
-                : item.epic}
+                  ? t("epics.ramayana", "Ramayana")
+                  : item.epic}
             </Text>
           </View>
         </View>
@@ -1656,7 +1727,7 @@ function FloatingCard({
             >
               {t("personaScreen.consultBtn", {
                 name: locItem.name,
-                defaultValue: `Consult ${locItem.name} →`
+                defaultValue: `Consult ${locItem.name} →`,
               })}
             </Text>
           </TouchableOpacity>

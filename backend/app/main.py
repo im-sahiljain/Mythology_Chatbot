@@ -9,6 +9,7 @@ from app.api.admin import router as admin_router
 from app.api.sessions import router as sessions_router
 from app.api.auth import router as auth_router
 from app.api.languages import router as languages_router, seed_default_languages_if_empty
+from app.api.characters import router as characters_router, seed_characters_if_empty
 from app.db.session import SessionLocal
 
 # Auto-create tables on startup in Supabase PostgreSQL
@@ -30,6 +31,12 @@ try:
         seed_default_languages_if_empty(db)
 except Exception as e:
     print(f"Language seed notice: {e}")
+
+try:
+    with SessionLocal() as db:
+        seed_characters_if_empty(db)
+except Exception as e:
+    print(f"Character seed notice: {e}")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -64,6 +71,7 @@ app.include_router(strategy_router)
 app.include_router(sessions_router)
 app.include_router(admin_router)
 app.include_router(languages_router)
+app.include_router(characters_router)
 
 
 

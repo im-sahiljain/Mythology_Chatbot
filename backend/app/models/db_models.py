@@ -117,3 +117,25 @@ class SupportedLanguageModel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
 
 
+class CharacterModel(Base):
+    __tablename__ = "characters"
+
+    id = Column(String, primary_key=True, default=generate_uuid, index=True)
+    slug = Column(String(120), unique=True, nullable=False, index=True)
+    name = Column(String(120), unique=True, nullable=False, index=True)
+    epic = Column(String(30), nullable=False)
+    category = Column(String(80), nullable=False)
+    role = Column(String(160), nullable=False)
+    subtitle = Column(String(160), nullable=False)
+    icon = Column(String(20), nullable=False)
+    color = Column(String(30), nullable=True)
+    accent = Column(String(80), nullable=True)
+    quote = Column(Text, nullable=False)
+    image_url = Column(Text, nullable=True)
+    cloudinary_public_id = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    display_order = Column(Integer, default=0, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
