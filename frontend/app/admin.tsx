@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../src/context/ThemeContext';
@@ -101,12 +102,17 @@ export default function AdminDashboardScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 960;
+  const isDesktop = width >= 1200;
   const isTablet = width >= 720;
+  const isMobile = width < 720;
+  const isWideDesktop = width >= 1200;
 
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<NavTab>('users');
+  const [activeTab, setActiveTab] = useState<NavTab>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
+  // Narrow screens use this same navigation as an overlay drawer.
+  const sidebarCompact = sidebarCollapsed || (!isWideDesktop && !sidebarDrawerOpen);
   const [timeframeDays, setTimeframeDays] = useState<number>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +120,13 @@ export default function AdminDashboardScreen() {
   // Column Visibility States for 3-Column Chat Inspector
   const [showUsersColumn, setShowUsersColumn] = useState(true);
   const [showSessionsColumn, setShowSessionsColumn] = useState(true);
+  const [mobileInspectorView, setMobileInspectorView] = useState<'users' | 'sessions' | 'transcript'>('users');
+
+  const handleAdminTabChange = (tab: NavTab) => {
+    setActiveTab(tab);
+    if (!isDesktop) setSidebarDrawerOpen(false);
+    if (isMobile && tab === 'users') setMobileInspectorView('users');
+  };
   const [expandedSourcesIdx, setExpandedSourcesIdx] = useState<number | null>(null);
 
   // Admin Login States
@@ -345,6 +358,7 @@ export default function AdminDashboardScreen() {
 
   const inspectUser = async (user: AdminUserItem) => {
     setSelectedUser(user);
+    if (!isTablet) setMobileInspectorView('sessions');
     setLoadingUserChats(true);
     try {
       const chats = await apiService.fetchAdminUserChats(user.id);
@@ -374,6 +388,12 @@ export default function AdminDashboardScreen() {
     } finally {
       setLoadingGuestChats(false);
     }
+  };
+
+  const selectGuest = (guestId: string | null, sessions: UserChatSessionDetail[]) => {
+    setSelectedGuestId(guestId);
+    if (sessions.length > 0) setActiveSession(sessions[0]);
+    if (!isTablet) setMobileInspectorView('sessions');
   };
 
   useEffect(() => {
@@ -526,12 +546,13 @@ export default function AdminDashboardScreen() {
           },
         ]}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={styles.topBarPrimary}>
           <TouchableOpacity
-            onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+            accessibilityLabel={sidebarDrawerOpen ? 'Close navigation' : sidebarCompact ? 'Open navigation' : 'Collapse sidebar'}
+            onPress={() => isDesktop ? setSidebarCollapsed(!sidebarCollapsed) : setSidebarDrawerOpen(!sidebarDrawerOpen)}
             style={[styles.menuToggleBtn, { borderColor: theme.outlineVariant }]}
           >
-            <Text style={{ color: theme.text, fontSize: 15 }}>{sidebarCollapsed ? '▶' : '◀'}</Text>
+            <Ionicons name={sidebarDrawerOpen || !sidebarCompact ? 'close-outline' : 'menu-outline'} size={20} color={theme.text} />
           </TouchableOpacity>
           <View>
             <Text style={[styles.appTitle, { color: theme.text, fontFamily: serif }]}>
@@ -543,7 +564,7 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={[styles.topActions, { width: isMobile ? '100%' : undefined }]}>
           {/* Timeframe selector */}
           <View style={[styles.timeframePill, { backgroundColor: theme.inputBg, borderColor: theme.outlineVariant }]}>
             {[7, 14, 30].map((d) => (
@@ -572,54 +593,66 @@ export default function AdminDashboardScreen() {
             onPress={() => fetchAllAdminData(timeframeDays)}
             style={[styles.actionBtn, { borderColor: theme.accent, backgroundColor: theme.surface }]}
           >
-            <Text style={{ color: theme.accent, fontSize: 12, fontFamily: bold }}>🔄 Sync</Text>
+            <Ionicons name="sync-outline" size={16} color={theme.accent} />
+            {!isMobile && <Text style={{ color: theme.accent, fontSize: 12, fontFamily: bold }}>Sync</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => router.replace('/(tabs)')}
             style={[styles.actionBtn, { borderColor: theme.outlineVariant, backgroundColor: theme.surface }]}
           >
-            <Text style={{ color: theme.text, fontSize: 12, fontFamily: bold }}>App ↗</Text>
+            <Ionicons name="open-outline" size={16} color={theme.text} />
+            {!isMobile && <Text style={{ color: theme.text, fontSize: 12, fontFamily: bold }}>App</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleAdminLogout}
             style={[styles.actionBtn, { borderColor: 'rgba(239, 68, 68, 0.4)', backgroundColor: 'rgba(239, 68, 68, 0.08)' }]}
           >
-            <Text style={{ color: '#EF4444', fontSize: 12, fontFamily: bold }}>🚪 Logout</Text>
+            <Ionicons name="log-out-outline" size={16} color="#EF4444" />
+            {!isMobile && <Text style={{ color: '#EF4444', fontSize: 12, fontFamily: bold }}>Logout</Text>}
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Body: Responsive Layout (Collapsible Sidebar + Main Area) */}
       <View style={styles.bodyLayout}>
+        {!isDesktop && sidebarDrawerOpen && (
+          <RNPressable
+            accessibilityLabel="Close navigation"
+            onPress={() => setSidebarDrawerOpen(false)}
+            style={styles.sidebarScrim}
+          />
+        )}
         {/* Left Sidebar (Collapses to icons-only when closed) */}
         <View
           style={[
             styles.sidebar,
             {
+              display: !isDesktop && !sidebarDrawerOpen ? 'none' : 'flex',
               backgroundColor: theme.surface,
               borderRightColor: theme.outlineVariant,
-              width: sidebarCollapsed ? 64 : 220,
+              width: !isDesktop ? Math.min(width * 0.82, 300) : sidebarCompact ? 64 : 240,
+              ...(!isDesktop ? { position: 'absolute' as const, left: 0, top: 0, bottom: 0, zIndex: 30, shadowColor: '#000', shadowOpacity: 0.24, shadowRadius: 20, shadowOffset: { width: 6, height: 0 }, elevation: 12 } : {}),
             },
           ]}
         >
-          {!sidebarCollapsed && (
+          {!sidebarCompact && (
             <Text style={[styles.sidebarSectionLabel, { color: theme.textTertiary, fontFamily: bold }]}>
               NAVIGATION
             </Text>
           )}
 
           <TouchableOpacity
-            onPress={() => setActiveTab('overview')}
+            onPress={() => handleAdminTabChange('overview')}
             style={[
               styles.navItem,
               activeTab === 'overview' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 18 }}>📊</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: activeTab === 'overview' ? theme.accent : theme.text, fontFamily: activeTab === 'overview' ? bold : body }]}>
                 Overview & KPIs
               </Text>
@@ -627,15 +660,15 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('users')}
+            onPress={() => handleAdminTabChange('users')}
             style={[
               styles.navItem,
               activeTab === 'users' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 18 }}>💬</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: activeTab === 'users' ? theme.accent : theme.text, fontFamily: activeTab === 'users' ? bold : body }]}>
                 Chat Inspector
               </Text>
@@ -643,15 +676,15 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('languages')}
+            onPress={() => handleAdminTabChange('languages')}
             style={[
               styles.navItem,
               activeTab === 'languages' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 18 }}>🌐</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: activeTab === 'languages' ? theme.accent : theme.text, fontFamily: activeTab === 'languages' ? bold : body }]}>
                 Language Control
               </Text>
@@ -659,15 +692,15 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('financials')}
+            onPress={() => handleAdminTabChange('financials')}
             style={[
               styles.navItem,
               activeTab === 'financials' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 18 }}>💰</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: activeTab === 'financials' ? theme.accent : theme.text, fontFamily: activeTab === 'financials' ? bold : body }]}>
                 Financials & Cost
               </Text>
@@ -675,15 +708,15 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('performance')}
+            onPress={() => handleAdminTabChange('performance')}
             style={[
               styles.navItem,
               activeTab === 'performance' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 18 }}>⚡</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: activeTab === 'performance' ? theme.accent : theme.text, fontFamily: activeTab === 'performance' ? bold : body }]}>
                 Performance
               </Text>
@@ -691,15 +724,15 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('scripture')}
+            onPress={() => handleAdminTabChange('scripture')}
             style={[
               styles.navItem,
               activeTab === 'scripture' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 18 }}>🪷</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: activeTab === 'scripture' ? theme.accent : theme.text, fontFamily: activeTab === 'scripture' ? bold : body }]}>
                 Scripture & Personas
               </Text>
@@ -707,15 +740,15 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('logs')}
+            onPress={() => handleAdminTabChange('logs')}
             style={[
               styles.navItem,
               activeTab === 'logs' && { backgroundColor: 'rgba(217, 119, 6, 0.15)', borderColor: theme.accent },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 18 }}>📜</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: activeTab === 'logs' ? theme.accent : theme.text, fontFamily: activeTab === 'logs' ? bold : body }]}>
                 Live Raw Logs
               </Text>
@@ -729,11 +762,11 @@ export default function AdminDashboardScreen() {
             style={[
               styles.navItem,
               { borderColor: 'rgba(239, 68, 68, 0.3)', backgroundColor: 'rgba(239, 68, 68, 0.08)', marginBottom: 10 },
-              sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+              sidebarCompact && { justifyContent: 'center', paddingHorizontal: 0 },
             ]}
           >
             <Text style={{ fontSize: 16 }}>🚪</Text>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={[styles.navText, { color: '#EF4444', fontFamily: bold }]}>
                 Sign Out
               </Text>
@@ -741,13 +774,13 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <View style={[styles.systemStatusBox, { backgroundColor: theme.inputBg, borderColor: theme.outlineVariant }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: sidebarCompact ? 'center' : 'flex-start' }}>
               <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
-              {!sidebarCollapsed && (
+              {!sidebarCompact && (
                 <Text style={{ color: theme.text, fontSize: 11, fontFamily: bold }}>PostgreSQL Connected</Text>
               )}
             </View>
-            {!sidebarCollapsed && (
+            {!sidebarCompact && (
               <Text style={{ color: theme.textTertiary, fontSize: 10, marginTop: 4 }}>
                 pgvector embeddings: {scriptureInsights?.total_indexed_scenarios || 0}
               </Text>
@@ -885,9 +918,9 @@ export default function AdminDashboardScreen() {
               {/* TAB 2: 3-COLUMN SEPARATED CHAT INSPECTOR                   */}
               {/* ========================================================= */}
               {activeTab === 'users' && (
-                <View style={styles.threeColumnLayout}>
+                <View style={[styles.threeColumnLayout, { flexDirection: isTablet ? 'row' : 'column' }]}>
                   {/* COLUMN 1: Seekers / Users List */}
-                  {showUsersColumn && (
+                  {(isMobile ? mobileInspectorView === 'users' : showUsersColumn) && (
                     <View
                       style={[
                         styles.usersListColumn,
@@ -895,6 +928,8 @@ export default function AdminDashboardScreen() {
                           backgroundColor: theme.surface,
                           borderRightColor: theme.outlineVariant,
                           width: isTablet ? 250 : '100%',
+                          height: isTablet ? '100%' : undefined,
+                          flex: isTablet ? undefined : 1,
                         },
                       ]}
                     >
@@ -904,12 +939,12 @@ export default function AdminDashboardScreen() {
                           <Text style={[styles.columnHeaderTitle, { color: theme.text, fontFamily: serif }]}>
                             Seekers
                           </Text>
-                          <TouchableOpacity
+                          {!isMobile && <TouchableOpacity
                             onPress={() => setShowUsersColumn(false)}
                             style={[styles.collapseIconBtn, { borderColor: theme.outlineVariant }]}
                           >
                             <Text style={{ color: theme.textTertiary, fontSize: 11 }}>◀ Hide</Text>
-                          </TouchableOpacity>
+                          </TouchableOpacity>}
                         </View>
 
                         {/* Subtab Toggle (Users / Guests) */}
@@ -996,8 +1031,7 @@ export default function AdminDashboardScreen() {
                             {/* All Guests Card */}
                             <TouchableOpacity
                               onPress={() => {
-                                setSelectedGuestId(null);
-                                if (guestChats.length > 0) setActiveSession(guestChats[0]);
+                                selectGuest(null, guestChats);
                               }}
                               style={[
                                 styles.userCardItem,
@@ -1040,9 +1074,8 @@ export default function AdminDashboardScreen() {
                                   <TouchableOpacity
                                     key={g.guest_id}
                                     onPress={() => {
-                                      setSelectedGuestId(g.guest_id);
                                       const gSessions = guestChats.filter((sess) => (sess.guest_id || 'anonymous') === g.guest_id);
-                                      if (gSessions.length > 0) setActiveSession(gSessions[0]);
+                                      selectGuest(g.guest_id, gSessions);
                                     }}
                                     style={[
                                       styles.userCardItem,
@@ -1082,7 +1115,7 @@ export default function AdminDashboardScreen() {
                   )}
 
                   {/* COLUMN 2: User's Consultation Sessions / Threads List */}
-                  {showSessionsColumn && (
+                  {(isMobile ? mobileInspectorView === 'sessions' : showSessionsColumn) && (
                     <View
                       style={[
                         styles.sessionsListColumn,
@@ -1090,6 +1123,8 @@ export default function AdminDashboardScreen() {
                           backgroundColor: theme.surface,
                           borderRightColor: theme.outlineVariant,
                           width: isTablet ? 270 : '100%',
+                          height: isTablet ? '100%' : undefined,
+                          flex: isTablet ? undefined : 1,
                         },
                       ]}
                     >
@@ -1115,10 +1150,10 @@ export default function AdminDashboardScreen() {
                           </View>
 
                           <TouchableOpacity
-                            onPress={() => setShowSessionsColumn(false)}
+                            onPress={() => isMobile ? setMobileInspectorView('users') : setShowSessionsColumn(false)}
                             style={[styles.collapseIconBtn, { borderColor: theme.outlineVariant }]}
                           >
-                            <Text style={{ color: theme.textTertiary, fontSize: 11 }}>◀ Hide</Text>
+                            <Text style={{ color: theme.textTertiary, fontSize: 11 }}>{isMobile ? '← Users' : '◀ Hide'}</Text>
                           </TouchableOpacity>
                         </View>
 
@@ -1147,7 +1182,7 @@ export default function AdminDashboardScreen() {
                             return (
                               <TouchableOpacity
                                 key={sess.session_id}
-                                onPress={() => setActiveSession(sess)}
+                                onPress={() => { setActiveSession(sess); if (!isTablet) setMobileInspectorView('transcript'); }}
                                 style={[
                                   styles.sessionCardItem,
                                   {
@@ -1185,12 +1220,12 @@ export default function AdminDashboardScreen() {
                   )}
 
                   {/* COLUMN 3: Active Dialogue Transcript & Citations */}
-                  <View style={[styles.chatTranscriptColumn, { backgroundColor: theme.bg }]}>
+                  {(!isMobile || mobileInspectorView === 'transcript') && <View style={[styles.chatTranscriptColumn, { backgroundColor: theme.bg }]}>
                     {/* Column 3 Header */}
                     <View style={[styles.threadHeader, { backgroundColor: theme.surface, borderBottomColor: theme.outlineVariant }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
                         {/* Quick restore toggles if columns are hidden */}
-                        {!showUsersColumn && (
+                        {!isMobile && !showUsersColumn && (
                           <TouchableOpacity
                             onPress={() => setShowUsersColumn(true)}
                             style={[styles.collapseIconBtn, { borderColor: theme.outlineVariant }]}
@@ -1198,12 +1233,18 @@ export default function AdminDashboardScreen() {
                             <Text style={{ color: theme.text, fontSize: 11 }}>👥 Seekers</Text>
                           </TouchableOpacity>
                         )}
-                        {!showSessionsColumn && (
+                        {!isMobile && !showSessionsColumn && (
                           <TouchableOpacity
                             onPress={() => setShowSessionsColumn(true)}
                             style={[styles.collapseIconBtn, { borderColor: theme.outlineVariant }]}
                           >
                             <Text style={{ color: theme.text, fontSize: 11 }}>📑 Sessions</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {isMobile && (
+                          <TouchableOpacity accessibilityLabel="Back to sessions" onPress={() => setMobileInspectorView('sessions')} style={[styles.collapseIconBtn, { borderColor: theme.outlineVariant }]}>
+                            <Text style={{ color: theme.text, fontSize: 11 }}>← Sessions</Text>
                           </TouchableOpacity>
                         )}
 
@@ -1342,7 +1383,7 @@ export default function AdminDashboardScreen() {
                         })
                       )}
                     </ScrollView>
-                  </View>
+                  </View>}
                 </View>
               )}
 
@@ -2151,21 +2192,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 12,
     zIndex: 10,
+  },
+  topBarPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexShrink: 1,
+  },
+  topActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
   appTitle: {
     fontSize: 18,
     fontWeight: '700',
   },
   menuToggleBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 8,
     borderWidth: 1,
   },
   actionBtn: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
   },
@@ -2183,6 +2244,11 @@ const styles = StyleSheet.create({
   bodyLayout: {
     flex: 1,
     flexDirection: 'row',
+  },
+  sidebarScrim: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    backgroundColor: 'rgba(9, 12, 18, 0.58)',
   },
   sidebar: {
     borderRightWidth: 1,
