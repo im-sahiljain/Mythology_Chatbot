@@ -48,6 +48,27 @@ if (Platform.OS === "web" && typeof document !== "undefined") {
         -ms-overflow-style: none !important;
         scrollbar-width: none !important;
       }
+      .show-scrollbar::-webkit-scrollbar,
+      .show-scrollbar *::-webkit-scrollbar {
+        display: block !important;
+        width: 6px !important;
+        height: 6px !important;
+      }
+      .show-scrollbar::-webkit-scrollbar-track,
+      .show-scrollbar *::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+      .show-scrollbar::-webkit-scrollbar-thumb,
+      .show-scrollbar *::-webkit-scrollbar-thumb {
+        background-color: rgba(155, 155, 155, 0.45) !important;
+        border-radius: 20px !important;
+      }
+      .show-scrollbar,
+      .show-scrollbar * {
+        -ms-overflow-style: auto !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(155, 155, 155, 0.45) transparent !important;
+      }
     `;
     document.head.appendChild(style);
   }

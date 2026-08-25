@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,9 @@ import { API_BASE_URL } from '../services/api';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Card, Pressable, FadeSlide } from '../components/AnimatedComponents';
+import { LanguageSelectorModal } from '../components/LanguageSelectorModal';
 
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
 const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
@@ -19,7 +21,11 @@ export default function LoginScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const { appLanguageOption } = useLanguage();
 
+  const passwordInputRef = useRef<TextInput>(null);
+
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -118,6 +124,28 @@ export default function LoginScreen() {
     >
       <FadeSlide delay={50}>
         <Card style={styles.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <TouchableOpacity 
+              onPress={() => setLanguageModalVisible(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: theme.inputBg,
+                borderColor: theme.inputBorder,
+                borderWidth: 1,
+                borderRadius: 20,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                gap: 6
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>🌐</Text>
+              <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: bold }}>
+                {appLanguageOption?.nativeName || 'English'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.text, fontFamily: serif }]}>
               {t('auth.welcomeBack', 'Welcome Back')}
@@ -155,6 +183,8 @@ export default function LoginScreen() {
               placeholderTextColor={theme.isDark ? '#666' : '#999'}
               autoCapitalize="none"
               keyboardType="email-address"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
             />
 
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
@@ -162,12 +192,15 @@ export default function LoginScreen() {
             </Text>
             <View style={styles.passwordWrapper}>
               <TextInput
+                ref={passwordInputRef}
                 style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
                 placeholder={t('auth.passwordPlaceholder', 'Enter your password')}
                 placeholderTextColor={theme.isDark ? '#666' : '#999'}
+                returnKeyType="go"
+                onSubmitEditing={login}
               />
               <TouchableOpacity
                 style={styles.eyeBtn}
@@ -212,6 +245,11 @@ export default function LoginScreen() {
           </View>
         </Card>
       </FadeSlide>
+      <LanguageSelectorModal
+        visible={languageModalVisible}
+        mode="app"
+        onClose={() => setLanguageModalVisible(false)}
+      />
     </ScrollView>
   );
 }

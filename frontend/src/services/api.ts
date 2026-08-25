@@ -15,10 +15,20 @@ const getLocalIp = (): string => {
   return "http://192.168.1.10:8000";
 };
 
-// API URL priority: 1) .env (EXPO_PUBLIC_API_URL) -> 2) Platform default (web: localhost, mobile: Wi-Fi IP)
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Platform.OS === "web" ? "http://localhost:8000" : getLocalIp());
+// API URL priority: 1) .env (if valid for platform) -> 2) Platform default (web: localhost, mobile: Wi-Fi IP)
+const getApiBaseUrl = (): string => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim().length > 0) {
+    // If it's a mobile device/emulator but the env URL points to localhost, redirect to local IP
+    if (Platform.OS !== "web" && (envUrl.includes("localhost") || envUrl.includes("127.0.0.1"))) {
+      return getLocalIp();
+    }
+    return envUrl;
+  }
+  return Platform.OS === "web" ? "http://localhost:8000" : getLocalIp();
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 console.log(
   `🌐 [API Service] Platform: ${Platform.OS} | Target API URL: ${API_BASE_URL}`,

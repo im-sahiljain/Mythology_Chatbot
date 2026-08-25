@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,18 +9,31 @@ import {
   Platform,
   useWindowDimensions,
   StatusBar,
-} from 'react-native';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { useTheme } from '../src/context/ThemeContext';
-import { useLanguage } from '../src/context/LanguageContext';
-import { ALL_LANGUAGES, LanguageOption } from '../src/i18n/languages';
-import { LanguageSelectorModal } from '../src/components/LanguageSelectorModal';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  useSafeAreaInsets,
+  SafeAreaView,
+} from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "../src/context/ThemeContext";
+import { useLanguage } from "../src/context/LanguageContext";
+import { ALL_LANGUAGES, LanguageOption } from "../src/i18n/languages";
+import { LanguageSelectorModal } from "../src/components/LanguageSelectorModal";
 
-const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
-const label = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_700Bold';
-const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
+const serif =
+  Platform.OS === "web"
+    ? "'EB Garamond', Georgia, serif"
+    : "EBGaramond_700Bold";
+const label =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_700Bold";
+const body =
+  Platform.OS === "web"
+    ? "'Hanken Grotesk', sans-serif"
+    : "HankenGrotesk_400Regular";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -44,11 +57,13 @@ export default function SettingsScreen() {
   // Desktop inline dropdown states
   const [appDropdownOpen, setAppDropdownOpen] = useState(false);
   const [chatDropdownOpen, setChatDropdownOpen] = useState(false);
-  const [appSearch, setAppSearch] = useState('');
-  const [chatSearch, setChatSearch] = useState('');
+  const [appSearch, setAppSearch] = useState("");
+  const [chatSearch, setChatSearch] = useState("");
 
   // Mobile modal states
-  const [mobileModalMode, setMobileModalMode] = useState<'app' | 'chat' | null>(null);
+  const [mobileModalMode, setMobileModalMode] = useState<"app" | "chat" | null>(
+    null,
+  );
 
   // Filtered lists for desktop dropdowns
   const filteredAppLanguages = useMemo(() => {
@@ -60,7 +75,7 @@ export default function SettingsScreen() {
         l.name.toLowerCase().includes(q) ||
         l.nativeName.toLowerCase().includes(q) ||
         l.code.toLowerCase().includes(q) ||
-        (l.region && l.region.toLowerCase().includes(q))
+        (l.region && l.region.toLowerCase().includes(q)),
     );
   }, [appSearch, supportedAppLanguages]);
 
@@ -73,13 +88,13 @@ export default function SettingsScreen() {
         l.name.toLowerCase().includes(q) ||
         l.nativeName.toLowerCase().includes(q) ||
         l.code.toLowerCase().includes(q) ||
-        (l.region && l.region.toLowerCase().includes(q))
+        (l.region && l.region.toLowerCase().includes(q)),
     );
   }, [chatSearch, supportedChatLanguages]);
 
-  const handleOpenLanguageSelector = (mode: 'app' | 'chat') => {
+  const handleOpenLanguageSelector = (mode: "app" | "chat") => {
     if (isDesktop) {
-      if (mode === 'app') {
+      if (mode === "app") {
         setAppDropdownOpen((prev) => !prev);
         setChatDropdownOpen(false);
       } else {
@@ -93,13 +108,10 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        { backgroundColor: theme.bgSecondary },
-      ]}
+      style={[styles.safeArea, { backgroundColor: theme.bgSecondary }]}
     >
       <StatusBar
-        barStyle={theme.isDark ? 'light-content' : 'dark-content'}
+        barStyle={theme.isDark ? "light-content" : "dark-content"}
         backgroundColor={theme.bgSecondary}
       />
 
@@ -125,7 +137,7 @@ export default function SettingsScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Text style={[styles.backButtonText, { color: theme.text }]}>←</Text>
+            <Ionicons name="arrow-back" size={22} color={theme.text} />
           </TouchableOpacity>
 
           <View style={styles.headerTitleGroup}>
@@ -135,7 +147,7 @@ export default function SettingsScreen() {
                 { color: theme.text, fontFamily: serif },
               ]}
             >
-              {t('settingsScreen.title', 'General Settings')}
+              {t("settingsScreen.title", "Settings")}
             </Text>
             <Text
               style={[
@@ -143,7 +155,10 @@ export default function SettingsScreen() {
                 { color: theme.secondary, fontFamily: body },
               ]}
             >
-              {t('settingsScreen.subtitle', 'Configure Vedic languages, appearance, and counsel preferences')}
+              {t(
+                "settingsScreen.subtitle",
+                "Configure Vedic languages, appearance, and counsel preferences",
+              )}
             </Text>
           </View>
         </View>
@@ -156,7 +171,9 @@ export default function SettingsScreen() {
           isDesktop && styles.desktopContentContainer,
           { paddingBottom: Math.max(insets.bottom, 24) + 24 },
         ]}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        // @ts-ignore
+        className="show-scrollbar"
       >
         {/* ── SECTION 1: LANGUAGE & REGION ────────────────────────── */}
         <View style={styles.section}>
@@ -166,7 +183,7 @@ export default function SettingsScreen() {
               { color: theme.primary, fontFamily: label },
             ]}
           >
-            {t('drawer.preferences_system', 'PREFERENCES & SYSTEM')}
+            {t("drawer.preferences_system", "PREFERENCES & SYSTEM")}
           </Text>
 
           {/* 1. App Language Picker */}
@@ -181,14 +198,14 @@ export default function SettingsScreen() {
           >
             <TouchableOpacity
               style={styles.settingCardHeader}
-              onPress={() => handleOpenLanguageSelector('app')}
+              onPress={() => handleOpenLanguageSelector("app")}
               activeOpacity={0.7}
             >
               <View style={styles.settingLeft}>
                 <View
                   style={[
                     styles.iconCircle,
-                    { backgroundColor: theme.isDark ? '#2D2214' : '#FBF3E8' },
+                    { backgroundColor: theme.isDark ? "#2D2214" : "#FBF3E8" },
                   ]}
                 >
                   <Text style={{ fontSize: 18 }}>🌐</Text>
@@ -201,7 +218,7 @@ export default function SettingsScreen() {
                     ]}
                     numberOfLines={1}
                   >
-                    {t('drawer.app_language', 'App Language')}
+                    {t("drawer.app_language", "App Language")}
                   </Text>
                   {isDesktop && (
                     <Text
@@ -211,7 +228,10 @@ export default function SettingsScreen() {
                       ]}
                       numberOfLines={1}
                     >
-                      {t('settingsScreen.app_language_desc', 'Changes menus, buttons, tabs, and navigation')}
+                      {t(
+                        "settingsScreen.app_language_desc",
+                        "Changes menus, buttons, tabs, and navigation",
+                      )}
                     </Text>
                   )}
                 </View>
@@ -241,8 +261,14 @@ export default function SettingsScreen() {
                       : appLanguageOption.nativeName}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 13, color: theme.secondary, marginLeft: 6 }}>
-                  {isDesktop ? (appDropdownOpen ? '▲' : '▼') : '›'}
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: theme.secondary,
+                    marginLeft: 6,
+                  }}
+                >
+                  {isDesktop ? (appDropdownOpen ? "▲" : "▼") : "›"}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -273,23 +299,35 @@ export default function SettingsScreen() {
                       styles.dropdownSearchInput,
                       { color: theme.text, fontFamily: body },
                     ]}
-                    placeholder={t('language_modal.search_placeholder', 'Search language or script...')}
+                    placeholder={t(
+                      "language_modal.search_placeholder",
+                      "Search language or script...",
+                    )}
                     placeholderTextColor={theme.textTertiary}
                     value={appSearch}
                     onChangeText={setAppSearch}
                     autoFocus
                   />
                   {appSearch.length > 0 && (
-                    <TouchableOpacity onPress={() => setAppSearch('')}>
-                      <Text style={{ color: theme.textTertiary, paddingHorizontal: 4 }}>✕</Text>
+                    <TouchableOpacity onPress={() => setAppSearch("")}>
+                      <Text
+                        style={{
+                          color: theme.textTertiary,
+                          paddingHorizontal: 4,
+                        }}
+                      >
+                        ✕
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
 
                 <ScrollView
                   style={styles.dropdownScroll}
-                  showsVerticalScrollIndicator={false}
+                  showsVerticalScrollIndicator={true}
                   nestedScrollEnabled
+                  // @ts-ignore
+                  className="show-scrollbar"
                 >
                   <View style={styles.dropdownGrid}>
                     {filteredAppLanguages.map((item) => {
@@ -301,9 +339,13 @@ export default function SettingsScreen() {
                             styles.dropdownItem,
                             {
                               backgroundColor: isSelected
-                                ? (theme.isDark ? 'rgba(217, 119, 6, 0.2)' : 'rgba(217, 119, 6, 0.12)')
-                                : 'transparent',
-                              borderColor: isSelected ? theme.accent : 'transparent',
+                                ? theme.isDark
+                                  ? "rgba(217, 119, 6, 0.2)"
+                                  : "rgba(217, 119, 6, 0.12)"
+                                : "transparent",
+                              borderColor: isSelected
+                                ? theme.accent
+                                : "transparent",
                             },
                           ]}
                           onPress={async () => {
@@ -316,7 +358,9 @@ export default function SettingsScreen() {
                               style={[
                                 styles.dropdownNativeName,
                                 {
-                                  color: isSelected ? theme.primary : theme.text,
+                                  color: isSelected
+                                    ? theme.primary
+                                    : theme.text,
                                   fontFamily: isSelected ? label : body,
                                 },
                               ]}
@@ -333,7 +377,14 @@ export default function SettingsScreen() {
                             </Text>
                           </View>
                           {isSelected && (
-                            <Text style={{ color: theme.primary, fontWeight: '700' }}>✓</Text>
+                            <Text
+                              style={{
+                                color: theme.primary,
+                                fontWeight: "700",
+                              }}
+                            >
+                              ✓
+                            </Text>
                           )}
                         </TouchableOpacity>
                       );
@@ -357,14 +408,14 @@ export default function SettingsScreen() {
           >
             <TouchableOpacity
               style={styles.settingCardHeader}
-              onPress={() => handleOpenLanguageSelector('chat')}
+              onPress={() => handleOpenLanguageSelector("chat")}
               activeOpacity={0.7}
             >
               <View style={styles.settingLeft}>
                 <View
                   style={[
                     styles.iconCircle,
-                    { backgroundColor: theme.isDark ? '#2D2214' : '#FBF3E8' },
+                    { backgroundColor: theme.isDark ? "#2D2214" : "#FBF3E8" },
                   ]}
                 >
                   <Text style={{ fontSize: 18 }}>💬</Text>
@@ -377,7 +428,7 @@ export default function SettingsScreen() {
                     ]}
                     numberOfLines={1}
                   >
-                    {t('drawer.chat_language', 'AI Deity Language')}
+                    {t("drawer.chat_language", "AI Deity Language")}
                   </Text>
                   {isDesktop && (
                     <Text
@@ -387,7 +438,10 @@ export default function SettingsScreen() {
                       ]}
                       numberOfLines={1}
                     >
-                      {t('settingsScreen.chat_language_desc', 'Language & script used by Krishna, Rama, Sita, etc. in replies')}
+                      {t(
+                        "settingsScreen.chat_language_desc",
+                        "Language & script used by Krishna, Rama, Sita, etc. in replies",
+                      )}
                     </Text>
                   )}
                 </View>
@@ -412,15 +466,21 @@ export default function SettingsScreen() {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {chatLanguageOption.code === 'auto'
-                      ? t('drawer.auto', 'Auto')
-                      : (isDesktop
-                          ? `${chatLanguageOption.nativeName} (${chatLanguageOption.name})`
-                          : chatLanguageOption.nativeName)}
+                    {chatLanguageOption.code === "auto"
+                      ? t("drawer.auto", "Auto")
+                      : isDesktop
+                        ? `${chatLanguageOption.nativeName} (${chatLanguageOption.name})`
+                        : chatLanguageOption.nativeName}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 13, color: theme.secondary, marginLeft: 6 }}>
-                  {isDesktop ? (chatDropdownOpen ? '▲' : '▼') : '›'}
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: theme.secondary,
+                    marginLeft: 6,
+                  }}
+                >
+                  {isDesktop ? (chatDropdownOpen ? "▲" : "▼") : "›"}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -451,23 +511,35 @@ export default function SettingsScreen() {
                       styles.dropdownSearchInput,
                       { color: theme.text, fontFamily: body },
                     ]}
-                    placeholder={t('language_modal.search_placeholder', 'Search language or script...')}
+                    placeholder={t(
+                      "language_modal.search_placeholder",
+                      "Search language or script...",
+                    )}
                     placeholderTextColor={theme.textTertiary}
                     value={chatSearch}
                     onChangeText={setChatSearch}
                     autoFocus
                   />
                   {chatSearch.length > 0 && (
-                    <TouchableOpacity onPress={() => setChatSearch('')}>
-                      <Text style={{ color: theme.textTertiary, paddingHorizontal: 4 }}>✕</Text>
+                    <TouchableOpacity onPress={() => setChatSearch("")}>
+                      <Text
+                        style={{
+                          color: theme.textTertiary,
+                          paddingHorizontal: 4,
+                        }}
+                      >
+                        ✕
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
 
                 <ScrollView
                   style={styles.dropdownScroll}
-                  showsVerticalScrollIndicator={false}
+                  showsVerticalScrollIndicator={true}
                   nestedScrollEnabled
+                  // @ts-ignore
+                  className="show-scrollbar"
                 >
                   <View style={styles.dropdownGrid}>
                     {/* Auto option */}
@@ -477,14 +549,19 @@ export default function SettingsScreen() {
                           styles.dropdownItem,
                           {
                             backgroundColor:
-                              chatLanguage === 'auto'
-                                ? (theme.isDark ? 'rgba(217, 119, 6, 0.2)' : 'rgba(217, 119, 6, 0.12)')
-                                : 'transparent',
-                            borderColor: chatLanguage === 'auto' ? theme.accent : 'transparent',
+                              chatLanguage === "auto"
+                                ? theme.isDark
+                                  ? "rgba(217, 119, 6, 0.2)"
+                                  : "rgba(217, 119, 6, 0.12)"
+                                : "transparent",
+                            borderColor:
+                              chatLanguage === "auto"
+                                ? theme.accent
+                                : "transparent",
                           },
                         ]}
                         onPress={async () => {
-                          await setChatLanguage('auto');
+                          await setChatLanguage("auto");
                           setChatDropdownOpen(false);
                         }}
                       >
@@ -493,12 +570,20 @@ export default function SettingsScreen() {
                             style={[
                               styles.dropdownNativeName,
                               {
-                                color: chatLanguage === 'auto' ? theme.primary : theme.text,
-                                fontFamily: chatLanguage === 'auto' ? label : body,
+                                color:
+                                  chatLanguage === "auto"
+                                    ? theme.primary
+                                    : theme.text,
+                                fontFamily:
+                                  chatLanguage === "auto" ? label : body,
                               },
                             ]}
                           >
-                            ✨ {t('language_modal.auto_option', 'Auto (System Default)')}
+                            ✨{" "}
+                            {t(
+                              "language_modal.auto_option",
+                              "Auto (System Default)",
+                            )}
                           </Text>
                           <Text
                             style={[
@@ -509,8 +594,12 @@ export default function SettingsScreen() {
                             Matches current app interface language
                           </Text>
                         </View>
-                        {chatLanguage === 'auto' && (
-                          <Text style={{ color: theme.primary, fontWeight: '700' }}>✓</Text>
+                        {chatLanguage === "auto" && (
+                          <Text
+                            style={{ color: theme.primary, fontWeight: "700" }}
+                          >
+                            ✓
+                          </Text>
                         )}
                       </TouchableOpacity>
                     )}
@@ -524,9 +613,13 @@ export default function SettingsScreen() {
                             styles.dropdownItem,
                             {
                               backgroundColor: isSelected
-                                ? (theme.isDark ? 'rgba(217, 119, 6, 0.2)' : 'rgba(217, 119, 6, 0.12)')
-                                : 'transparent',
-                              borderColor: isSelected ? theme.accent : 'transparent',
+                                ? theme.isDark
+                                  ? "rgba(217, 119, 6, 0.2)"
+                                  : "rgba(217, 119, 6, 0.12)"
+                                : "transparent",
+                              borderColor: isSelected
+                                ? theme.accent
+                                : "transparent",
                             },
                           ]}
                           onPress={async () => {
@@ -539,7 +632,9 @@ export default function SettingsScreen() {
                               style={[
                                 styles.dropdownNativeName,
                                 {
-                                  color: isSelected ? theme.primary : theme.text,
+                                  color: isSelected
+                                    ? theme.primary
+                                    : theme.text,
                                   fontFamily: isSelected ? label : body,
                                 },
                               ]}
@@ -556,7 +651,14 @@ export default function SettingsScreen() {
                             </Text>
                           </View>
                           {isSelected && (
-                            <Text style={{ color: theme.primary, fontWeight: '700' }}>✓</Text>
+                            <Text
+                              style={{
+                                color: theme.primary,
+                                fontWeight: "700",
+                              }}
+                            >
+                              ✓
+                            </Text>
                           )}
                         </TouchableOpacity>
                       );
@@ -576,7 +678,7 @@ export default function SettingsScreen() {
               { color: theme.primary, fontFamily: label },
             ]}
           >
-            {t('settingsScreen.appearance', 'APPEARANCE & THEME')}
+            {t("settingsScreen.appearance", "APPEARANCE & THEME")}
           </Text>
 
           <View
@@ -593,9 +695,16 @@ export default function SettingsScreen() {
                 styles.themeCard,
                 !theme.isDark && [
                   styles.themeCardActive,
-                  { borderColor: theme.primary, backgroundColor: theme.isDark ? '#2D2214' : '#FBF3E8' },
+                  {
+                    borderColor: theme.primary,
+                    backgroundColor: theme.isDark ? "#2D2214" : "#FBF3E8",
+                  },
                 ],
-                { borderColor: !theme.isDark ? theme.primary : theme.outlineVariant },
+                {
+                  borderColor: !theme.isDark
+                    ? theme.primary
+                    : theme.outlineVariant,
+                },
               ]}
               onPress={() => {
                 if (theme.isDark) toggleTheme();
@@ -609,7 +718,7 @@ export default function SettingsScreen() {
                   { color: theme.text, fontFamily: label },
                 ]}
               >
-                {t('drawer.theme_light', 'Light Theme')}
+                {t("drawer.theme_light", "Light Theme")}
               </Text>
               <Text
                 style={[
@@ -626,9 +735,16 @@ export default function SettingsScreen() {
                 styles.themeCard,
                 theme.isDark && [
                   styles.themeCardActive,
-                  { borderColor: theme.primary, backgroundColor: theme.isDark ? '#2D2214' : '#FBF3E8' },
+                  {
+                    borderColor: theme.primary,
+                    backgroundColor: theme.isDark ? "#2D2214" : "#FBF3E8",
+                  },
                 ],
-                { borderColor: theme.isDark ? theme.primary : theme.outlineVariant },
+                {
+                  borderColor: theme.isDark
+                    ? theme.primary
+                    : theme.outlineVariant,
+                },
               ]}
               onPress={() => {
                 if (!theme.isDark) toggleTheme();
@@ -642,7 +758,7 @@ export default function SettingsScreen() {
                   { color: theme.text, fontFamily: label },
                 ]}
               >
-                {t('drawer.theme_dark', 'Dark Theme')}
+                {t("drawer.theme_dark", "Dark Theme")}
               </Text>
               <Text
                 style={[
@@ -680,23 +796,23 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     maxWidth: 900,
-    width: '100%',
-    marginHorizontal: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: "100%",
+    marginHorizontal: "auto",
+    flexDirection: "row",
+    alignItems: "center",
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   backButtonText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   headerTitleGroup: {
     flex: 1,
@@ -715,14 +831,14 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     maxWidth: 900,
-    width: '100%',
-    marginHorizontal: 'auto',
+    width: "100%",
+    marginHorizontal: "auto",
   },
   desktopContentContainer: {
     paddingVertical: 24,
   },
   section: {
-    width: '100%',
+    width: "100%",
   },
   sectionTitle: {
     fontSize: 12,
@@ -733,19 +849,19 @@ const styles = StyleSheet.create({
   settingCard: {
     borderRadius: 16,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   settingCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     paddingHorizontal: 14,
     minHeight: 56,
   },
   settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     marginRight: 8,
   },
@@ -753,8 +869,8 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   settingTextGroup: {
@@ -768,8 +884,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   settingRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flexShrink: 0,
   },
   valueBadge: {
@@ -786,8 +902,8 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   dropdownSearchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
@@ -803,15 +919,15 @@ const styles = StyleSheet.create({
     maxHeight: 280,
   },
   dropdownGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '49%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "49%",
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 10,
@@ -828,7 +944,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   themeGrid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderRadius: 16,
     borderWidth: 1,
     padding: 12,
@@ -839,8 +955,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1.5,
-    alignItems: 'center',
-    textAlign: 'center',
+    alignItems: "center",
+    textAlign: "center",
   },
   themeCardActive: {
     elevation: 2,
@@ -851,6 +967,6 @@ const styles = StyleSheet.create({
   themeCardDesc: {
     fontSize: 12,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

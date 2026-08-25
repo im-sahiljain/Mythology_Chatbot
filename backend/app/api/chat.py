@@ -239,7 +239,9 @@ async def chat_roundtable_endpoint(
             assistant_reply=combined_replies,
             character=", ".join(spoken_chars) if spoken_chars else "Vedic Council",
             stage=response_data.get("stage"),
-            sources=response_data.get("sources", [])
+            sources=response_data.get("sources", []),
+            roundtable_replies=replies,
+            council=request.council_characters
         )
 
 

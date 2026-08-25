@@ -166,8 +166,10 @@ export const LanguageSelectorModal: React.FC<LanguageSelectorModalProps> = ({
           {/* Radio List */}
           <ScrollView
             style={styles.radioListScroll}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
             keyboardShouldPersistTaps="handled"
+            // @ts-ignore
+            className="show-scrollbar"
           >
             {/* System Default / Auto option for Chat Mode */}
             {mode === 'chat' && !searchQuery && (

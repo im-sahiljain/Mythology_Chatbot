@@ -189,7 +189,7 @@
     "mahabharata": "Mahabharata"
   },
   "settingsScreen": {
-    "title": "General Settings",
+    "title": "Settings",
     "subtitle": "Configure Vedic languages, appearance, and counsel preferences",
     "app_language_desc": "Changes menus, buttons, tabs, and navigation",
     "chat_language_desc": "Language & script used by Krishna, Rama, Sita, etc. in replies",

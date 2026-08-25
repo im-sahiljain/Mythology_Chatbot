@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import { useTheme } from "../src/context/ThemeContext";
 import {
   apiService,
@@ -216,9 +217,7 @@ export default function AdminDashboardScreen() {
 
   const handleCopyText = async (text: string, id: string) => {
     try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      }
+      await Clipboard.setStringAsync(text);
       setCopiedMsgId(id);
       setTimeout(() => {
         setCopiedMsgId(null);
@@ -577,15 +576,18 @@ export default function AdminDashboardScreen() {
             onPress={() => router.replace("/(tabs)")}
             style={{ marginTop: 16, alignItems: "center" }}
           >
-            <Text
-              style={{
-                color: theme.textSecondary,
-                fontFamily: body,
-                fontSize: 13,
-              }}
-            >
-              ← Return to Main App
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="arrow-back" size={14} color={theme.textSecondary} />
+              <Text
+                style={{
+                  color: theme.textSecondary,
+                  fontFamily: body,
+                  fontSize: 13,
+                }}
+              >
+                Return to Main App
+              </Text>
+            </View>
           </RNPressable>
         </View>
       </View>
@@ -1685,6 +1687,11 @@ export default function AdminDashboardScreen() {
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                           />
+                          {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                              <Ionicons name="close-circle" size={14} color={theme.textTertiary} />
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
 
@@ -2082,7 +2089,7 @@ export default function AdminDashboardScreen() {
                                 fontSize: 11,
                               }}
                             >
-                              {isMobile ? "← Users" : "◀ Hide"}
+                              {isMobile ? "◀ Users" : "◀ Hide"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -2112,6 +2119,11 @@ export default function AdminDashboardScreen() {
                             value={sessionSearchQuery}
                             onChangeText={setSessionSearchQuery}
                           />
+                          {sessionSearchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSessionSearchQuery('')} style={{ padding: 4 }}>
+                              <Ionicons name="close-circle" size={14} color={theme.textTertiary} />
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
 
@@ -2296,7 +2308,7 @@ export default function AdminDashboardScreen() {
                               ]}
                             >
                               <Text style={{ color: theme.text, fontSize: 11 }}>
-                                ← Sessions
+                                ◀ Sessions
                               </Text>
                             </TouchableOpacity>
                           )}

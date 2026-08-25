@@ -15,6 +15,8 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../src/context/ThemeContext";
@@ -269,9 +271,7 @@ export default function RoundtableScreen() {
 
   const handleCopyText = async (text: string, id: string) => {
     try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      }
+      await Clipboard.setStringAsync(text);
       setCopiedMsgId(id);
       setTimeout(() => {
         setCopiedMsgId(null);
@@ -397,6 +397,12 @@ export default function RoundtableScreen() {
         setHistory(active.history);
         if (active.council && active.council.length > 0) {
           setActiveCouncil(active.council);
+        } else {
+          // Dynamic fallback for older sessions: extract distinct characters from history
+          const chars = Array.from(new Set(active.history.map(m => m.character).filter(Boolean))) as string[];
+          if (chars.length > 0) {
+            setActiveCouncil(chars);
+          }
         }
         setIsSessionLoading(false);
       } else {
@@ -410,6 +416,12 @@ export default function RoundtableScreen() {
             const current = all.find((s) => s.id === params.id);
             if (current?.council && current.council.length > 0) {
               setActiveCouncil(current.council);
+            } else {
+              // Dynamic fallback for older sessions: extract distinct characters from loaded history
+              const chars = Array.from(new Set(msgs.map(m => m.character).filter(Boolean))) as string[];
+              if (chars.length > 0) {
+                setActiveCouncil(chars);
+              }
             }
           }
         } finally {
@@ -1168,6 +1180,171 @@ export default function RoundtableScreen() {
           ]}
           pointerEvents="box-none"
         >
+            {/* Autocomplete Dropup when typing @ (Placed at Animated.View root level to prevent Android touch boundaries clipping) */}
+            {showMentionDropup && (
+              <View
+                style={[
+                  styles.mentionDropupCard,
+                  {
+                    backgroundColor: theme.surface,
+                    borderColor: theme.outlineVariant,
+                    shadowColor: theme.shadow,
+                    position: "relative",
+                    bottom: undefined,
+                    left: undefined,
+                    right: undefined,
+                    width: "100%",
+                    maxWidth: 820,
+                    marginBottom: 8,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.dropupHeader,
+                    { borderBottomColor: theme.outlineVariant },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dropupHeaderTitle,
+                      { color: theme.secondary, fontFamily: label },
+                    ]}
+                  >
+                    {t(
+                      "roundtableScreen.selectLegendDropup",
+                      "SELECT LEGEND TO ADDRESS & INVITE",
+                    )}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowMentionDropup(false)}>
+                    <Text style={{ fontSize: 13, color: theme.secondary }}>
+                      ✕
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  ref={mentionScrollRef}
+                  style={{ maxHeight: 260 }}
+                  showsVerticalScrollIndicator={true}
+                  keyboardShouldPersistTaps="always"
+                  nestedScrollEnabled={true}
+                  {...({ className: "show-scrollbar" } as any)}
+                >
+                  {filteredMentionCandidates.map((legend, index) => {
+                    const isInCouncil = activeCouncil.includes(legend.name);
+                    const isSelected = index === mentionSelectedIndex;
+                    const locLeg = getLocalizedCharacter(legend, i18n.language);
+
+                    return (
+                      <TouchableOpacity
+                        key={legend.name}
+                        style={[
+                          styles.dropupRow,
+                          {
+                            backgroundColor: isSelected
+                              ? theme.surfaceContainerLow
+                              : theme.surfaceContainerLowest,
+                            borderColor: isSelected
+                              ? theme.primary
+                              : isInCouncil
+                                ? theme.outlineVariant
+                                : legend.color,
+                            borderWidth: isSelected ? 2 : 1,
+                          },
+                        ]}
+                        onPress={() => handleSelectMentionCandidate(legend)}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 10,
+                            flex: 1,
+                          }}
+                        >
+                          <Text style={{ fontSize: 20 }}>{legend.icon}</Text>
+                          <View style={{ flex: 1 }}>
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.dropupName,
+                                  { color: theme.text, fontFamily: serif },
+                                ]}
+                              >
+                                {locLeg.name}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.dropupEpic,
+                                  { color: theme.secondary, fontFamily: label },
+                                ]}
+                              >
+                                (
+                                {legend.epic
+                                  ?.toLowerCase()
+                                  .includes("mahabharata")
+                                  ? t("epics.mahabharata", "Mahabharata")
+                                  : legend.epic
+                                        ?.toLowerCase()
+                                        .includes("ramayana")
+                                    ? t("epics.ramayana", "Ramayana")
+                                    : legend.epic}
+                                )
+                              </Text>
+                            </View>
+                            <Text
+                              style={[
+                                styles.dropupArchetype,
+                                { color: theme.secondary, fontFamily: body },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {locLeg.role} · {locLeg.subtitle}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.dropupTag,
+                            {
+                              backgroundColor: isInCouncil
+                                ? "rgba(74, 222, 128, 0.12)"
+                                : theme.primaryContainer,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dropupTagText,
+                              {
+                                color: isInCouncil
+                                  ? "#16A34A"
+                                  : theme.onPrimaryContainer,
+                                fontFamily: label,
+                              },
+                            ]}
+                          >
+                            {isInCouncil
+                              ? t("roundtableScreen.inCouncil", "● In Council")
+                              : t("roundtableScreen.addTag", "➕ Add & Tag")}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
           <View
             style={[
               styles.dockContainer,
@@ -1290,161 +1467,7 @@ export default function RoundtableScreen() {
               })}
             </ScrollView>
 
-            {/* Autocomplete Dropup when typing @ */}
-            {showMentionDropup && (
-              <View
-                style={[
-                  styles.mentionDropupCard,
-                  {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.outlineVariant,
-                    shadowColor: theme.shadow,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.dropupHeader,
-                    { borderBottomColor: theme.outlineVariant },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dropupHeaderTitle,
-                      { color: theme.secondary, fontFamily: label },
-                    ]}
-                  >
-                    {t(
-                      "roundtableScreen.selectLegendDropup",
-                      "SELECT LEGEND TO ADDRESS & INVITE",
-                    )}
-                  </Text>
-                  <TouchableOpacity onPress={() => setShowMentionDropup(false)}>
-                    <Text style={{ fontSize: 13, color: theme.secondary }}>
-                      ✕
-                    </Text>
-                  </TouchableOpacity>
-                </View>
 
-                <ScrollView
-                  ref={mentionScrollRef}
-                  style={{ maxHeight: 260 }}
-                  showsVerticalScrollIndicator={true}
-                  keyboardShouldPersistTaps="always"
-                >
-                  {filteredMentionCandidates.map((legend, index) => {
-                    const isInCouncil = activeCouncil.includes(legend.name);
-                    const isSelected = index === mentionSelectedIndex;
-                    const locLeg = getLocalizedCharacter(legend, i18n.language);
-
-                    return (
-                      <TouchableOpacity
-                        key={legend.name}
-                        style={[
-                          styles.dropupRow,
-                          {
-                            backgroundColor: isSelected
-                              ? theme.surfaceContainerLow
-                              : theme.surfaceContainerLowest,
-                            borderColor: isSelected
-                              ? theme.primary
-                              : isInCouncil
-                                ? theme.outlineVariant
-                                : legend.color,
-                            borderWidth: isSelected ? 2 : 1,
-                          },
-                        ]}
-                        onPress={() => handleSelectMentionCandidate(legend)}
-                        activeOpacity={0.7}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 10,
-                            flex: 1,
-                          }}
-                        >
-                          <Text style={{ fontSize: 20 }}>{legend.icon}</Text>
-                          <View style={{ flex: 1 }}>
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                            >
-                              <Text
-                                style={[
-                                  styles.dropupName,
-                                  { color: theme.text, fontFamily: serif },
-                                ]}
-                              >
-                                {locLeg.name}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.dropupEpic,
-                                  { color: theme.secondary, fontFamily: label },
-                                ]}
-                              >
-                                (
-                                {legend.epic
-                                  ?.toLowerCase()
-                                  .includes("mahabharata")
-                                  ? t("epics.mahabharata", "Mahabharata")
-                                  : legend.epic
-                                        ?.toLowerCase()
-                                        .includes("ramayana")
-                                    ? t("epics.ramayana", "Ramayana")
-                                    : legend.epic}
-                                )
-                              </Text>
-                            </View>
-                            <Text
-                              style={[
-                                styles.dropupArchetype,
-                                { color: theme.secondary, fontFamily: body },
-                              ]}
-                              numberOfLines={1}
-                            >
-                              {locLeg.role} · {locLeg.subtitle}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <View
-                          style={[
-                            styles.dropupTag,
-                            {
-                              backgroundColor: isInCouncil
-                                ? "rgba(74, 222, 128, 0.12)"
-                                : theme.primaryContainer,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.dropupTagText,
-                              {
-                                color: isInCouncil
-                                  ? "#16A34A"
-                                  : theme.onPrimaryContainer,
-                                fontFamily: label,
-                              },
-                            ]}
-                          >
-                            {isInCouncil
-                              ? t("roundtableScreen.inCouncil", "● In Council")
-                              : t("roundtableScreen.addTag", "➕ Add & Tag")}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
 
             {/* Seek Counsel Now Button (during Interviewing Stage) */}
             {history.length > 0 &&
@@ -1615,19 +1638,16 @@ export default function RoundtableScreen() {
                   disabled={!input.trim() || loading}
                   activeOpacity={loading ? 1 : 0.8}
                 >
-                  <Text
-                    style={[
-                      styles.chatgptSendIcon,
-                      {
-                        color:
-                          input.trim().length > 0 && !loading
-                            ? theme.onPrimaryContainer
-                            : theme.secondary,
-                      },
-                    ]}
-                  >
-                    ↑
-                  </Text>
+                  <Ionicons
+                    name="arrow-up"
+                    size={20}
+                    color={
+                      input.trim().length > 0 && !loading
+                        ? theme.onPrimaryContainer
+                        : theme.secondary
+                    }
+                    style={styles.chatgptSendIcon}
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -1703,7 +1723,9 @@ export default function RoundtableScreen() {
 
             <ScrollView
               style={{ maxHeight: 400 }}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+              {...({ className: "show-scrollbar" } as any)}
             >
               {AVAILABLE_LEGENDS.map((legend) => {
                 const isAlreadyInCouncil = activeCouncil.includes(legend.name);

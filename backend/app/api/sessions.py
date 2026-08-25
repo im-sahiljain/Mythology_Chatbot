@@ -195,10 +195,13 @@ def auto_save_chat_turn(
     character: Optional[str] = None,
     stage: Optional[str] = None,
     sources: Optional[Any] = None,
-    title: Optional[str] = None
+    title: Optional[str] = None,
+    roundtable_replies: Optional[List[Dict[str, Any]]] = None,
+    council: Optional[List[str]] = None
 ) -> str:
     """Auto-persists user prompt and assistant reply into PostgreSQL cleanly."""
     import time, uuid
+    from datetime import datetime, timedelta
 
     try:
         sid = session_id or f"sess_{uuid.uuid4().hex[:12]}"
@@ -212,7 +215,7 @@ def auto_save_chat_turn(
                 guest_id=auth.guest_id if not auth.is_authenticated else None,
                 mode=mode,
                 title=s_title,
-                metadata_json={"character": character, "stage": stage}
+                metadata_json={"character": character, "stage": stage, "council": council or []}
             )
             db.add(session)
             db.commit()
@@ -220,7 +223,13 @@ def auto_save_chat_turn(
         else:
             if auth.is_authenticated and not session.user_id:
                 session.user_id = auth.user_id
-                db.commit()
+            
+            # Keep metadata_json synced with latest roundtable council
+            if council is not None:
+                meta = dict(session.metadata_json or {})
+                meta["council"] = council
+                session.metadata_json = meta
+            db.commit()
 
         # Convert Pydantic objects or non-dict items in sources to raw dicts
         clean_sources = []
@@ -243,18 +252,35 @@ def auto_save_chat_turn(
             content=user_message,
             stage=stage
         )
-        msg_asst = ChatMessageModel(
-            id=f"msg_a_{t_now}_{uuid.uuid4().hex[:4]}",
-            session_id=session.id,
-            role="assistant",
-            character=character or "Universal Epic Scholar",
-            content=assistant_reply,
-            stage=stage,
-            sources_json=clean_sources
-        )
-
         db.add(msg_user)
-        db.add(msg_asst)
+
+        if mode == "roundtable" and roundtable_replies:
+            base_time = datetime.utcnow()
+            for idx, r in enumerate(roundtable_replies):
+                msg_time = base_time + timedelta(milliseconds=idx * 10)
+                msg_asst = ChatMessageModel(
+                    id=f"msg_a_{t_now}_{uuid.uuid4().hex[:4]}_{idx}",
+                    session_id=session.id,
+                    role="assistant",
+                    character=r.get("character") or "Vedic Council",
+                    content=r.get("content") or "",
+                    stage=stage,
+                    sources_json=clean_sources if idx == 0 else [],
+                    created_at=msg_time
+                )
+                db.add(msg_asst)
+        else:
+            msg_asst = ChatMessageModel(
+                id=f"msg_a_{t_now}_{uuid.uuid4().hex[:4]}",
+                session_id=session.id,
+                role="assistant",
+                character=character or "Universal Epic Scholar",
+                content=assistant_reply,
+                stage=stage,
+                sources_json=clean_sources
+            )
+            db.add(msg_asst)
+
         db.commit()
         return session.id
     except Exception as e:

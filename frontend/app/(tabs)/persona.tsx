@@ -15,6 +15,8 @@ import {
   Animated as RNAnimated,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import Animated, {
@@ -284,9 +286,7 @@ export default function PersonaScreen() {
 
   const handleCopyText = async (text: string, id: string) => {
     try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      }
+      await Clipboard.setStringAsync(text);
       setCopiedMsgId(id);
       setTimeout(() => {
         setCopiedMsgId(null);
@@ -379,34 +379,13 @@ export default function PersonaScreen() {
     [filteredCharacters, aboutOpacity, aboutTranslateY],
   );
 
-  // Handle typing inside input box and detect '@'
+  // Handle typing inside input box
   const handleInputChange = (text: string) => {
     setInput(text);
     if (!text.trim()) {
       setInputHeight(36);
       setIsInputExpanded(false);
     }
-
-    const lastAtIndex = text.lastIndexOf("@");
-    if (lastAtIndex !== -1) {
-      if (lastAtIndex > 0 && text[lastAtIndex - 1] === "@") {
-        setShowMentionDropup(false);
-        setMentionQuery("");
-        return;
-      }
-      const textAfterAt = text.slice(lastAtIndex + 1);
-      if (
-        !textAfterAt.includes(" ") &&
-        !textAfterAt.includes("\n") &&
-        !textAfterAt.includes("@")
-      ) {
-        setShowMentionDropup(true);
-        setMentionQuery(textAfterAt.toLowerCase());
-        return;
-      }
-    }
-    setShowMentionDropup(false);
-    setMentionQuery("");
   };
 
   // Select 1 character from @ mention dropup and start consultation immediately
@@ -1283,111 +1262,7 @@ export default function PersonaScreen() {
                 : { backgroundColor: "transparent" },
             ]}
           >
-            {/* Autocomplete Dropup when typing @ in consultation */}
-            {showMentionDropup && (
-              <View
-                style={[
-                  styles.mentionDropupCard,
-                  {
-                    backgroundColor: theme.surfaceContainerLowest,
-                    borderColor: theme.outlineVariant,
-                    shadowColor: theme.shadow,
-                    bottom: 80,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.dropupHeader,
-                    { borderBottomColor: theme.outlineVariant },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dropupHeaderTitle,
-                      { color: theme.secondary, fontFamily: label },
-                    ]}
-                  >
-                    SWITCH TO 1 CHARACTER
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowMentionDropup(false)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        color: theme.textTertiary,
-                        fontWeight: "700",
-                      }}
-                    >
-                      ✕
-                    </Text>
-                  </TouchableOpacity>
-                </View>
 
-                <ScrollView
-                  ref={consultationMentionScrollRef}
-                  style={{ maxHeight: 260 }}
-                  showsVerticalScrollIndicator={true}
-                  keyboardShouldPersistTaps="always"
-                >
-                  {filteredMentionCharacters.map((char, index) => {
-                    const isCandidateSelected = index === mentionSelectedIndex;
-                    const isCurrentGuide =
-                      selectedGuide.name.toLowerCase() ===
-                      char.name.toLowerCase();
-
-                    return (
-                      <TouchableOpacity
-                        key={char.name}
-                        style={[
-                          styles.dropupRow,
-                          {
-                            backgroundColor: isCandidateSelected
-                              ? theme.surfaceContainerLow
-                              : isCurrentGuide
-                                ? theme.isDark
-                                  ? "rgba(234,194,92,0.12)"
-                                  : "rgba(146,113,13,0.08)"
-                                : "transparent",
-                            borderBottomColor: theme.outlineVariant,
-                            borderColor: isCandidateSelected
-                              ? theme.primary
-                              : "transparent",
-                            borderWidth: isCandidateSelected ? 1.5 : 0,
-                          },
-                        ]}
-                        onPress={() => handleSelectMentionCharacter(char)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={{ fontSize: 20, marginRight: 8 }}>
-                          {char.icon}
-                        </Text>
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            style={[
-                              styles.dropupName,
-                              { color: theme.primary, fontFamily: serif },
-                            ]}
-                          >
-                            {getLocalizedCharacter(char, i18n.language).name}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.dropupRole,
-                              { color: theme.secondary, fontFamily: body },
-                            ]}
-                          >
-                            {getLocalizedCharacter(char, i18n.language).role}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
 
             <View
               style={[
@@ -1454,37 +1329,7 @@ export default function PersonaScreen() {
               {/* Bottom Bar: @ mention trigger, Guide Name Pill + Send Button */}
               <View style={styles.chatgptBottomBar}>
                 <View style={styles.bottomBarLeft}>
-                  <TouchableOpacity
-                    style={[
-                      styles.atMentionTriggerBtn,
-                      {
-                        backgroundColor: showMentionDropup
-                          ? theme.primaryContainer
-                          : theme.isDark
-                            ? "rgba(234,194,92,0.12)"
-                            : "rgba(146,113,13,0.08)",
-                        borderColor: showMentionDropup
-                          ? theme.primaryContainer
-                          : theme.outlineVariant,
-                      },
-                    ]}
-                    onPress={toggleMentionDropup}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.atMentionTriggerText,
-                        {
-                          color: showMentionDropup
-                            ? theme.onPrimaryContainer
-                            : theme.primaryContainer,
-                          fontFamily: label,
-                        },
-                      ]}
-                    >
-                      @
-                    </Text>
-                  </TouchableOpacity>
+
 
                   <View
                     style={[
@@ -1520,19 +1365,16 @@ export default function PersonaScreen() {
                   disabled={loading || !input.trim()}
                   activeOpacity={loading ? 1 : 0.8}
                 >
-                  <Text
-                    style={[
-                      styles.chatgptSendIcon,
-                      {
-                        color:
-                          input.trim().length > 0 && !loading
-                            ? theme.onPrimaryContainer
-                            : theme.secondary,
-                      },
-                    ]}
-                  >
-                    ↑
-                  </Text>
+                  <Ionicons
+                    name="arrow-up"
+                    size={20}
+                    color={
+                      input.trim().length > 0 && !loading
+                        ? theme.onPrimaryContainer
+                        : theme.secondary
+                    }
+                    style={styles.chatgptSendIcon}
+                  />
                 </TouchableOpacity>
               </View>
             </View>

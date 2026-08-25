@@ -13,6 +13,8 @@ import {
   Animated,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import {
@@ -174,9 +176,7 @@ export default function FullChatScreen() {
 
   const handleCopyText = async (text: string, id: string) => {
     try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-      }
+      await Clipboard.setStringAsync(text);
       setCopiedMsgId(id);
       setTimeout(() => {
         setCopiedMsgId(null);
@@ -1100,19 +1100,16 @@ export default function FullChatScreen() {
                 disabled={loading || !input.trim()}
                 activeOpacity={loading ? 1 : 0.8}
               >
-                <Text
-                  style={[
-                    styles.chatgptSendIcon,
-                    {
-                      color:
-                        input.trim().length > 0 && !loading
-                          ? theme.onPrimaryContainer
-                          : theme.secondary,
-                    },
-                  ]}
-                >
-                  ↑
-                </Text>
+                <Ionicons
+                  name="arrow-up"
+                  size={20}
+                  color={
+                    input.trim().length > 0 && !loading
+                      ? theme.onPrimaryContainer
+                      : theme.secondary
+                  }
+                  style={styles.chatgptSendIcon}
+                />
               </TouchableOpacity>
             </View>
           </View>

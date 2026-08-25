@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, Platform, TouchableOpacity, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,7 +6,9 @@ import { supabase } from '../services/supabase';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Card, Pressable, FadeSlide } from '../components/AnimatedComponents';
+import { LanguageSelectorModal } from '../components/LanguageSelectorModal';
 
 const serif = Platform.OS === 'web' ? "'EB Garamond', Georgia, serif" : 'EBGaramond_700Bold';
 const body = Platform.OS === 'web' ? "'Hanken Grotesk', sans-serif" : 'HankenGrotesk_400Regular';
@@ -17,7 +19,13 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const { appLanguageOption } = useLanguage();
 
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
+
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -147,6 +155,28 @@ export default function RegisterScreen() {
     >
       <FadeSlide delay={50}>
         <Card style={styles.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <TouchableOpacity 
+              onPress={() => setLanguageModalVisible(true)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: theme.inputBg,
+                borderColor: theme.inputBorder,
+                borderWidth: 1,
+                borderRadius: 20,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                gap: 6
+              }}
+            >
+              <Text style={{ fontSize: 14 }}>🌐</Text>
+              <Text style={{ fontSize: 12, color: theme.textSecondary, fontFamily: bold }}>
+                {appLanguageOption?.nativeName || 'English'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.text, fontFamily: serif }]}>
               {t('auth.createAccount', 'Create Account')}
@@ -166,12 +196,15 @@ export default function RegisterScreen() {
               onChangeText={setFullName}
               placeholder={t('auth.namePlaceholder', 'Arjuna')}
               placeholderTextColor={theme.isDark ? '#666' : '#999'}
+              returnKeyType="next"
+              onSubmitEditing={() => emailInputRef.current?.focus()}
             />
 
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
               {t('auth.email', 'EMAIL')}
             </Text>
             <TextInput
+              ref={emailInputRef}
               style={[styles.input, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
               value={email}
               onChangeText={setEmail}
@@ -179,6 +212,8 @@ export default function RegisterScreen() {
               placeholderTextColor={theme.isDark ? '#666' : '#999'}
               autoCapitalize="none"
               keyboardType="email-address"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
             />
 
             <Text style={[styles.inputLabel, { color: theme.textTertiary, fontFamily: bold }]}>
@@ -186,12 +221,15 @@ export default function RegisterScreen() {
             </Text>
             <View style={styles.passwordWrapper}>
               <TextInput
+                ref={passwordInputRef}
                 style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
                 placeholder={t('auth.passwordPlaceholder', 'Minimum 6 characters')}
                 placeholderTextColor={theme.isDark ? '#666' : '#999'}
+                returnKeyType="next"
+                onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
               />
               <TouchableOpacity
                 style={styles.eyeBtn}
@@ -212,12 +250,15 @@ export default function RegisterScreen() {
             </Text>
             <View style={styles.passwordWrapper}>
               <TextInput
+                ref={confirmPasswordInputRef}
                 style={[styles.input, styles.passwordInput, { color: theme.text, backgroundColor: theme.inputBg, borderColor: theme.inputBorder, fontFamily: body }]}
                 secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder={t('auth.confirmPasswordPlaceholder', 'Re-enter your password')}
                 placeholderTextColor={theme.isDark ? '#666' : '#999'}
+                returnKeyType="go"
+                onSubmitEditing={register}
               />
               <TouchableOpacity
                 style={styles.eyeBtn}
@@ -243,7 +284,7 @@ export default function RegisterScreen() {
 
             <View style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.textSecondary, fontFamily: body }]}>
-                {t('auth.hasAccount', 'Already have an account?')}{' '}
+                {t('auth.alreadyHaveAccount', 'Already have an account?')}{' '}
               </Text>
               <Pressable onPress={() => router.push('/login')}>
                 <Text style={[styles.linkText, { color: theme.accent, fontFamily: bold }]}>
@@ -262,6 +303,11 @@ export default function RegisterScreen() {
           </View>
         </Card>
       </FadeSlide>
+      <LanguageSelectorModal
+        visible={languageModalVisible}
+        mode="app"
+        onClose={() => setLanguageModalVisible(false)}
+      />
     </ScrollView>
   );
 }

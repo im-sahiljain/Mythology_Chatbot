@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { SourceCitation } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
@@ -294,9 +295,12 @@ export const SourceCard: React.FC<SourceCardProps> = ({ sources }) => {
                     { backgroundColor: theme.bgTertiary, opacity: activeIndex === 0 ? 0.35 : 1 },
                   ]}
                 >
-                  <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>
-                    {t('common.previous', '← Previous')}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="arrow-back" size={14} color={theme.text} />
+                    <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>
+                      {t('common.previous', 'Previous').replace('←', '').trim()}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
 
                 {/* Dots indicator */}
@@ -324,9 +328,12 @@ export const SourceCard: React.FC<SourceCardProps> = ({ sources }) => {
                     { backgroundColor: theme.bgTertiary, opacity: activeIndex === sources.length - 1 ? 0.35 : 1 },
                   ]}
                 >
-                  <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>
-                    {t('common.next', 'Next →')}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[s.navBtnText, { color: theme.text, fontFamily: label }]}>
+                      {t('common.next', 'Next').replace('→', '').trim()}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={14} color={theme.text} />
+                  </View>
                 </TouchableOpacity>
               </View>
             )}

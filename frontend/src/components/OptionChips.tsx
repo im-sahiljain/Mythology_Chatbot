@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Pressable } from './AnimatedComponents';
 
@@ -41,7 +42,7 @@ const ChipItem: React.FC<{ index: number; option: string; onSelect: (o: string) 
         <View style={[s.chip, { backgroundColor: theme.accentSubtle, borderColor: theme.surfaceBorder }]}>
           <View style={[s.dot, { backgroundColor: theme.accent }]} />
           <Text style={[s.chipText, { color: theme.text, fontFamily: body }]}>{option}</Text>
-          <Text style={[s.arrow, { color: theme.textTertiary }]}>→</Text>
+          <Ionicons name="arrow-forward" size={16} color={theme.textTertiary} style={{ marginLeft: 8 }} />
         </View>
       </Pressable>
     </Animated.View>
